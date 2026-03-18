@@ -14,3 +14,7 @@ Topic: "Wetter";
 Reform: "..."
 """
 
+
+
+Todo: implement StarDestroyer 
+

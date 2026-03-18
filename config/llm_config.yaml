@@ -1,0 +1,45 @@
+# LLM Provider Configuration
+
+default_provider: openai
+
+providers:
+  openai:
+    type: openai
+    model: gpt-4o-mini
+    temperature: 0.7
+    max_tokens: 2048
+    timeout: 30
+
+  openai_gpt4:
+    type: openai
+    model: gpt-4o
+    temperature: 0.5
+    max_tokens: 4096
+    timeout: 60
+
+  local_ollama:
+    type: ollama
+    base_url: http://localhost:11434
+    model: llama3.2
+    temperature: 0.7
+    max_tokens: 2048
+    timeout: 60
+
+routing:
+  weather: openai
+  recommendation: openai
+  general: openai
+  document_qa: openai_gpt4
+
+system_prompts:
+  default: |
+    You are a helpful AI assistant. Be concise, accurate, and friendly.
+  weather: |
+    You are a weather assistant. Provide clear weather information and useful advice
+    based on the conditions. Be concise and helpful.
+  recommendation: |
+    You are a personalized recommendation assistant. Use the user's profile and
+    preferences to suggest relevant content, activities, or resources.
+  document_qa: |
+    You are a document analysis assistant. Answer questions based solely on the
+    provided context. If the answer is not in the context, say so clearly.

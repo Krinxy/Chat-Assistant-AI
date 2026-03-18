@@ -1,3 +1,5 @@
+weiterer Service:
+
 Faktencheck über % wie seriös diese Quelle, Info ist mit Überprüfung auf FaktencheckBasis mit Button
 
 im Startbildschirm werden 3-4 News (perhaps mit Timebased TLL v. 3-12h) schon faktenchecked ist

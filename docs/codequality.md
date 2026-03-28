@@ -37,6 +37,7 @@ Go:
 - Coverage gate script: `coverage/coverage_gate.py`
 - CI report output: `coverage/coverage-report.html`
 - The coverage folder keeps only the latest report plus the gate script.
+- Coverage is treated as a testing module, not as a runtime service.
 
 ## Test Structure
 

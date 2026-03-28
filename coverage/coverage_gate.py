@@ -191,8 +191,8 @@ def main() -> int:
     print(f"Coverage report generated: {report_path}")
 
     if not results:
-      print("No coverage report files found. Failing coverage gate.")
-      return 1
+                print("No coverage report files found. Failing coverage gate.")
+                return 1
 
     failed = [r for r in results if r.percent < args.threshold]
     overall = sum(r.percent for r in results) / len(results)

@@ -15,7 +15,8 @@ Editable install matrix:
 | Purpose | Command |
 |---|---|
 | Core package | `pip install -e .` |
-| All extras | `pip install -e ".[all]"` |
+| All extras (meta extra) | `pip install -e ".[all]"` |
+| All extras (direct grouping) | `pip install -e ".[backend,frontend,development]"` |
 | Development extras | `pip install -e ".[development]"` |
 | Backend extras | `pip install -e ".[backend]"` |
 | Frontend extras | `pip install -e ".[frontend]"` |

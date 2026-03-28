@@ -6,4 +6,5 @@
 | Context | ... |
 | Decision | |
 | Consequences | |
-
+| Alternative |  |
+| ... | | 

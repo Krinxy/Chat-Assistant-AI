@@ -72,7 +72,7 @@ def reset_coverage_folder(coverage_dir: Path, keep: set[str]) -> None:
         if child.is_file() or child.is_symlink():
             child.unlink(missing_ok=True)
         elif child.is_dir():
-            for nested in sorted(child.rglob('*'), reverse=True):
+            for nested in sorted(child.rglob("*"), reverse=True):
                 if nested.is_file() or nested.is_symlink():
                     nested.unlink(missing_ok=True)
                 elif nested.is_dir():
@@ -92,7 +92,7 @@ def write_dark_report(report_path: Path, threshold: float, results: list[Coverag
             f"<td>{result.component}</td>"
             f"<td>{result.percent:.2f}%</td>"
             f"<td>{result.source}</td>"
-            f"<td class=\"{status_class}\">{status}</td>"
+            f'<td class="{status_class}">{status}</td>'
             "</tr>"
         )
 

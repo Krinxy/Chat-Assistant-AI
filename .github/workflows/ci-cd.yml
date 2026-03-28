@@ -210,7 +210,7 @@ jobs:
         run: npm test --if-present
 
       - name: Run Node tests with coverage
-        if: ${{ hashFiles('package.json') != '' }}
+        if: ${{ hashFiles('package.json') != '' && (hashFiles('services/**/*.ts') != '' || hashFiles('services/**/*.js') != '' || hashFiles('packages/**/*.ts') != '' || hashFiles('packages/**/*.js') != '' || hashFiles('tests/**/*.test.ts') != '' || hashFiles('tests/**/*.spec.ts') != '' || hashFiles('tests/**/*.test.js') != '' || hashFiles('tests/**/*.spec.js') != '') }}
         run: npm run test:coverage --if-present
 
       - name: Run Node build

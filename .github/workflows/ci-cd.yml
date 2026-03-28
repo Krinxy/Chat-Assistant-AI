@@ -73,6 +73,7 @@ jobs:
           excluded_dirs = {
               '.git', '__pycache__', '.venv', 'venv', 'node_modules',
               'dist', 'build', '.mypy_cache', '.pytest_cache',
+              'coverage', 'docs', 'assets', 'config',
           }
 
           def is_excluded(path: Path) -> bool:
@@ -84,6 +85,10 @@ jobs:
                   continue
               if p.suffix in source_exts:
                   name = p.name.lower()
+                  if name in {'jest.config.ts', 'jest.config.js'}:
+                    continue
+                  if name.endswith(('.config.ts', '.config.js')):
+                    continue
                   if '.min.' in name:
                       continue
                   if (

@@ -14,7 +14,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
       "@services/*": ["services/*"],

@@ -1,6 +1,4 @@
-import type { Config } from 'jest';
-
-const config: Config = {
+const config = {
   roots: ['<rootDir>/services', '<rootDir>/packages', '<rootDir>/tests'],
   testEnvironment: 'node',
   transform: {

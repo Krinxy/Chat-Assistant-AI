@@ -1,9 +1,9 @@
 # UI for frontend
 
-| TITLE | User Interface for Chatbot Service |
+| TITLE | Homepage |
 |-------|-------|
 | Status | Open |
-| Context | ... |
+| Context | Homepage dashboard shown after login, acting as the container frame for all other UI modules.  |
 | Decision | |
 | Consequences | |
 | Alternative |  |

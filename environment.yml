@@ -1,0 +1,10 @@
+name: chat-assistant-ai
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      # pyproject.toml remains the source of truth.
+      - -e ".[development]"

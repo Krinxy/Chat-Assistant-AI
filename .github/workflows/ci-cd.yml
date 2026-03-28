@@ -17,7 +17,7 @@ jobs:
   ci-cd:
     runs-on: ubuntu-latest
     env:
-      # Fallback values for CI. Team workflow may load credentials from .env when available.
+      # CI uses GitHub Secrets only. Local .env is for local development only.
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       USERNAME: ${{ secrets.USERNAME }}
       PASSWORD: ${{ secrets.PASSWORD }}
@@ -29,15 +29,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Load .env variables (optional)
-        run: |
-          if [ -f .env ]; then
-            grep -v '^\s*#' .env | grep -E '^[A-Za-z_][A-Za-z0-9_]*=' >> "$GITHUB_ENV"
-            echo "Loaded credentials/config from .env"
-          else
-            echo "No .env file found in runner. Using GitHub Secrets fallback."
-          fi
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5

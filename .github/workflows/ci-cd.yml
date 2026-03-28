@@ -175,12 +175,18 @@ jobs:
           fi
           exit $status
 
-      - name: Set up Node.js
-        if: ${{ hashFiles('package.json') != '' }}
+      - name: Set up Node.js (with npm cache)
+        if: ${{ hashFiles('package.json') != '' && hashFiles('package-lock.json') != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Set up Node.js (without cache)
+        if: ${{ hashFiles('package.json') != '' && hashFiles('package-lock.json') == '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Install Node dependencies
         if: ${{ hashFiles('package.json') != '' }}

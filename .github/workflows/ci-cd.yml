@@ -167,8 +167,21 @@ jobs:
       - name: Run Python tests
         if: ${{ hashFiles('pyproject.toml') != '' || hashFiles('pytest.ini') != '' || hashFiles('requirements.txt') != '' }}
         run: |
+          python_sources=$(find . -type f -name "*.py" \
+            ! -path "./tests/*" \
+            ! -path "./coverage/*" \
+            ! -path "./.venv/*" \
+            ! -path "./venv/*" \
+            ! -path "./build/*" \
+            ! -path "./dist/*" | wc -l)
+
           set +e
-          pytest
+          if [ "$python_sources" -eq 0 ]; then
+            echo "No coverage-eligible Python source files found. Running pytest without coverage."
+            pytest --no-cov
+          else
+            pytest
+          fi
           status=$?
           if [ $status -eq 5 ]; then
             echo "No Python tests collected yet. Skipping failure for now."
@@ -181,7 +194,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
 
       - name: Install Node dependencies
         if: ${{ hashFiles('package.json') != '' }}
@@ -238,7 +250,7 @@ jobs:
       #   if: ${{ hashFiles('Dockerfile') != '' || hashFiles('**/Dockerfile') != '' }}
       #   run: docker build -t chatbot-ci:${{ github.sha }} .
 
-      - name: Repository coverage gate (min 80%)
+      - name: Repository coverage gate (advisory target 80%)
         if: ${{ hashFiles('coverage/coverage_gate.py') != '' && (hashFiles('coverage/coverage-python.xml') != '' || hashFiles('coverage/coverage-summary.json') != '' || hashFiles('**/coverage.cobertura.xml') != '' || hashFiles('coverage.xml') != '') }}
         continue-on-error: true
         run: python coverage/coverage_gate.py --threshold 80

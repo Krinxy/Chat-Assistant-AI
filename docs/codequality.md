@@ -2,7 +2,7 @@
 
 ## Minimum Rules
 
-- Coverage threshold is minimum 80%.
+- Coverage target is minimum 80% (currently advisory in CI while coverage is bootstrapped).
 - Every source file should have a corresponding test file.
 - Linting must pass before push.
 - Every new source file must include the required project header and contributor metadata defined in [04 Contribution Principles](04_contribution_principles.md).

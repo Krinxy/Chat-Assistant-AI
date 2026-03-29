@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
-import xml.etree.ElementTree as ET
+from defusedxml import ElementTree as ET
 
 
 @dataclass

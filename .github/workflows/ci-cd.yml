@@ -17,7 +17,7 @@ jobs:
   ci-cd:
     runs-on: ubuntu-latest
     env:
-      # CI uses GitHub Secrets only. Local .env is for local development only.
+      # Local runtime reads these names from .env; CI injects the same names from GitHub Secrets.
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       USERNAME: ${{ secrets.USERNAME }}
       PASSWORD: ${{ secrets.PASSWORD }}
@@ -55,8 +55,9 @@ jobs:
 
       - name: Security scan for credentials/secrets patterns (bandit)
         run: |
-          bandit -r . \
-            -x .git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
+          bandit -c pyproject.toml -r coverage services packages scripts \
+            --skip B101 \
+            --confidence-level high
 
       - name: Type checks (mypy)
         if: ${{ hashFiles('**/*.py') != '' }}

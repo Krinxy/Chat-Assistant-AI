@@ -1,5 +1,5 @@
 const config = {
-  roots: ['<rootDir>/services', '<rootDir>/packages', '<rootDir>/tests'],
+  roots: ['<rootDir>'],
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: 'tsconfig.json' }],

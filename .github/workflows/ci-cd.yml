@@ -176,18 +176,12 @@ jobs:
           fi
           exit $status
 
-      - name: Set up Node.js (with npm cache)
-        if: ${{ hashFiles('package.json') != '' && hashFiles('package-lock.json') != '' }}
+      - name: Set up Node.js
+        if: ${{ hashFiles('package.json') != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: Set up Node.js (without cache)
-        if: ${{ hashFiles('package.json') != '' && hashFiles('package-lock.json') == '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
 
       - name: Install Node dependencies
         if: ${{ hashFiles('package.json') != '' }}
@@ -206,13 +200,14 @@ jobs:
         if: ${{ hashFiles('package.json') != '' }}
         run: npm run typecheck --if-present
 
-      - name: Run Node tests
+      - name: Run Node tests (coverage)
         if: ${{ hashFiles('package.json') != '' }}
-        run: npm test --if-present
-
-      - name: Run Node tests with coverage
-        if: ${{ hashFiles('package.json') != '' && (hashFiles('services/**/*.ts') != '' || hashFiles('services/**/*.js') != '' || hashFiles('packages/**/*.ts') != '' || hashFiles('packages/**/*.js') != '' || hashFiles('tests/**/*.test.ts') != '' || hashFiles('tests/**/*.spec.ts') != '' || hashFiles('tests/**/*.test.js') != '' || hashFiles('tests/**/*.spec.js') != '') }}
-        run: npm run test:coverage --if-present
+        run: |
+          if [ "${{ hashFiles('services/**/*.ts') != '' || hashFiles('services/**/*.js') != '' || hashFiles('packages/**/*.ts') != '' || hashFiles('packages/**/*.js') != '' || hashFiles('tests/**/*.test.ts') != '' || hashFiles('tests/**/*.spec.ts') != '' || hashFiles('tests/**/*.test.js') != '' || hashFiles('tests/**/*.spec.js') != '' }}" = "true" ]; then
+            npm run test:coverage --if-present
+          else
+            npm test --if-present
+          fi
 
       - name: Run Node build
         if: ${{ hashFiles('package.json') != '' }}

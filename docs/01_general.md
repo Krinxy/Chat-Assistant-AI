@@ -30,6 +30,7 @@ This document describes the general architecture and documentation flow for this
 
 ## Current Security/Secrets State
 
-- Local development can load credentials from `.env`.
-- CI can use fallback secrets and optional `.env` loading.
+- Local development reads credentials from `.env`.
+- Runtime code should read only environment variables (no hardcoded credentials in source files).
+- CI injects the same variable names from GitHub Secrets (without committing `.env`).
 - Secret manager integration is planned and can be mocked in local/CI until server integration is available.

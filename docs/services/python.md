@@ -22,13 +22,26 @@ uvicorn app.main:app --reload
 
 ## Quality Gates
 
+Canonical quality commands are maintained in [Code Quality](../codequality.md) and [03 Quick Setup](../03_quick_setup.md).
+
+Python security scan command:
+
 ```bash
-flake8 .
-black --check .
-bandit -r .
-mypy .
-pytest
+bandit -c pyproject.toml -r coverage services packages scripts --skip B101 --confidence-level high
 ```
+
+## Credentials and .env
+
+All credentials are read from environment variables.
+
+Local development:
+
+- Create `.env` locally and keep it out of version control.
+- Set `OPENAI_API_KEY`, `USERNAME`, `PASSWORD`, and `LOGIN_URL`.
+
+CI:
+
+- Uses the same variable names via GitHub Secrets injection.
 
 ## Service Notes
 

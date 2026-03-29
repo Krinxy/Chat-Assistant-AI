@@ -71,3 +71,9 @@ dotnet restore
 - minimum coverage threshold is 80%
 - repository coverage is validated by `coverage/coverage_gate.py`
 - report artifact output is generated from CI
+
+## Credentials / Environment Variables
+
+- Credentials are provided through environment variables.
+- Local development uses a local `.env` file that is not versioned.
+- CI uses the same variable names via GitHub Secrets injection.

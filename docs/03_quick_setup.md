@@ -17,19 +17,15 @@ python -m venv .venv
 pip install --upgrade pip
 ```
 
-### Python Install Matrix (from pyproject.toml)
+### Python Dependency Presets
 
-| Purpose | Command |
-|---|---|
-| Core package | `pip install -e .` |
-| All extras (meta extra) | `pip install -e ".[all]"` |
-| All extras (direct grouping) | `pip install -e ".[backend,frontend,development]"` |
-| Development extras | `pip install -e ".[development]"` |
-| Backend extras | `pip install -e ".[backend]"` |
-| Frontend extras | `pip install -e ".[frontend]"` |
-| Production extras (currently empty by design) | `pip install -e ".[production]"` |
+The full editable install matrix is maintained in [02 Dependencies](02_dependencies.md).
 
-Note: `pip install -e "[development]"` is not valid for this project. The correct extras syntax includes `.`: `pip install -e ".[development]"`.
+Recommended for local development:
+
+```bash
+pip install -e ".[development]"
+```
 
 ### Option B: conda (keeps TOML as source of truth)
 
@@ -53,14 +49,24 @@ Node/Nest controls runtime behavior for TypeScript services.
 
 | Stack | Install | Run | Quality |
 |---|---|---|---|
-| Python | `pip install -e ".[development]"` | `uvicorn app.main:app --reload` | `flake8 . && black --check . && bandit -r . && mypy . && pytest` |
+| Python | `pip install -e ".[development]"` | `uvicorn app.main:app --reload` | `flake8 . && black --check . && bandit -c pyproject.toml -r coverage services packages scripts --skip B101 --confidence-level high && mypy . && pytest` |
 | TypeScript/JavaScript (Node/Nest) | `npm install` | `npm run start --if-present` | `npm run lint && npm run typecheck && npm test && npm run test:coverage` |
 | Go | `go mod tidy` | `go run ./...` | `go test ./...` |
 | .NET | `dotnet restore` | `dotnet run --project <path-to-service.csproj>` | `dotnet test --nologo` |
 
-## 4. Local Environment
+## 4. Local Environment (.env)
 
-Create `.env` and set local credentials/URLs.
+All credentials are read from environment variables.
+For local development, store them in `.env` and do not commit `.env`.
+
+Create your local `.env` manually and keep it out of version control.
+
+Required credential variables:
+
+- `OPENAI_API_KEY`
+- `USERNAME`
+- `PASSWORD`
+- `LOGIN_URL`
 
 ## 5. Run Checks (recommended before push)
 
@@ -69,7 +75,7 @@ Python:
 ```bash
 flake8 .
 black --check .
-bandit -r .
+bandit -c pyproject.toml -r coverage services packages scripts --skip B101 --confidence-level high
 mypy .
 pytest
 ```

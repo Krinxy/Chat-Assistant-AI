@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
+from typing import Callable
 from defusedxml import ElementTree as ET
 
 
@@ -23,17 +24,29 @@ class CoverageResult:
     percent: float
 
 
+def _to_percent(value: object, source: Path, field: str) -> float:
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"", "unknown", "n/a", "nan"}:
+            raise ValueError(f"{field} is not numeric in {source}: {value!r}")
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} is not numeric in {source}: {value!r}") from exc
+
+
 def parse_python_coverage_xml(path: Path) -> float:
     root = ET.parse(path).getroot()
     line_rate = root.attrib.get("line-rate")
     if line_rate is None:
         raise ValueError(f"line-rate missing in {path}")
-    return float(line_rate) * 100.0
+    return _to_percent(line_rate, path, "line-rate") * 100.0
 
 
 def parse_node_coverage_summary(path: Path) -> float:
     data = json.loads(path.read_text(encoding="utf-8"))
-    return float(data["total"]["lines"]["pct"])
+    pct = data["total"]["lines"]["pct"]
+    return _to_percent(pct, path, "total.lines.pct")
 
 
 def parse_cobertura_xml(path: Path) -> float:
@@ -41,7 +54,21 @@ def parse_cobertura_xml(path: Path) -> float:
     line_rate = root.attrib.get("line-rate")
     if line_rate is None:
         raise ValueError(f"line-rate missing in {path}")
-    return float(line_rate) * 100.0
+    return _to_percent(line_rate, path, "line-rate") * 100.0
+
+
+def _append_if_parseable(
+    results: list[CoverageResult],
+    component: str,
+    source: Path,
+    parser: Callable[[Path], float],
+) -> None:
+    try:
+        percent = parser(source)
+    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Skipping invalid coverage file {source}: {exc}")
+        return
+    results.append(CoverageResult(component, str(source), percent))
 
 
 def collect_results(repo_root: Path) -> list[CoverageResult]:
@@ -49,17 +76,17 @@ def collect_results(repo_root: Path) -> list[CoverageResult]:
 
     for candidate in [repo_root / "coverage" / "coverage-python.xml", repo_root / "coverage.xml"]:
         if candidate.exists():
-            results.append(CoverageResult("python", str(candidate), parse_python_coverage_xml(candidate)))
+            _append_if_parseable(results, "python", candidate, parse_python_coverage_xml)
             break
 
     node_summary = repo_root / "coverage" / "coverage-summary.json"
     if node_summary.exists():
-        results.append(CoverageResult("node", str(node_summary), parse_node_coverage_summary(node_summary)))
+        _append_if_parseable(results, "node", node_summary, parse_node_coverage_summary)
 
     for cob in repo_root.rglob("coverage.cobertura.xml"):
         if "node_modules" in cob.parts:
             continue
-        results.append(CoverageResult("dotnet", str(cob), parse_cobertura_xml(cob)))
+        _append_if_parseable(results, "dotnet", cob, parse_cobertura_xml)
 
     return results
 

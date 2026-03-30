@@ -1,7 +1,7 @@
 import streamlit as st
 
-from state.session_state import init_session_state
-from components.auth_component import render_auth
+from src.app.store.session_state import init_session_state
+from src.shared.components.feedback.auth_component import render_auth
 
 st.set_page_config(
     page_title="Chat Assistant AI",

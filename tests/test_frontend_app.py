@@ -36,16 +36,20 @@ def _load_frontend_app_module() -> tuple[types.ModuleType, types.ModuleType, dic
 
     fake_streamlit.rerun = _rerun
 
-    state_package = types.ModuleType("state")
-    state_session_module = types.ModuleType("state.session_state")
+    src_package = types.ModuleType("src")
+    src_app_package = types.ModuleType("src.app")
+    src_app_store_package = types.ModuleType("src.app.store")
+    state_session_module = types.ModuleType("src.app.store.session_state")
 
     def init_session_state() -> None:
         fake_streamlit.session_state.setdefault("authenticated", False)
 
     state_session_module.init_session_state = init_session_state
 
-    components_package = types.ModuleType("components")
-    auth_module = types.ModuleType("components.auth_component")
+    src_shared_package = types.ModuleType("src.shared")
+    src_shared_components_package = types.ModuleType("src.shared.components")
+    src_shared_feedback_package = types.ModuleType("src.shared.components.feedback")
+    auth_module = types.ModuleType("src.shared.components.feedback.auth_component")
 
     def render_auth() -> None:
         calls["render_auth"] += 1
@@ -54,10 +58,14 @@ def _load_frontend_app_module() -> tuple[types.ModuleType, types.ModuleType, dic
 
     replacement_modules = {
         "streamlit": fake_streamlit,
-        "state": state_package,
-        "state.session_state": state_session_module,
-        "components": components_package,
-        "components.auth_component": auth_module,
+        "src": src_package,
+        "src.app": src_app_package,
+        "src.app.store": src_app_store_package,
+        "src.app.store.session_state": state_session_module,
+        "src.shared": src_shared_package,
+        "src.shared.components": src_shared_components_package,
+        "src.shared.components.feedback": src_shared_feedback_package,
+        "src.shared.components.feedback.auth_component": auth_module,
     }
 
     original_modules: dict[str, types.ModuleType | None] = {}

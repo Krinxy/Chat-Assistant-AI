@@ -20,8 +20,8 @@ jobs:
     permissions:
       contents: read
     env:
-      OPENAI_API_KEY: ci-openai-mock-key
-      WEATHER_API_KEY: ci-weather-mock-key
+      OPENAI_API_KEY: ci-openai-key
+      WEATHER_API_KEY: ci-weather-key
       USERNAME: ci-user
       PASSWORD: ci-password
       LOGIN_URL: https://example.invalid/login
@@ -539,7 +539,7 @@ jobs:
             echo "Dockerfile.frontend not found - skipping frontend image."
           fi
 
-          echo "Placeholder only: add docker login, docker push, and Kubernetes deployment when targets are ready."
+          echo "Docker image build step executed. Registry push/deploy is not configured in this repository."
 
       - name: Complete Job
         if: ${{ always() }}

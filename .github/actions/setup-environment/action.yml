@@ -1,0 +1,25 @@
+name: Setup Environment
+description: Configure required runtimes for CI.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: "1.22"
+
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "8.0.x"
+
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: "21"

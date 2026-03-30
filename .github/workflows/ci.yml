@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   setup-env:
-    name: Setup Env
+    name: Set up job
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -40,31 +40,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment (Python)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Setup Environment (Node.js / React)
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Setup Environment (Go)
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-
-      - name: Setup Environment (.NET)
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Setup Environment (Java / Kotlin)
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "21"
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
 
       - name: Dependencies
         run: |
@@ -109,8 +86,6 @@ jobs:
           if unique:
             subprocess.check_call([sys.executable, "-m", "pip", "install", *unique])
             print(f"Installed {len(unique)} dependencies from pyproject.toml groups.")
-          else:
-            print("No installable dependencies found in pyproject.toml groups.")
           PY
 
           REQUIREMENTS_TXT_FILES="$(find . -type f -iname '*requirements*.txt' \
@@ -127,29 +102,21 @@ jobs:
             npm ci
           elif [ -f package.json ]; then
             npm install
-          else
-            echo "No Node.js project detected."
           fi
 
           if [ -f frontend/package-lock.json ] || [ -f frontend/npm-shrinkwrap.json ]; then
             npm --prefix frontend ci
           elif [ -f frontend/package.json ]; then
             npm --prefix frontend install
-          else
-            echo "No React frontend project detected."
           fi
 
           if [ -f go.mod ]; then
             go mod download
-          else
-            echo "No Go project detected."
           fi
 
           DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet restore "$DOTNET_TARGET"
-          else
-            echo "No .NET project detected."
           fi
 
           KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
@@ -160,31 +127,8 @@ jobs:
               gradle dependencies
             else
               echo "Kotlin build files detected, but no Gradle wrapper/Gradle command is available."
+              exit 1
             fi
-          else
-            echo "No Kotlin project detected."
-          fi
-
-      - name: Post Setup
-        run: |
-          set -euo pipefail
-
-          python --version
-          if command -v node >/dev/null 2>&1; then
-            node --version
-            npm --version
-          fi
-          if command -v go >/dev/null 2>&1; then
-            go version
-          fi
-          if command -v dotnet >/dev/null 2>&1; then
-            dotnet --version
-          fi
-          if command -v java >/dev/null 2>&1; then
-            java --version
-          fi
-          if command -v kotlinc >/dev/null 2>&1; then
-            kotlinc -version
           fi
 
       - name: Linting
@@ -204,15 +148,11 @@ jobs:
           if [ -n "$PYTHON_TARGETS" ]; then
             flake8 $PYTHON_TARGETS --max-line-length=140 --exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
             black --required-version 25.1.0 --check $PYTHON_TARGETS --line-length=140 --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
-          else
-            echo "No Python source directories detected - skipping flake8/black."
           fi
 
           if [ -f package.json ]; then
             npm run lint --if-present
             npm run typecheck --if-present
-          else
-            echo "No Node.js lint target detected."
           fi
 
           if [ -f frontend/package.json ]; then
@@ -226,8 +166,6 @@ jobs:
             if [ -d frontend/src ]; then
               npx eslint frontend/src --ext .ts,.tsx --max-warnings=0 --no-error-on-unmatched-pattern
             fi
-          else
-            echo "No React frontend lint target detected."
           fi
 
           if [ -f go.mod ]; then
@@ -238,33 +176,21 @@ jobs:
               exit 1
             fi
             go vet ./...
-          else
-            echo "No Go lint target detected."
           fi
 
           DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet build "$DOTNET_TARGET" --no-restore --configuration Release -warnaserror
-          else
-            echo "No .NET lint target detected."
           fi
 
           KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ]; then
-            if [ -x "./gradlew" ]; then
-              if ./gradlew --no-daemon -q tasks --all | grep -q 'ktlintCheck'; then
-                ./gradlew --no-daemon ktlintCheck
-              else
-                echo "Kotlin lint task (ktlintCheck) is not configured - skipping Kotlin lint."
-              fi
-            else
-              echo "Kotlin project detected, but no Gradle wrapper found - skipping Kotlin lint."
+          if [ -n "$KOTLIN_BUILD_FILE" ] && [ -x "./gradlew" ]; then
+            if ./gradlew --no-daemon -q tasks --all | grep -q 'ktlintCheck'; then
+              ./gradlew --no-daemon ktlintCheck
             fi
-          else
-            echo "No Kotlin lint target detected."
           fi
 
-      - name: Security
+      - name: security
         run: |
           set -euo pipefail
           TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env(\..+)?$' || true)"
@@ -284,39 +210,24 @@ jobs:
 
           if [ -n "$PYTHON_SECURITY_TARGETS" ]; then
             bandit -r $PYTHON_SECURITY_TARGETS -ll -x backend/tests
-          else
-            echo "No Python security targets detected."
           fi
 
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm audit --audit-level=high
-          else
-            echo "No root npm lockfile detected - skipping root npm audit."
           fi
 
           if [ -f frontend/package-lock.json ] || [ -f frontend/npm-shrinkwrap.json ]; then
             npm --prefix frontend audit --audit-level=high
-          else
-            echo "No frontend npm lockfile detected - skipping frontend npm audit."
           fi
 
           if [ -f go.mod ]; then
             go install golang.org/x/vuln/cmd/govulncheck@latest
             govulncheck ./...
-          else
-            echo "No Go project detected."
           fi
 
           DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet list "$DOTNET_TARGET" package --vulnerable --include-transitive
-          else
-            echo "No .NET project detected."
-          fi
-
-          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ]; then
-            echo "Kotlin security scan is currently covered by SonarQube baseline when configured."
           fi
 
       - name: SonarQube
@@ -330,6 +241,16 @@ jobs:
           args: >
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.sources=backend,frontend,tests
+
+      - name: Post Setup Environment
+        run: |
+          set -euo pipefail
+          python --version
+          node --version
+          npm --version
+          go version
+          dotnet --version
+          java --version
 
       - name: Test
         run: |
@@ -434,38 +355,24 @@ jobs:
 
           if [ -f package.json ]; then
             npm test --if-present
-          else
-            echo "No Node.js tests detected."
           fi
 
           if [ -f frontend/package.json ]; then
             npm --prefix frontend test --if-present
-          else
-            echo "No React frontend tests detected."
           fi
 
           if [ -f go.mod ]; then
             go test ./...
-          else
-            echo "No Go tests detected."
           fi
 
           DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet test "$DOTNET_TARGET" --no-restore --verbosity normal
-          else
-            echo "No .NET tests detected."
           fi
 
           KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ]; then
-            if [ -x "./gradlew" ]; then
-              ./gradlew --no-daemon test
-            else
-              echo "Kotlin project detected, but no Gradle wrapper found - skipping Kotlin tests."
-            fi
-          else
-            echo "No Kotlin tests detected."
+          if [ -n "$KOTLIN_BUILD_FILE" ] && [ -x "./gradlew" ]; then
+            ./gradlew --no-daemon test
           fi
 
       - name: Run
@@ -480,48 +387,30 @@ jobs:
 
           if [ "${#PYTHON_RUN_TARGETS[@]}" -gt 0 ]; then
             python -m compileall "${PYTHON_RUN_TARGETS[@]}"
-          else
-            echo "No Python run targets detected."
           fi
 
           if [ -f package.json ]; then
             npm run build --if-present
-          else
-            echo "No Node.js build target detected."
           fi
 
           if [ -f frontend/package.json ]; then
             if npm --prefix frontend ls vite >/dev/null 2>&1; then
               npm --prefix frontend run build --if-present
-            else
-              echo "Frontend build skipped because vite is not installed in frontend/package.json dependencies."
             fi
-          else
-            echo "No React frontend build target detected."
           fi
 
           if [ -f go.mod ]; then
             go build ./...
-          else
-            echo "No Go build target detected."
           fi
 
           DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet build "$DOTNET_TARGET" --no-restore --configuration Release
-          else
-            echo "No .NET build target detected."
           fi
 
           KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ]; then
-            if [ -x "./gradlew" ]; then
-              ./gradlew --no-daemon assemble
-            else
-              echo "Kotlin project detected, but no Gradle wrapper found - skipping Kotlin build."
-            fi
-          else
-            echo "No Kotlin build target detected."
+          if [ -n "$KOTLIN_BUILD_FILE" ] && [ -x "./gradlew" ]; then
+            ./gradlew --no-daemon assemble
           fi
 
       - name: Docker
@@ -529,18 +418,14 @@ jobs:
         run: |
           if [ -f Dockerfile.backend ]; then
             docker build -f Dockerfile.backend -t chat-backend:ci .
-          else
-            echo "Dockerfile.backend not found - skipping backend image."
           fi
 
           if [ -f Dockerfile.frontend ]; then
             docker build -f Dockerfile.frontend -t chat-frontend:ci .
-          else
-            echo "Dockerfile.frontend not found - skipping frontend image."
           fi
 
-          echo "Docker image build step executed. Registry push/deploy is not configured in this repository."
-
-      - name: Complete Job
+      - name: Complete job
         if: ${{ always() }}
-        run: echo "ChatBot CI/CD pipeline completed."
+        run: |
+          set -euo pipefail
+          :

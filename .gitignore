@@ -16,3 +16,8 @@ coverage/*
 .coverage.*
 
 *.log
+*.xml
+.txt
+
+*.egg-info/
+.eggs/

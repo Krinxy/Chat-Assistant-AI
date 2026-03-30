@@ -14,18 +14,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci-cd:
-    name: Required Checks
+  setup-env:
+    name: Setup Env
     runs-on: ubuntu-latest
     permissions:
       contents: read
     env:
-      # CI must never depend on an untracked local .env file.
-      MONGODB_URL: mongodb://localhost:27017
-      DATABASE_NAME: chat_test
-      SECRET_KEY: test-secret-key-for-ci-only
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'ci-placeholder-openai-key' }}
-      WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY || 'ci-placeholder-weather-key' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'ci-openai-mock-key' }}
+      WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY || 'ci-weather-mock-key' }}
+      USERNAME: ${{ secrets.USERNAME || 'ci-user' }}
+      PASSWORD: ${{ secrets.PASSWORD || 'ci-password' }}
+      LOGIN_URL: ${{ secrets.LOGIN_URL || 'https://example.invalid/login' }}
+      MONGODB_URL: ${{ secrets.MONGODB_URL || 'mongodb://localhost:27017' }}
+      DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'chat_test' }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-only' }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || '' }}
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || '' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || '' }}
       ENVIRONMENT: testing
       LOCAL_DB_ENABLED: "false"
       CI_TEMP_DB_ENABLED: "true"
@@ -35,40 +40,64 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup for Python/Node/.NET/Go (Python)
+      - name: Setup Environment
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Setup for Python/Node/.NET/Go (Node)
-        if: ${{ hashFiles('package.json') != '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Setup for Python/Node/.NET/Go (.NET)
-        if: ${{ hashFiles('**/*.sln') != '' || hashFiles('**/*.csproj') != '' }}
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Setup for Python/Node/.NET/Go (Go)
-        if: ${{ hashFiles('go.mod') != '' }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.22.x"
-
       - name: Dependencies
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install -e ".[all]"
+          if [ ! -f pyproject.toml ]; then
+            echo "pyproject.toml is required for dependency installation."
+            exit 1
+          fi
+
+          python - << 'PY'
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          try:
+            import tomllib
+          except ModuleNotFoundError:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "tomli"])
+            import tomli as tomllib
+
+          pyproject_path = Path("pyproject.toml")
+          data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+
+          project = data.get("project", {})
+          optional = project.get("optional-dependencies", {})
+
+          deps = []
+          deps.extend(project.get("dependencies", []))
+          for group in ("backend", "frontend", "development", "test", "lint", "security", "all"):
+            deps.extend(optional.get(group, []))
+
+          deps = [dep for dep in deps if not dep.lower().startswith("chat-assistant-ai[")]
+
+          unique = []
+          seen = set()
+          for dep in deps:
+            if dep not in seen:
+              seen.add(dep)
+              unique.append(dep)
+
+          if unique:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", *unique])
+            print(f"Installed {len(unique)} dependencies from pyproject.toml groups.")
+          else:
+            print("No installable dependencies found in pyproject.toml groups.")
+          PY
 
           REQUIREMENTS_TXT_FILES="$(find . -type f -iname '*requirements*.txt' \
             -not -path './.venv/*' \
             -not -path './venv/*' \
             -not -path './chat_assistant_ai.egg-info/*' || true)"
           if [ -n "$REQUIREMENTS_TXT_FILES" ]; then
-            echo "Found requirements*.txt files. Use pyproject.toml extras instead:"
+            echo "requirements*.txt files detected. Use pyproject.toml extras only:"
             echo "$REQUIREMENTS_TXT_FILES"
             exit 1
           fi
@@ -78,59 +107,37 @@ jobs:
           elif [ -f package.json ]; then
             npm install
           else
-            echo "No Node.js project detected - skipping npm install."
+            echo "No Node.js project detected."
           fi
 
           if [ -f go.mod ]; then
             go mod download
           else
-            echo "No Go project detected - skipping go mod download."
+            echo "No Go project detected."
           fi
 
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1)"
+          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet restore "$DOTNET_TARGET"
           else
-            echo "No .NET project detected - skipping dotnet restore."
+            echo "No .NET project detected."
           fi
 
-      - name: Test
-        run: |
-          if [ -d backend/tests ] && find backend/tests -type f -name '*.py' | grep -q .; then
-            set +e
-            (cd backend && pytest tests/ -v --asyncio-mode=auto --tb=short)
-            PYTEST_STATUS=$?
-            set -e
-            if [ "$PYTEST_STATUS" -eq 5 ]; then
-              echo "No Python tests collected - skipping pytest failure."
-            elif [ "$PYTEST_STATUS" -ne 0 ]; then
-              exit "$PYTEST_STATUS"
-            fi
-          else
-            echo "No Python tests detected - skipping pytest."
+          python --version
+          if command -v node >/dev/null 2>&1; then
+            node --version
+            npm --version
           fi
-
-          if [ -f package.json ]; then
-            npm test --if-present
-          else
-            echo "No Node.js tests detected - skipping npm test."
+          if command -v go >/dev/null 2>&1; then
+            go version
           fi
-
-          if [ -f go.mod ]; then
-            go test ./...
-          else
-            echo "No Go tests detected - skipping go test."
-          fi
-
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1)"
-          if [ -n "$DOTNET_TARGET" ]; then
-            dotnet test "$DOTNET_TARGET" --no-restore --verbosity normal
-          else
-            echo "No .NET tests detected - skipping dotnet test."
+          if command -v dotnet >/dev/null 2>&1; then
+            dotnet --version
           fi
 
       - name: Linting
         run: |
+          set -euo pipefail
           PYTHON_TARGETS=""
           if [ -d backend ]; then
             PYTHON_TARGETS="${PYTHON_TARGETS} backend"
@@ -153,7 +160,7 @@ jobs:
             npm run lint --if-present
             npm run typecheck --if-present
           else
-            echo "No Node.js lint target detected - skipping npm lint/typecheck."
+            echo "No Node.js lint target detected."
           fi
 
           if [ -f go.mod ]; then
@@ -165,19 +172,20 @@ jobs:
             fi
             go vet ./...
           else
-            echo "No Go lint target detected - skipping gofmt/go vet."
+            echo "No Go lint target detected."
           fi
 
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1)"
+          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet build "$DOTNET_TARGET" --no-restore --configuration Release -warnaserror
           else
-            echo "No .NET lint target detected - skipping dotnet build lint pass."
+            echo "No .NET lint target detected."
           fi
 
       - name: Security
         run: |
-          TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env$' || true)"
+          set -euo pipefail
+          TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env(\..+)?$' || true)"
           if [ -n "$TRACKED_ENV_FILES" ]; then
             echo "Tracked .env files detected. Remove them from git and use GitHub Secrets instead:"
             echo "$TRACKED_ENV_FILES"
@@ -195,97 +203,217 @@ jobs:
           if [ -n "$PYTHON_SECURITY_TARGETS" ]; then
             bandit -r $PYTHON_SECURITY_TARGETS -ll -x backend/tests
           else
-            echo "No Python security targets detected - skipping bandit."
+            echo "No Python security targets detected."
           fi
 
           if [ -f package.json ]; then
             npm audit --audit-level=high
           else
-            echo "No Node.js project detected - skipping npm audit."
+            echo "No Node.js project detected."
           fi
 
           if [ -f go.mod ]; then
             go install golang.org/x/vuln/cmd/govulncheck@latest
             govulncheck ./...
           else
-            echo "No Go project detected - skipping govulncheck."
+            echo "No Go project detected."
           fi
 
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1)"
+          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
             dotnet list "$DOTNET_TARGET" package --vulnerable --include-transitive
           else
-            echo "No .NET project detected - skipping dotnet vulnerability scan."
+            echo "No .NET project detected."
           fi
 
-      - name: Coverage
+      - name: SonarQube
+        if: env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' && env.SONAR_TOKEN != ''
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.sources=backend,frontend
+
+      - name: SonarQube (Skipped)
+        if: env.SONAR_HOST_URL == '' || env.SONAR_PROJECT_KEY == '' || env.SONAR_TOKEN == ''
+        run: echo "SonarQube not configured. Skipping baseline scan."
+
+      - name: Test
         run: |
-          if [ -d backend/tests ] && find backend/tests -type f -name '*.py' | grep -q . && find backend/app -type f -name '*.py' | grep -q .; then
+          set -euo pipefail
+          python - << 'PY'
+          from pathlib import Path
+          import sys
+
+          repo = Path(".")
+          source_dirs = [repo / d for d in ("frontend", "backend", "shared") if (repo / d).is_dir()]
+          test_roots = [repo / "tests", repo / "backend" / "tests"]
+
+          excluded_parts = {
+              ".git",
+              "__pycache__",
+              ".venv",
+              "venv",
+              "node_modules",
+              "build",
+              "dist",
+              ".mypy_cache",
+              ".pytest_cache",
+              "coverage",
+              "chat_assistant_ai.egg-info",
+          }
+
+          def excluded(path: Path) -> bool:
+              return any(part in excluded_parts for part in path.parts)
+
+          source_files = []
+          for src_dir in source_dirs:
+              for file in src_dir.rglob("*.py"):
+                  if excluded(file):
+                      continue
+                  low = file.name.lower()
+                  if low.startswith("test_") or low.endswith("_test.py"):
+                      continue
+                  source_files.append(file)
+
+          test_files = []
+          for root in test_roots:
+              if not root.exists():
+                  continue
+              for file in root.rglob("*.py"):
+                  if excluded(file):
+                      continue
+                  test_files.append(file)
+
+          missing = []
+          for src in source_files:
+              stem = src.stem.lower()
+              expected = {
+                  f"test_{stem}.py",
+                  f"{stem}_test.py",
+                  f"{stem}.test.py",
+                  f"{stem}.spec.py",
+              }
+              has_match = any(
+                  test.name.lower() in expected or stem in test.stem.lower()
+                  for test in test_files
+              )
+              if not has_match:
+                  missing.append(src.as_posix())
+
+          if missing:
+              print("Missing test file for these source files:")
+              for item in sorted(missing):
+                  print(f" - {item}")
+              sys.exit(1)
+
+          print("Each source file has a test file.")
+          PY
+
+          if [ -d tests ] && find tests -type f -name '*.py' | grep -q .; then
             if ! [[ "${PYTHON_COVERAGE_MIN}" =~ ^[0-9]+$ ]] || [ "${PYTHON_COVERAGE_MIN}" -lt 1 ] || [ "${PYTHON_COVERAGE_MIN}" -gt 100 ]; then
               echo "PYTHON_COVERAGE_MIN must be an integer between 1 and 100. Current value: ${PYTHON_COVERAGE_MIN}"
               exit 1
             fi
 
-            set +e
-            (cd backend && pytest tests/ --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under="${PYTHON_COVERAGE_MIN}")
-            PYTEST_COV_STATUS=$?
-            set -e
-            if [ "$PYTEST_COV_STATUS" -eq 5 ]; then
-              echo "No Python tests collected - skipping Python coverage gate."
-            elif [ "$PYTEST_COV_STATUS" -ne 0 ]; then
-              exit "$PYTEST_COV_STATUS"
+            PYTHON_COV_TARGETS=()
+            for target in backend frontend shared; do
+              if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+                PYTHON_COV_TARGETS+=("--cov=$target")
+              fi
+            done
+
+            if [ "${#PYTHON_COV_TARGETS[@]}" -gt 0 ]; then
+              pytest tests -v --asyncio-mode=auto --tb=short "${PYTHON_COV_TARGETS[@]}" --cov-report=term-missing --cov-report=xml --cov-fail-under="${PYTHON_COVERAGE_MIN}"
+            else
+              pytest tests -v --asyncio-mode=auto --tb=short
             fi
+          elif [ -d backend/tests ] && find backend/tests -type f -name '*.py' | grep -q .; then
+            if ! [[ "${PYTHON_COVERAGE_MIN}" =~ ^[0-9]+$ ]] || [ "${PYTHON_COVERAGE_MIN}" -lt 1 ] || [ "${PYTHON_COVERAGE_MIN}" -gt 100 ]; then
+              echo "PYTHON_COVERAGE_MIN must be an integer between 1 and 100. Current value: ${PYTHON_COVERAGE_MIN}"
+              exit 1
+            fi
+            (cd backend && pytest tests -v --asyncio-mode=auto --tb=short --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under="${PYTHON_COVERAGE_MIN}")
           else
-            echo "No Python source/tests detected - skipping Python coverage."
+            echo "No Python tests found."
+            exit 1
           fi
 
           if [ -f package.json ]; then
-            npm run coverage --if-present
+            npm test --if-present
           else
-            echo "No Node.js coverage target detected - skipping npm coverage."
+            echo "No Node.js tests detected."
           fi
 
           if [ -f go.mod ]; then
-            go test ./... -coverprofile=coverage.out
-            go tool cover -func=coverage.out
+            go test ./...
           else
-            echo "No Go tests detected - skipping Go coverage."
+            echo "No Go tests detected."
           fi
 
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1)"
+          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
           if [ -n "$DOTNET_TARGET" ]; then
-            dotnet test "$DOTNET_TARGET" --no-build --collect:"XPlat Code Coverage"
+            dotnet test "$DOTNET_TARGET" --no-restore --verbosity normal
           else
-            echo "No .NET tests detected - skipping .NET coverage."
+            echo "No .NET tests detected."
           fi
 
-  deploy-docker:
-    name: Deploy Docker
-    runs-on: ubuntu-latest
-    needs: ci-cd
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Run
+        run: |
+          set -euo pipefail
+          PYTHON_RUN_TARGETS=()
+          for target in backend frontend shared; do
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+              PYTHON_RUN_TARGETS+=("$target")
+            fi
+          done
 
-      - name: Build backend image
+          if [ "${#PYTHON_RUN_TARGETS[@]}" -gt 0 ]; then
+            python -m compileall "${PYTHON_RUN_TARGETS[@]}"
+          else
+            echo "No Python run targets detected."
+          fi
+
+          if [ -f package.json ]; then
+            npm run build --if-present
+          else
+            echo "No Node.js build target detected."
+          fi
+
+          if [ -f go.mod ]; then
+            go build ./...
+          else
+            echo "No Go build target detected."
+          fi
+
+          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
+          if [ -n "$DOTNET_TARGET" ]; then
+            dotnet build "$DOTNET_TARGET" --no-restore --configuration Release
+          else
+            echo "No .NET build target detected."
+          fi
+
+      - name: Docker
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: |
           if [ -f Dockerfile.backend ]; then
             docker build -f Dockerfile.backend -t chat-backend:ci .
           else
-            echo "Dockerfile.backend not found - skipping backend build."
+            echo "Dockerfile.backend not found - skipping backend image."
           fi
 
-      - name: Build frontend image
-        run: |
           if [ -f Dockerfile.frontend ]; then
             docker build -f Dockerfile.frontend -t chat-frontend:ci .
           else
-            echo "Dockerfile.frontend not found - skipping frontend build."
+            echo "Dockerfile.frontend not found - skipping frontend image."
           fi
 
-      - name: Deploy Docker
-        run: |
-          echo "Placeholder: docker login, docker push, and kubernetes deployment steps are added when deployment targets are ready."
+          echo "Placeholder only: add docker login, docker push, and Kubernetes deployment when targets are ready."
+
+      - name: Complete Job
+        if: ${{ always() }}
+        run: echo "ChatBot CI/CD pipeline completed."

@@ -24,6 +24,7 @@ A modular multi-agent AI assistant for mobile applications, combining conversati
 - [docs](docs)
 - [services](services)
 - [packages](packages)
+- [frontend](frontend)
 - [tests](tests)
 - [coverage](coverage)
 

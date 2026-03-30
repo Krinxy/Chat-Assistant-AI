@@ -2,7 +2,7 @@
 
 ## Minimum Rules
 
-- Coverage target is minimum 80% (currently advisory in CI while coverage is bootstrapped).
+- Coverage target is minimum 80%.
 - Every source file should have a corresponding test file.
 - Linting must pass before push.
 - Every new source file must include the required project header and contributor metadata defined in [04 Contribution Principles](04_contribution_principles.md).
@@ -14,7 +14,6 @@ Python:
 - `flake8`
 - `black --check`
 - `bandit`
-- `mypy`
 - `pytest`
 
 TypeScript/JavaScript:
@@ -23,6 +22,8 @@ TypeScript/JavaScript:
 - `npm run typecheck`
 - `npm test`
 - `npm run test:coverage`
+- `npm --prefix frontend run lint --if-present`
+- `npm --prefix frontend run typecheck --if-present`
 
 Go:
 
@@ -31,6 +32,24 @@ Go:
 .NET (C#):
 
 - `dotnet test --nologo`
+
+Kotlin:
+
+- `./gradlew test` (when Kotlin modules exist)
+
+## CI/CD Stage Order
+
+The pipeline is intentionally bundled as one job with this order:
+
+1. Setup Environment
+2. Dependencies
+3. Linting
+4. Security
+5. SonarQube
+6. Test
+7. Run
+8. Docker
+9. Complete Job
 
 ## Coverage Gate
 

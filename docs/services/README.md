@@ -8,6 +8,7 @@ Use this section to navigate to language-specific service startup and structure 
 - [JavaScript Services](javascript.md)
 - [Python Services](python.md)
 - [Go Services](go.md)
+- [Frontend Module](../../frontend/README.md)
 
 ## Service Folder Convention
 

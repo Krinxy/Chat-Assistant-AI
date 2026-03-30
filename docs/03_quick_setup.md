@@ -40,6 +40,7 @@ conda activate chat-assistant-ai
 
 ```bash
 npm install
+npm --prefix frontend install
 ```
 
 Node/Nest controls runtime behavior for TypeScript services.
@@ -49,10 +50,11 @@ Node/Nest controls runtime behavior for TypeScript services.
 
 | Stack | Install | Run | Quality |
 |---|---|---|---|
-| Python | `pip install -e ".[development]"` | `uvicorn app.main:app --reload` | `flake8 . && black --check . && bandit -c pyproject.toml -r coverage services packages scripts --skip B101 --confidence-level high && mypy . && pytest` |
-| TypeScript/JavaScript (Node/Nest) | `npm install` | `npm run start --if-present` | `npm run lint && npm run typecheck && npm test && npm run test:coverage` |
+| Python | dependencies from `pyproject.toml` groups | `uvicorn app.main:app --reload` | `flake8 backend frontend shared --max-line-length=140 && black --check backend frontend shared --line-length=140 && bandit -r backend frontend -ll -x backend/tests && pytest` |
+| TypeScript/JavaScript (Node/Nest + React) | `npm install && npm --prefix frontend install` | `npm run start --if-present` | `npm run lint && npm run typecheck && npm test && npm run test:coverage && npm --prefix frontend run lint --if-present && npm --prefix frontend run typecheck --if-present` |
 | Go | `go mod tidy` | `go run ./...` | `go test ./...` |
 | .NET | `dotnet restore` | `dotnet run --project <path-to-service.csproj>` | `dotnet test --nologo` |
+| Kotlin | `./gradlew dependencies` | `./gradlew run` | `./gradlew test` |
 
 ## 4. Local Environment (.env)
 
@@ -73,10 +75,9 @@ Required credential variables:
 Python:
 
 ```bash
-flake8 .
-black --check .
-bandit -c pyproject.toml -r coverage services packages scripts --skip B101 --confidence-level high
-mypy .
+flake8 backend frontend shared --max-line-length=140
+black --check backend frontend shared --line-length=140
+bandit -r backend frontend -ll -x backend/tests
 pytest
 ```
 
@@ -87,6 +88,8 @@ npm run lint
 npm run typecheck
 npm test
 npm run test:coverage
+npm --prefix frontend run lint --if-present
+npm --prefix frontend run typecheck --if-present
 ```
 
 ## 6. Coverage Gate

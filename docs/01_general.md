@@ -17,6 +17,7 @@ This document describes the general architecture and documentation flow for this
 
 - `services/`: API services (one service per bounded context)
 - `packages/`: shared modules and utilities
+- `frontend/`: UI module with `src/app`, `src/pages`, `src/features`, `src/entities`, `src/widgets`, and `src/shared`
 - `tests/`: test suites and language-specific service tests
 - `coverage/`: latest coverage report and gate script
 - `docs/`: all project documentation

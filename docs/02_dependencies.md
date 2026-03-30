@@ -10,17 +10,15 @@ Managed via `pyproject.toml` optional groups:
 - `all`
 - `production` (currently intentionally empty)
 
-Editable install matrix:
+CI and local tooling use `pyproject.toml` as the source of truth.
+
+Typical install matrix:
 
 | Purpose | Command |
 |---|---|
-| Core package | `pip install -e .` |
-| All extras (meta extra) | `pip install -e ".[all]"` |
-| All extras (direct grouping) | `pip install -e ".[backend,frontend,development]"` |
-| Development extras | `pip install -e ".[development]"` |
-| Backend extras | `pip install -e ".[backend]"` |
-| Frontend extras | `pip install -e ".[frontend]"` |
-| Production extras (currently empty) | `pip install -e ".[production]"` |
+| CI install | Automatic: workflow resolves and installs dependency groups from `pyproject.toml` |
+| Local recommended | `conda env create -f environment.yml` |
+| Production extras (currently empty) | reserved in `pyproject.toml` |
 
 Conda option (still TOML-based dependencies):
 
@@ -44,6 +42,7 @@ Install:
 
 ```bash
 npm install
+npm --prefix frontend install
 ```
 
 ## Go
@@ -77,3 +76,4 @@ dotnet restore
 - Credentials are provided through environment variables.
 - Local development uses a local `.env` file that is not versioned.
 - CI uses the same variable names via GitHub Secrets injection.
+- CI fails when `.env` or `.env.*` files are tracked in git.

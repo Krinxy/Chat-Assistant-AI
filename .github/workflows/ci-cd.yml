@@ -1,0 +1,267 @@
+name: ChatBot CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-cd:
+    runs-on: ubuntu-latest
+    env:
+      # Local runtime reads these names from .env; CI injects the same names from GitHub Secrets.
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      USERNAME: ${{ secrets.USERNAME }}
+      PASSWORD: ${{ secrets.PASSWORD }}
+      LOGIN_URL: ${{ secrets.LOGIN_URL }}
+      # Local DB access is intentionally disabled in CI for now.
+      LOCAL_DB_ENABLED: "false"
+      CI_TEMP_DB_ENABLED: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python tooling and project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black bandit pytest mypy
+          if [ -f pyproject.toml ]; then
+            pip install ".[development]" || pip install . || echo "Skipping package install from pyproject.toml (no installable package)."
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      - name: Lint Python files (flake8, black)
+        run: |
+          flake8 . \
+            --max-line-length 140 \
+            --exclude .git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
+          black --check . \
+            --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
+
+      - name: Security scan for credentials/secrets patterns (bandit)
+        run: |
+          bandit -c pyproject.toml -r coverage services packages scripts \
+            --skip B101 \
+            --confidence-level high
+
+      - name: Type checks (mypy)
+        if: ${{ hashFiles('**/*.py') != '' }}
+        run: mypy .
+
+      - name: Enforce tests for each source file
+        run: |
+          python - << 'PY'
+          import os
+          from pathlib import Path
+
+          repo = Path('.')
+          source_exts = {'.py', '.js', '.ts', '.go', '.cs'}
+          excluded_dirs = {
+              '.git', '__pycache__', '.venv', 'venv', 'node_modules',
+              'dist', 'build', '.mypy_cache', '.pytest_cache',
+              'coverage', 'docs', 'assets', 'config',
+          }
+
+          def is_excluded(path: Path) -> bool:
+              return any(part in excluded_dirs for part in path.parts)
+
+          source_files = []
+          for p in repo.rglob('*'):
+              if not p.is_file() or is_excluded(p):
+                  continue
+              if p.suffix in source_exts:
+                  name = p.name.lower()
+                  if name in {'jest.config.ts', 'jest.config.js'}:
+                    continue
+                  if name.endswith(('.config.ts', '.config.js')):
+                    continue
+                  if '.min.' in name:
+                      continue
+                  if (
+                      name.startswith('test_')
+                      or name.endswith('_test.py')
+                      or name.endswith('.test.js')
+                      or name.endswith('.spec.js')
+                      or name.endswith('.test.ts')
+                      or name.endswith('.spec.ts')
+                      or name.endswith('_test.go')
+                      or name.endswith('test.go')
+                      or name.endswith('tests.cs')
+                      or '.test.' in name
+                      or '.spec.' in name
+                  ):
+                      continue
+                  source_files.append(p)
+
+          test_files = []
+          for p in repo.rglob('*'):
+              if not p.is_file() or is_excluded(p):
+                  continue
+              n = p.name.lower()
+              if (
+                  n.startswith('test_')
+                  or n.endswith('_test.py')
+                  or n.endswith('.test.js')
+                  or n.endswith('.spec.js')
+                  or n.endswith('.test.ts')
+                  or n.endswith('.spec.ts')
+                  or n.endswith('_test.go')
+                  or n.endswith('tests.cs')
+                  or '.test.' in n
+                  or '.spec.' in n
+              ):
+                  test_files.append(p)
+
+          missing = []
+          for src in source_files:
+              stem = src.stem.lower().replace('.min', '')
+              suffix = src.suffix.lower()
+              candidates = [
+                  f'test_{stem}{suffix}',
+                  f'{stem}_test{suffix}',
+                  f'{stem}.test{suffix}',
+                  f'{stem}.spec{suffix}',
+                  f'{stem}tests{suffix}',
+                  f'{stem}.tests{suffix}',
+              ]
+
+              if suffix == '.go':
+                  candidates.append(f'{stem}_test.go')
+              if suffix == '.cs':
+                  candidates.extend([f'{stem}tests.cs', f'{stem}.tests.cs'])
+
+              has_match = False
+              for t in test_files:
+                  tn = t.name.lower()
+                  if tn in candidates or stem in tn:
+                      has_match = True
+                      break
+
+              if not has_match:
+                  missing.append(str(src))
+
+          if missing:
+              print('Missing test file for these source files:')
+              for m in sorted(missing):
+                  print(f' - {m}')
+              raise SystemExit(1)
+
+          print('All source files have corresponding test files.')
+          PY
+
+      - name: Run Python tests
+        if: ${{ hashFiles('pyproject.toml') != '' || hashFiles('pytest.ini') != '' || hashFiles('requirements.txt') != '' }}
+        run: |
+          python_sources=$(find . -type f -name "*.py" \
+            ! -path "./tests/*" \
+            ! -path "./coverage/*" \
+            ! -path "./.venv/*" \
+            ! -path "./venv/*" \
+            ! -path "./build/*" \
+            ! -path "./dist/*" | wc -l)
+
+          set +e
+          if [ "$python_sources" -eq 0 ]; then
+            echo "No coverage-eligible Python source files found. Running pytest without coverage."
+            pytest --no-cov
+          else
+            pytest
+          fi
+          status=$?
+          if [ $status -eq 5 ]; then
+            echo "No Python tests collected yet. Skipping failure for now."
+            exit 0
+          fi
+          exit $status
+
+      - name: Set up Node.js
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run Node lint
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run lint --if-present
+
+      - name: Run Node type checks
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run typecheck --if-present
+
+      - name: Run Node tests (coverage)
+        if: ${{ hashFiles('package.json') != '' }}
+        run: |
+          if [ "${{ hashFiles('services/**/*.ts') != '' || hashFiles('services/**/*.js') != '' || hashFiles('packages/**/*.ts') != '' || hashFiles('packages/**/*.js') != '' || hashFiles('tests/**/*.test.ts') != '' || hashFiles('tests/**/*.spec.ts') != '' || hashFiles('tests/**/*.test.js') != '' || hashFiles('tests/**/*.spec.js') != '' }}" = "true" ]; then
+            npm run test:coverage --if-present
+          else
+            npm test --if-present
+          fi
+
+      - name: Run Node build
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run build --if-present
+
+      - name: Set up Go
+        if: ${{ hashFiles('go.mod') != '' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Run Go tests
+        if: ${{ hashFiles('go.mod') != '' }}
+        run: go test ./...
+
+      - name: Set up .NET
+        if: ${{ hashFiles('**/*.sln') != '' || hashFiles('**/*.csproj') != '' }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run .NET tests
+        if: ${{ hashFiles('**/*.sln') != '' || hashFiles('**/*.csproj') != '' }}
+        run: dotnet test --nologo
+
+      # Docker requirement prepared but intentionally disabled for now.
+      # - name: Build Docker image
+      #   if: ${{ hashFiles('Dockerfile') != '' || hashFiles('**/Dockerfile') != '' }}
+      #   run: docker build -t chatbot-ci:${{ github.sha }} .
+
+      - name: Repository coverage gate (advisory target 80%)
+        if: ${{ hashFiles('coverage/coverage_gate.py') != '' && (hashFiles('coverage/coverage-python.xml') != '' || hashFiles('coverage/coverage-summary.json') != '' || hashFiles('**/coverage.cobertura.xml') != '' || hashFiles('coverage.xml') != '') }}
+        continue-on-error: true
+        run: python coverage/coverage_gate.py --threshold 80
+
+      - name: Upload coverage report artifact
+        if: ${{ always() && hashFiles('coverage/coverage-report.html') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/coverage-report.html
+
+      - name: Deploy placeholder
+        if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+        run: echo "Deploy step for ${{ github.ref_name }} (replace with real deploy command)"

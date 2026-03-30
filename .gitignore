@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Environment files
+.env
+!.env.example
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# Lint caches
+.mypy_cache/
+.ruff_cache/
+
+# Frontend / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Secrets / Credentials
+*.pem
+*.key
+*.cert
+*.crt
+secrets/
+
+# Data / DB
+*.db
+*.sqlite3
+chroma_data/
+uploads/
+
+# Logs
+logs/
+*.log
+
+# Archives
+*.tar.gz
+*.zip
+
+# Text artifacts
+*.txt

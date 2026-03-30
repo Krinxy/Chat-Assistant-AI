@@ -1,0 +1,17 @@
+{
+  "name": "chatbot-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "npx eslint src --ext .ts,.tsx --max-warnings=0 --no-error-on-unmatched-pattern --config ../.eslintrc.json",
+    "typecheck": "npx tsc --noEmit -p tsconfig.json",
+    "test": "echo \"No dedicated frontend tests yet\""
+  },
+  "devDependencies": {
+    "vite": "^5.4.19"
+  }
+}

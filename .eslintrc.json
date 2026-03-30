@@ -7,7 +7,7 @@
   },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./tsconfig.json",
+    "project": ["./tsconfig.json", "./frontend/tsconfig.json"],
     "sourceType": "module"
   },
   "plugins": ["@typescript-eslint"],
@@ -17,7 +17,7 @@
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier"
   ],
-  "ignorePatterns": ["dist/", "build/", "coverage/", "node_modules/"],
+  "ignorePatterns": ["dist/", "build/", "coverage/", "node_modules/", "frontend/node_modules/", "frontend/dist/", "frontend/vite.config.ts"],
   "rules": {
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/no-misused-promises": "error",

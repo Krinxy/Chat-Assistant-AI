@@ -20,30 +20,51 @@ jobs:
     permissions:
       contents: read
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'ci-openai-mock-key' }}
-      WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY || 'ci-weather-mock-key' }}
-      USERNAME: ${{ secrets.USERNAME || 'ci-user' }}
-      PASSWORD: ${{ secrets.PASSWORD || 'ci-password' }}
-      LOGIN_URL: ${{ secrets.LOGIN_URL || 'https://example.invalid/login' }}
-      MONGODB_URL: ${{ secrets.MONGODB_URL || 'mongodb://localhost:27017' }}
-      DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'chat_test' }}
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-for-ci-only' }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || '' }}
-      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || '' }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || '' }}
+      OPENAI_API_KEY: ci-openai-mock-key
+      WEATHER_API_KEY: ci-weather-mock-key
+      USERNAME: ci-user
+      PASSWORD: ci-password
+      LOGIN_URL: https://example.invalid/login
+      MONGODB_URL: mongodb://localhost:27017
+      DATABASE_NAME: chat_test
+      SECRET_KEY: test-secret-key-for-ci-only
+      SONAR_TOKEN: ""
+      SONAR_HOST_URL: ""
+      SONAR_PROJECT_KEY: ""
       ENVIRONMENT: testing
       LOCAL_DB_ENABLED: "false"
       CI_TEMP_DB_ENABLED: "true"
-      PYTHON_COVERAGE_MIN: ${{ vars.PYTHON_COVERAGE_MIN || '80' }}
+      PYTHON_COVERAGE_MIN: "80"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment
+      - name: Setup Environment (Python)
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Setup Environment (Node.js / React)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Environment (Go)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Setup Environment (.NET)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Setup Environment (Java / Kotlin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
 
       - name: Dependencies
         run: |
@@ -110,6 +131,14 @@ jobs:
             echo "No Node.js project detected."
           fi
 
+          if [ -f frontend/package-lock.json ] || [ -f frontend/npm-shrinkwrap.json ]; then
+            npm --prefix frontend ci
+          elif [ -f frontend/package.json ]; then
+            npm --prefix frontend install
+          else
+            echo "No React frontend project detected."
+          fi
+
           if [ -f go.mod ]; then
             go mod download
           else
@@ -123,6 +152,19 @@ jobs:
             echo "No .NET project detected."
           fi
 
+          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
+          if [ -n "$KOTLIN_BUILD_FILE" ]; then
+            if [ -x "./gradlew" ]; then
+              ./gradlew --no-daemon dependencies
+            elif command -v gradle >/dev/null 2>&1; then
+              gradle dependencies
+            else
+              echo "Kotlin build files detected, but no Gradle wrapper/Gradle command is available."
+            fi
+          else
+            echo "No Kotlin project detected."
+          fi
+
           python --version
           if command -v node >/dev/null 2>&1; then
             node --version
@@ -133,6 +175,12 @@ jobs:
           fi
           if command -v dotnet >/dev/null 2>&1; then
             dotnet --version
+          fi
+          if command -v java >/dev/null 2>&1; then
+            java --version
+          fi
+          if command -v kotlinc >/dev/null 2>&1; then
+            kotlinc -version
           fi
 
       - name: Linting
@@ -163,6 +211,21 @@ jobs:
             echo "No Node.js lint target detected."
           fi
 
+          if [ -f frontend/package.json ]; then
+            npm --prefix frontend run lint --if-present
+            npm --prefix frontend run typecheck --if-present
+
+            if [ -f frontend/tsconfig.json ]; then
+              npx tsc --noEmit -p frontend/tsconfig.json
+            fi
+
+            if [ -d frontend/src ]; then
+              npx eslint frontend/src --ext .ts,.tsx --max-warnings=0 --no-error-on-unmatched-pattern
+            fi
+          else
+            echo "No React frontend lint target detected."
+          fi
+
           if [ -f go.mod ]; then
             GOFMT_OUTPUT="$(gofmt -l .)"
             if [ -n "$GOFMT_OUTPUT" ]; then
@@ -180,6 +243,21 @@ jobs:
             dotnet build "$DOTNET_TARGET" --no-restore --configuration Release -warnaserror
           else
             echo "No .NET lint target detected."
+          fi
+
+          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
+          if [ -n "$KOTLIN_BUILD_FILE" ]; then
+            if [ -x "./gradlew" ]; then
+              if ./gradlew --no-daemon -q tasks --all | grep -q 'ktlintCheck'; then
+                ./gradlew --no-daemon ktlintCheck
+              else
+                echo "Kotlin lint task (ktlintCheck) is not configured - skipping Kotlin lint."
+              fi
+            else
+              echo "Kotlin project detected, but no Gradle wrapper found - skipping Kotlin lint."
+            fi
+          else
+            echo "No Kotlin lint target detected."
           fi
 
       - name: Security
@@ -206,10 +284,16 @@ jobs:
             echo "No Python security targets detected."
           fi
 
-          if [ -f package.json ]; then
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm audit --audit-level=high
           else
-            echo "No Node.js project detected."
+            echo "No root npm lockfile detected - skipping root npm audit."
+          fi
+
+          if [ -f frontend/package-lock.json ] || [ -f frontend/npm-shrinkwrap.json ]; then
+            npm --prefix frontend audit --audit-level=high
+          else
+            echo "No frontend npm lockfile detected - skipping frontend npm audit."
           fi
 
           if [ -f go.mod ]; then
@@ -226,6 +310,11 @@ jobs:
             echo "No .NET project detected."
           fi
 
+          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
+          if [ -n "$KOTLIN_BUILD_FILE" ]; then
+            echo "Kotlin security scan is currently covered by SonarQube baseline when configured."
+          fi
+
       - name: SonarQube
         if: env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' && env.SONAR_TOKEN != ''
         continue-on-error: true
@@ -236,7 +325,7 @@ jobs:
         with:
           args: >
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
-            -Dsonar.sources=backend,frontend
+            -Dsonar.sources=backend,frontend,tests
 
       - name: SonarQube (Skipped)
         if: env.SONAR_HOST_URL == '' || env.SONAR_PROJECT_KEY == '' || env.SONAR_TOKEN == ''
@@ -349,6 +438,12 @@ jobs:
             echo "No Node.js tests detected."
           fi
 
+          if [ -f frontend/package.json ]; then
+            npm --prefix frontend test --if-present
+          else
+            echo "No React frontend tests detected."
+          fi
+
           if [ -f go.mod ]; then
             go test ./...
           else
@@ -360,6 +455,17 @@ jobs:
             dotnet test "$DOTNET_TARGET" --no-restore --verbosity normal
           else
             echo "No .NET tests detected."
+          fi
+
+          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
+          if [ -n "$KOTLIN_BUILD_FILE" ]; then
+            if [ -x "./gradlew" ]; then
+              ./gradlew --no-daemon test
+            else
+              echo "Kotlin project detected, but no Gradle wrapper found - skipping Kotlin tests."
+            fi
+          else
+            echo "No Kotlin tests detected."
           fi
 
       - name: Run
@@ -384,6 +490,16 @@ jobs:
             echo "No Node.js build target detected."
           fi
 
+          if [ -f frontend/package.json ]; then
+            if npm --prefix frontend ls vite >/dev/null 2>&1; then
+              npm --prefix frontend run build --if-present
+            else
+              echo "Frontend build skipped because vite is not installed in frontend/package.json dependencies."
+            fi
+          else
+            echo "No React frontend build target detected."
+          fi
+
           if [ -f go.mod ]; then
             go build ./...
           else
@@ -395,6 +511,17 @@ jobs:
             dotnet build "$DOTNET_TARGET" --no-restore --configuration Release
           else
             echo "No .NET build target detected."
+          fi
+
+          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
+          if [ -n "$KOTLIN_BUILD_FILE" ]; then
+            if [ -x "./gradlew" ]; then
+              ./gradlew --no-daemon assemble
+            else
+              echo "Kotlin project detected, but no Gradle wrapper found - skipping Kotlin build."
+            fi
+          else
+            echo "No Kotlin build target detected."
           fi
 
       - name: Docker

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   setup-env:
-    name: Set up job
+    name: Set up Job
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,16 +28,13 @@ jobs:
       MONGODB_URL: mongodb://localhost:27017
       DATABASE_NAME: chat_test
       SECRET_KEY: test-secret-key-for-ci-only
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
       ENVIRONMENT: testing
       LOCAL_DB_ENABLED: "false"
       CI_TEMP_DB_ENABLED: "true"
       PYTHON_COVERAGE_MIN: "80"
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Environment
@@ -190,7 +187,7 @@ jobs:
             fi
           fi
 
-      - name: security
+      - name: Security
         run: |
           set -euo pipefail
           TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env(\..+)?$' || true)"
@@ -230,27 +227,32 @@ jobs:
             dotnet list "$DOTNET_TARGET" package --vulnerable --include-transitive
           fi
 
+      - name: Sonar readiness
+        id: sonar-ready
+        shell: bash
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || '' }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || '' }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || '' }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SONAR_HOST_URL" ] && [ -n "$SONAR_PROJECT_KEY" ] && [ -n "$SONAR_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: SonarQube
-        if: env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' && env.SONAR_TOKEN != ''
+        if: steps.sonar-ready.outputs.enabled == 'true'
         continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v5
         env:
-          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || '' }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || '' }}
         with:
           args: >
-            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY || '' }}
             -Dsonar.sources=backend,frontend,tests
-
-      - name: Post Setup Environment
-        run: |
-          set -euo pipefail
-          python --version
-          node --version
-          npm --version
-          go version
-          dotnet --version
-          java --version
 
       - name: Test
         run: |
@@ -423,9 +425,3 @@ jobs:
           if [ -f Dockerfile.frontend ]; then
             docker build -f Dockerfile.frontend -t chat-frontend:ci .
           fi
-
-      - name: Complete job
-        if: ${{ always() }}
-        run: |
-          set -euo pipefail
-          :

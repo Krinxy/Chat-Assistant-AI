@@ -28,9 +28,9 @@ jobs:
       MONGODB_URL: mongodb://localhost:27017
       DATABASE_NAME: chat_test
       SECRET_KEY: test-secret-key-for-ci-only
-      SONAR_TOKEN: ""
-      SONAR_HOST_URL: ""
-      SONAR_PROJECT_KEY: ""
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
       ENVIRONMENT: testing
       LOCAL_DB_ENABLED: "false"
       CI_TEMP_DB_ENABLED: "true"
@@ -165,6 +165,10 @@ jobs:
             echo "No Kotlin project detected."
           fi
 
+      - name: Post Setup
+        run: |
+          set -euo pipefail
+
           python --version
           if command -v node >/dev/null 2>&1; then
             node --version
@@ -199,7 +203,7 @@ jobs:
 
           if [ -n "$PYTHON_TARGETS" ]; then
             flake8 $PYTHON_TARGETS --max-line-length=140 --exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
-            black --check $PYTHON_TARGETS --line-length=140 --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
+            black --required-version 25.1.0 --check $PYTHON_TARGETS --line-length=140 --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
           else
             echo "No Python source directories detected - skipping flake8/black."
           fi
@@ -326,10 +330,6 @@ jobs:
           args: >
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
             -Dsonar.sources=backend,frontend,tests
-
-      - name: SonarQube (Skipped)
-        if: env.SONAR_HOST_URL == '' || env.SONAR_PROJECT_KEY == '' || env.SONAR_TOKEN == ''
-        run: echo "SonarQube not configured. Skipping baseline scan."
 
       - name: Test
         run: |

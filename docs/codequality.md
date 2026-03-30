@@ -60,7 +60,7 @@ The pipeline is intentionally bundled as one job with this order:
 
 ## Test Structure
 
-- `tests/python_test/service_1/`
-- `tests/python_test/service_2/`
-
-Extend this pattern with one folder per service and language as the project grows.
+- Primary active tests live in `tests/`.
+- `tests/python_test/` exists as a legacy subtree and is not the default CI target.
+- Keep tests grouped by domain when useful (for example `tests/frontend`, `tests/backend`, `tests/integration`).
+- Use source-to-test naming symmetry so CI mapping checks remain deterministic.

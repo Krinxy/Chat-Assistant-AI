@@ -22,17 +22,16 @@ A modular multi-agent AI assistant for mobile applications, combining conversati
 ### Main Project Folders
 
 - [docs](docs)
-- [services](services)
-- [packages](packages)
+- [backend](backend)
 - [frontend](frontend)
 - [tests](tests)
 - [coverage](coverage)
 
 ## Service Startup Direction
 
-Each service should be documented and runnable independently. Use the language-specific guides in `docs/services/` to start and validate each service.
+Each stack should be documented and runnable independently. Use the language-specific guides in `docs/services/` to start and validate each runtime.
 
-Recommended pattern per service:
+Current repository quality pattern:
 
 - Keep API contract boundaries explicit.
 - Keep source and tests paired by language conventions.

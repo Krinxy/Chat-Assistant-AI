@@ -15,12 +15,12 @@ This document describes the general architecture and documentation flow for this
 
 ## Project Layout
 
-- `services/`: API services (one service per bounded context)
-- `packages/`: shared modules and utilities
+- `backend/`: backend services and APIs
 - `frontend/`: UI module with `src/app`, `src/pages`, `src/features`, `src/entities`, `src/widgets`, and `src/shared`
-- `tests/`: test suites and language-specific service tests
+- `tests/`: test suites
 - `coverage/`: latest coverage report and gate script
 - `docs/`: all project documentation
+- `.github/workflows/`: CI/CD workflows
 
 ## Service Design Rules
 
@@ -33,5 +33,4 @@ This document describes the general architecture and documentation flow for this
 
 - Local development reads credentials from `.env`.
 - Runtime code should read only environment variables (no hardcoded credentials in source files).
-- CI injects the same variable names from GitHub Secrets (without committing `.env`).
-- Secret manager integration is planned and can be mocked in local/CI until server integration is available.
+- CI defines environment variables in the workflow environment and supports repository/runner overrides.

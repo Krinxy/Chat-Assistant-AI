@@ -12,11 +12,12 @@ Use this section to navigate to language-specific service startup and structure 
 
 ## Service Folder Convention
 
-Create each service in:
+Current repository runtime roots:
 
-- `services/<service-name>/`
+- `backend/`
+- `frontend/`
 
-Recommended service contents:
+Service contents in this repository:
 
 - `src/` for source code
 - `tests/` for tests

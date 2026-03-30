@@ -5,13 +5,13 @@
 Development bundle:
 
 ```bash
-pip install .[development]
+pip install -e ".[development]"
 ```
 
 Backend service bundle:
 
 ```bash
-pip install .[backend]
+pip install -e ".[backend]"
 ```
 
 ## Start Service (FastAPI/Uvicorn example)
@@ -27,7 +27,7 @@ Canonical quality commands are maintained in [Code Quality](../codequality.md) a
 Python security scan command:
 
 ```bash
-bandit -c pyproject.toml -r coverage services packages scripts --skip B101 --confidence-level high
+bandit -r backend frontend -ll -x backend/tests
 ```
 
 ## Credentials and .env
@@ -41,7 +41,7 @@ Local development:
 
 CI:
 
-- Uses the same variable names via GitHub Secrets injection.
+- Uses workflow-defined environment variables and supports runner/repository overrides.
 
 ## Service Notes
 

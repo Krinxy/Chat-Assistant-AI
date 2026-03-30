@@ -21,7 +21,7 @@ pip install --upgrade pip
 
 The full editable install matrix is maintained in [02 Dependencies](02_dependencies.md).
 
-Recommended for local development:
+Local development install:
 
 ```bash
 pip install -e ".[development]"
@@ -50,7 +50,7 @@ Node/Nest controls runtime behavior for TypeScript services.
 
 | Stack | Install | Run | Quality |
 |---|---|---|---|
-| Python | dependencies from `pyproject.toml` groups | `uvicorn app.main:app --reload` | `flake8 backend frontend shared --max-line-length=140 && black --check backend frontend shared --line-length=140 && bandit -r backend frontend -ll -x backend/tests && pytest` |
+| Python | dependencies from `pyproject.toml` groups | `uvicorn app.main:app --reload` | `flake8 backend frontend --max-line-length=140 && black --check backend frontend --line-length=140 && bandit -r backend frontend -ll -x backend/tests && pytest` |
 | TypeScript/JavaScript (Node/Nest + React) | `npm install && npm --prefix frontend install` | `npm run start --if-present` | `npm run lint && npm run typecheck && npm test && npm run test:coverage && npm --prefix frontend run lint --if-present && npm --prefix frontend run typecheck --if-present` |
 | Go | `go mod tidy` | `go run ./...` | `go test ./...` |
 | .NET | `dotnet restore` | `dotnet run --project <path-to-service.csproj>` | `dotnet test --nologo` |
@@ -70,13 +70,13 @@ Required credential variables:
 - `PASSWORD`
 - `LOGIN_URL`
 
-## 5. Run Checks (recommended before push)
+## 5. Run Checks
 
 Python:
 
 ```bash
-flake8 backend frontend shared --max-line-length=140
-black --check backend frontend shared --line-length=140
+flake8 backend frontend --max-line-length=140
+black --check backend frontend --line-length=140
 bandit -r backend frontend -ll -x backend/tests
 pytest
 ```
@@ -101,3 +101,8 @@ python coverage/coverage_gate.py --threshold 80
 ## 7. Service Startup Guides
 
 Go to [docs/services/README.md](services/README.md) for per-language startup commands.
+
+## 8. Test Location Reminder
+
+Active tests are expected under `tests/`.
+The `tests/python_test/` subtree is legacy and not the primary CI test target.

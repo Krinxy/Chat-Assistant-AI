@@ -97,3 +97,31 @@ Git does not track empty folders, only files.
 
 - If a directory is empty and has no tracked file, it will not be part of a commit.
 - To avoid noise, this repository keeps `.gitkeep` only where an empty directory must be versioned.
+
+
+## ?? Lokale Entwicklung starten
+
+Wann immer du das Projekt frisch auscheckst oder neue Packages via KI hinzugefuegt wurden (wie framer-motion), **musst** du die Abhaengigkeiten neu installieren:
+
+1. **In das Frontend-Verzeichnis wechseln:**
+`ash
+cd frontend
+``n2. **Abhaengigkeiten installieren:**
+`ash
+npm install
+``n3. **Entwicklungsserver starten:**
+`ash
+npm run dev
+``n
+Das Frontend laeuft danach standardmaessig auf http://localhost:5173.
+
+---
+
+## ?? Bekannte UI/UX Fehlerquellen & Troubleshooting
+
+Sollte das Layout nach Code-Aenderungen komplett zerschossen sein (ueberschneidende Boxen, fehlende Margins, Sidebar kaputt):
+
+- **Grid-Mismatch durch React:** 
+  Verstecke Elemente wie die Sidebar **nie** per \eturn null;\ in React, wenn das umschliessende CSS (\.dashboard-shell\) explizit mehrere Spalten verlangt (\grid-template-columns\). Nutze stattdessen CSS-Klassen zum Ausblenden (z.B. \.is-collapsed\), andernfalls bricht das Grid zusammen und alle Contents rutschen unkontrolliert in die linke, kleine Spalte.
+- **Fehlende UI-Boxen:** 
+  Achte in der \dashboard.css\ darauf, dass Widgets einen echten Hintergrund (\ackground: var(--panel)\) und eine feste Umrandung (\ox-shadow: var(--shadow-sm); border: 1px solid var(--line);\) haben. Transparenz-Variablen wie \--panel-soft\ lassen das Dashboard unstrukturiert wirken.

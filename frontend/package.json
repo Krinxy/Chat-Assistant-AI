@@ -12,14 +12,21 @@
     "test": "echo \"No dedicated frontend tests yet\""
   },
   "dependencies": {
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jest": "^30.0.0",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "jsdom": "^29.0.1",
     "typescript": "^5.6.3",
-    "vite": "^5.4.19"
+    "vite": "^5.4.19",
+    "vitest": "^4.1.2"
   }
 }

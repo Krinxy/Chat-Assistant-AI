@@ -185,8 +185,12 @@ const composeAssistantReply = (prompt: string, modelLabel: string): string =>
 const getGreetingFromUnixTime = (unixTime: number): string => {
 	const hour = new Date(unixTime * 1000).getHours();
 
-	if (hour < 12) {
+	if (hour < 10) {
 		return "Good morning";
+	}
+
+	if (hour < 12) {
+		return "Good day";
 	}
 
 	if (hour < 18) {

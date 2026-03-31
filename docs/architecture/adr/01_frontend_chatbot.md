@@ -3,11 +3,11 @@
 | TITLE | Homepage |
 |-------|-------|
 | Status | Open |
-| Context | Homepage dashboard shown after login, acting as the container frame for all other UI modules.  |
-| Decision | |
-| Consequences | |
+| Context | Homepage dashboard shown after login, acting as the container frame for all other UI modules. |
+| Decision |  |
+| Consequences |  |
 | Alternative |  |
-| ... | | 
+| Funktionaler Aufbau |  |
 
 ## Implementation Baseline
 

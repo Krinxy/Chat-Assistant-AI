@@ -58,13 +58,13 @@
 }
 
 .welcome-type-caret {
-  width: 0.075em;
-  height: 0.82em;
+  width: 0.1em;
+  height: 0.96em;
   margin-left: 0.02em;
   border-radius: 3px;
   background: currentColor;
   display: inline-block;
-  align-self: center;
+  align-self: baseline;
   animation: streamCursorBlink 900ms step-end infinite;
 }
 
@@ -73,7 +73,11 @@
   font-size: 0.9rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in srgb, currentColor 70%, transparent);
+  color: color-mix(in srgb, currentColor 84%, transparent);
+}
+
+[data-theme="dark"] .welcome-subtitle {
+  color: color-mix(in srgb, currentColor 92%, transparent);
 }
 
 .welcome-subline {

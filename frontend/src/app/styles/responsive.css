@@ -33,6 +33,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-right: 0;
   }
+
+  .company-workspace-grid,
+  .feature-guide-layout,
+  .company-overview-layout,
+  .profile-layout-grid,
+  .profile-tuning-header,
+  .profile-tuning-layout,
+  .company-overview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -78,8 +88,13 @@
     flex-wrap: wrap;
   }
 
+  .local-llm-hover-popover {
+    right: auto;
+    left: 0;
+  }
+
   .local-llm-config-panel {
-    margin: 8px 10px 0;
+    width: min(92vw, 420px);
   }
 
   .local-llm-config-form {
@@ -111,6 +126,11 @@
     padding-inline: 10px;
   }
 
+  .brainrot-style-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .right-column {
     grid-template-columns: 1fr;
   }
@@ -120,8 +140,35 @@
     right: -6px;
   }
 
-  .profile-grid {
+  .company-overview-pie-wrap {
+    min-height: auto;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .company-list-scroll {
+    max-height: 260px;
+  }
+
+  .company-sublist-scroll {
+    max-height: 82px;
+  }
+
+  .feature-guide-nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .feature-guide-topic-btn {
+    min-width: 240px;
+  }
+
+  .company-documents-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .profile-presets-column {
+    min-width: 0;
   }
 
   .welcome-core h1 {

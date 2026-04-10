@@ -298,6 +298,111 @@
   font-size: 1.05rem;
 }
 
+.weather-hourly-block {
+  margin-top: 12px;
+}
+
+.weather-hourly-title {
+  margin: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-500);
+  text-transform: uppercase;
+}
+
+.weather-hourly-scroll-box {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--feature-lilac) 6%, var(--panel));
+  padding: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+}
+
+.weather-hourly-scroll-box.is-dragging {
+  cursor: grabbing;
+}
+
+.weather-hourly-scroll-box::-webkit-scrollbar {
+  height: 4px;
+}
+
+.weather-hourly-scroll-box::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--feature-lilac) 28%, transparent);
+}
+
+.weather-hourly-track {
+  display: flex;
+  gap: 0;
+  width: max-content;
+  min-width: 100%;
+  padding-bottom: 2px;
+}
+
+.weather-hourly-row-item {
+  width: 132px;
+  min-width: 132px;
+  flex: 0 0 132px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-right: 1px solid var(--line);
+}
+
+.weather-hourly-row-item:last-child {
+  border-right: 0;
+}
+
+.weather-hourly-state {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--ink-700);
+}
+
+.weather-hourly-state.is-sun {
+  background: color-mix(in srgb, #ffd55a 26%, transparent);
+}
+
+.weather-hourly-state.is-cloud {
+  background: color-mix(in srgb, #9bacd2 20%, transparent);
+}
+
+.weather-hourly-state.is-rain {
+  background: color-mix(in srgb, #5f83ff 22%, transparent);
+}
+
+.weather-hourly-state.is-storm {
+  background: color-mix(in srgb, #6b78a5 24%, transparent);
+}
+
+.weather-hourly-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.weather-hourly-copy strong {
+  font-size: 0.78rem;
+}
+
+.weather-hourly-copy span {
+  font-size: 0.76rem;
+  color: var(--ink-900);
+}
+
+.weather-hourly-copy small {
+  font-size: 0.68rem;
+  color: var(--ink-500);
+}
+
 .widget-accordion {
   padding: 16px;
 }

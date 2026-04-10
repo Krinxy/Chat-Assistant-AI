@@ -1,0 +1,169 @@
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+@keyframes streamCursorBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes textShimmer {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes welcomeRise {
+  0% {
+    transform: translateY(40px) scale(0.96);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes welcomeLeave {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+    filter: blur(10px);
+  }
+}
+
+@keyframes viewSwitchZoom {
+  0% {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes panelEnterChat {
+  0% {
+    opacity: 0;
+    transform: scale(0.985) translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes panelEnterDashboard {
+  0% {
+    opacity: 0;
+    transform: scale(1.012) translateY(-4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes weatherStatsSwitch {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.992);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ghostLanguageFloat {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes centerGrowLine {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes dayPulseOverlayFade {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes dayPulseRibbonGrow {
+  0% {
+    transform: scaleX(0.08);
+    opacity: 0;
+  }
+
+  16% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  82% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleX(1.03);
+    opacity: 0;
+  }
+}
+

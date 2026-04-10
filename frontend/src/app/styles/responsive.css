@@ -1,0 +1,150 @@
+@media (min-width: 1700px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1.65fr) minmax(430px, 1fr);
+  }
+
+  .chat-log {
+    padding-inline: clamp(18px, 5vw, 96px);
+  }
+}
+
+@media (max-width: 1360px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.95fr);
+  }
+
+  .model-picker-popover {
+    width: min(620px, 78vw);
+  }
+}
+
+@media (max-width: 1120px) {
+  .dashboard-shell {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .right-column {
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-root {
+    padding: 0;
+  }
+
+  .dashboard-shell,
+  .dashboard-shell.is-collapsed,
+  .dashboard-shell.chat-mode-shell {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 0;
+    height: 100vh;
+  }
+
+  .left-sidebar {
+    display: none;
+  }
+
+  .main-stage {
+    padding: 10px;
+  }
+
+  .top-bar {
+    border-radius: 0;
+    padding: 0 2px 12px;
+  }
+
+  .profile-chip {
+    padding-right: 8px;
+  }
+
+  .profile-chip > div:nth-child(2) {
+    display: none;
+  }
+
+  .chat-panel {
+    border-radius: 14px;
+  }
+
+  .chat-top-bar-container {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .local-llm-config-panel {
+    margin: 8px 10px 0;
+  }
+
+  .local-llm-config-form {
+    grid-template-columns: 1fr;
+  }
+
+  .model-picker-popover {
+    width: min(92vw, 420px);
+  }
+
+  .model-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .popup-submenu {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .chat-log {
+    padding: 16px 12px;
+  }
+
+  .chat-message {
+    max-width: 96%;
+  }
+
+  .chat-input-container {
+    padding-inline: 10px;
+  }
+
+  .right-column {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-add-popover {
+    width: min(92vw, 420px);
+    right: -6px;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-core h1 {
+    font-size: clamp(2.4rem, 20vw, 5rem);
+  }
+
+  .day-pulse-ribbon {
+    width: min(92vw, 620px);
+    min-height: 74px;
+    padding: 10px 14px;
+    gap: 10px;
+    grid-template-columns: auto auto auto auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .welcome-overlay {
+    display: none;
+  }
+}

@@ -1,19 +1,82 @@
-import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 import { Sidebar } from './Sidebar';
+import { uiTextByLanguage } from '../../shared/i18n/uiText';
 
 describe('Sidebar Widget', () => {
   it('renders brand and navigation when open', () => {
-    render(<Sidebar isSidebarOpen={true} setIsSidebarOpen={() => {}} hasStartedChat={false} activeView="dashboard" setActiveView={() => {}} />);
-    expect(screen.getByText('Chat Assistant')).toBeInTheDocument();
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    render(
+      <Sidebar
+        isSidebarOpen={true}
+        setIsSidebarOpen={() => {}}
+        activeView="dashboard"
+        setActiveView={() => {}}
+        language="de"
+        setLanguage={() => {}}
+        theme="light"
+        onToggleTheme={() => {}}
+        copy={uiTextByLanguage.de.sidebar}
+        selectedModelLabel="GPT-5.3-Codex"
+        activeServiceLabels={['Persona']}
+        latestMessagePreview={null}
+        onStartNewChat={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('AURA')).toBeInTheDocument();
+    expect(screen.getAllByText('Home').length).toBeGreaterThan(0);
     expect(screen.getByText('Letzte Chats')).toBeInTheDocument();
+    expect(screen.getByText('Modell')).toBeInTheDocument();
+    expect(screen.getByText('GPT-5.3-Codex')).toBeInTheDocument();
+    expect(screen.getByText('DE')).toBeInTheDocument();
+    expect(screen.getByText('EN')).toBeInTheDocument();
   });
 
-  it('hides recent chats and services when chat has started, even if open', () => {
-    render(<Sidebar isSidebarOpen={true} setIsSidebarOpen={() => {}} hasStartedChat={true} activeView="chat" setActiveView={() => {}} />);
-    expect(screen.getByText('Chat Assistant')).toBeInTheDocument();
+  it('hides cards when sidebar is collapsed', () => {
+    render(
+      <Sidebar
+        isSidebarOpen={false}
+        setIsSidebarOpen={() => {}}
+        activeView="chat"
+        setActiveView={() => {}}
+        language="de"
+        setLanguage={() => {}}
+        theme="dark"
+        onToggleTheme={() => {}}
+        copy={uiTextByLanguage.de.sidebar}
+        selectedModelLabel="GPT-5.3-Codex"
+        activeServiceLabels={[]}
+        latestMessagePreview={{ text: 'Testnachricht', time: '10:00' }}
+        onStartNewChat={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText('AURA')).not.toBeInTheDocument();
     expect(screen.queryByText('Letzte Chats')).not.toBeInTheDocument();
-    expect(screen.queryByText('Services')).not.toBeInTheDocument();
+    expect(screen.getByText('DE')).toBeInTheDocument();
+    expect(screen.getByText('EN')).toBeInTheDocument();
+  });
+
+  it('shows Aktiv only for current active recent chat', () => {
+    render(
+      <Sidebar
+        isSidebarOpen={true}
+        setIsSidebarOpen={() => {}}
+        activeView="chat"
+        setActiveView={() => {}}
+        language="de"
+        setLanguage={() => {}}
+        theme="dark"
+        onToggleTheme={() => {}}
+        copy={uiTextByLanguage.de.sidebar}
+        selectedModelLabel="GPT-5.3-Codex"
+        activeServiceLabels={[]}
+        latestMessagePreview={{ text: 'Testnachricht', time: '10:00' }}
+        onStartNewChat={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Pipeline Fixes'));
+    expect(screen.getByText('Aktiv')).toBeInTheDocument();
   });
 });

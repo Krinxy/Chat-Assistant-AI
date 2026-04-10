@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "npx eslint src --ext .ts,.tsx --max-warnings=0 --no-error-on-unmatched-pattern --config ../.eslintrc.json",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings=0 --no-error-on-unmatched-pattern",
     "typecheck": "npx tsc --noEmit -p tsconfig.json",
-    "test": "echo \"No dedicated frontend tests yet\""
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
     "framer-motion": "^12.38.0",
@@ -23,7 +24,11 @@
     "@types/jest": "^30.0.0",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.8.1",
+    "@typescript-eslint/parser": "^8.8.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
     "jsdom": "^29.0.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.19",

@@ -1,37 +1,25 @@
-import React from "react";
-
 interface HeaderProps {
   greeting: string;
   randomHeaderQuestion: string;
   hasStartedChat: boolean;
-  isSidebarOpen: boolean;
-  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  showChatBrand: boolean;
+  profileRole: string;
 }
 
 export function Header({
   greeting,
   randomHeaderQuestion,
   hasStartedChat,
-  isSidebarOpen,
-  setIsSidebarOpen,
+  showChatBrand,
+  profileRole,
 }: HeaderProps) {
   return (
     <header className={`top-bar ${hasStartedChat ? "chat-active" : ""}`}>
-      <div
-        className="greeting-block"
-        style={{ display: "flex", alignItems: "center", gap: "16px" }}
-      >
+      <div className="greeting-block">
         <div>
-          <h2 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {hasStartedChat && (
-              <span
-                className="brand-logo-combined"
-                style={{
-                  fontWeight: "bold",
-                  fontSize: "1.2rem",
-                  color: "var(--accent-1)",
-                }}
-              >
+          <h2 className="greeting-heading">
+            {hasStartedChat && showChatBrand && (
+              <span className="brand-logo-combined">
                 AURA
               </span>
             )}
@@ -43,7 +31,7 @@ export function Header({
         </div>
       </div>
 
-      <div className="profile-chip" aria-label="Signed in profile">
+      <div className={`profile-chip ${hasStartedChat ? "is-compact" : ""}`} aria-label="Signed in profile">
         <div
           className="profile-avatar"
           aria-hidden="true"
@@ -54,7 +42,7 @@ export function Header({
         {!hasStartedChat && (
           <div>
             <p className="profile-name">Dominic Bechtold</p>
-            <p className="profile-role">Softwarearchitekt</p>
+            <p className="profile-role">{profileRole}</p>
           </div>
         )}
       </div>

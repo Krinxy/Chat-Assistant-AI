@@ -13,6 +13,7 @@ import { useOutsideClick } from "../../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../../shared/i18n/uiText";
 import type {
   AttachmentAction,
+  BrainrotStyleKey,
   ChatServiceKey,
   ChatMessage,
   LocalLlmConfig,
@@ -36,8 +37,11 @@ interface ChatPanelProps {
   activeServices: ChatServiceKey[];
   onServiceAdd: (serviceKey: ChatServiceKey) => void;
   onServiceRemove: (serviceKey: ChatServiceKey) => void;
+  brainrotStyle: BrainrotStyleKey;
+  onBrainrotStyleChange: (style: BrainrotStyleKey) => void;
   onLocalLlmConfigSave?: (config: LocalLlmConfig) => void;
   onReturnToDashboard: () => void;
+  onOpenProfile: () => void;
   copy: UiText["chat"];
 }
 
@@ -95,8 +99,11 @@ export function ChatPanel({
   activeServices,
   onServiceAdd,
   onServiceRemove,
+  brainrotStyle,
+  onBrainrotStyleChange,
   onLocalLlmConfigSave,
   onReturnToDashboard,
+  onOpenProfile,
   copy,
 }: ChatPanelProps) {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState<boolean>(false);
@@ -136,6 +143,7 @@ export function ChatPanel({
   const stopSpeechRecognition = useCallback((): void => {
     recognitionRef.current?.stop();
     setIsRecordingSpeech(false);
+    setSpeechStatusText(null);
   }, []);
 
   useEffect(() => {
@@ -144,6 +152,20 @@ export function ChatPanel({
       recognitionRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (speechStatusText === null || isRecordingSpeech) {
+      return;
+    }
+
+    const timeoutId = globalThis.setTimeout(() => {
+      setSpeechStatusText(null);
+    }, 2400);
+
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [isRecordingSpeech, speechStatusText]);
 
   const handleSpeechResult = useCallback((event: SpeechRecognitionEventLike): void => {
     const finalSegments: string[] = [];
@@ -221,6 +243,7 @@ export function ChatPanel({
     };
     recognition.onend = () => {
       setIsRecordingSpeech(false);
+      setSpeechStatusText(null);
     };
 
     recognitionRef.current = recognition;
@@ -249,11 +272,17 @@ export function ChatPanel({
     return Object.keys(copy.serviceLabels) as ChatServiceKey[];
   }, [copy.serviceLabels]);
 
+  const brainrotStyleOptions = useMemo<Array<[BrainrotStyleKey, string]>>(() => {
+    return Object.entries(copy.brainrotStyles) as Array<[BrainrotStyleKey, string]>;
+  }, [copy.brainrotStyles]);
+
   const remainingServices = useMemo<ChatServiceKey[]>(() => {
     return serviceKeys.filter((serviceKey) => !activeServices.includes(serviceKey));
   }, [activeServices, serviceKeys]);
 
   const isLocalConfiguratorEnabled = activeServices.includes("localConfigurator");
+  const isBrainrotEnabled = activeServices.includes("brainrot");
+  const activeBrainrotStyleLabel = copy.brainrotStyles[brainrotStyle];
 
   const filteredProviders = useMemo<ModelProvider[]>(() => {
     const query = modelSearch.trim().toLowerCase();
@@ -340,6 +369,10 @@ export function ChatPanel({
     setIsLocalConfigSaved(true);
   };
 
+  const inputPlaceholder = isRecordingSpeech
+    ? copy.speechListening
+    : (speechStatusText ?? copy.inputPlaceholder);
+
   return (
     <section className="chat-panel" aria-label="LLM chat window">
       <div className="chat-top-bar-container">
@@ -349,6 +382,7 @@ export function ChatPanel({
               className="return-home-btn"
               onClick={onReturnToDashboard}
               title={copy.returnDashboard}
+              aria-label={copy.returnDashboard}
               type="button"
             >
               <svg
@@ -364,7 +398,6 @@ export function ChatPanel({
                 <line x1="19" y1="12" x2="5" y2="12" />
                 <polyline points="12 19 5 12 12 5" />
               </svg>
-              <span>{copy.returnDashboard}</span>
             </button>
           ) : null}
 
@@ -534,76 +567,111 @@ export function ChatPanel({
               </ul>
             ) : null}
           </div>
+
+          {isBrainrotEnabled ? (
+            <label className="brainrot-style-wrap">
+              <span>{copy.brainrotStyleLabel}</span>
+              <select
+                value={brainrotStyle}
+                onChange={(event) => {
+                  onBrainrotStyleChange(event.target.value as BrainrotStyleKey);
+                }}
+              >
+                {brainrotStyleOptions.map(([styleKey, styleLabel]) => (
+                  <option key={styleKey} value={styleKey}>{styleLabel}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {isLocalConfiguratorEnabled ? (
+            <div className="local-llm-hover-wrap">
+              <button type="button" className="local-llm-hover-btn">
+                {copy.localConfigTitle}
+              </button>
+
+              <section className="local-llm-hover-popover" aria-label={copy.localConfigTitle}>
+                <div className="local-llm-config-panel">
+                  <div className="local-llm-config-header">
+                    <h3>{copy.localConfigTitle}</h3>
+                    <p>{copy.localConfigHint}</p>
+                    <ol className="local-llm-steps">
+                      {copy.localSetupSteps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <form className="local-llm-config-form" onSubmit={handleLocalConfigSubmit}>
+                    <label className="local-llm-field">
+                      <span>{copy.localEndpoint}</span>
+                      <input
+                        type="url"
+                        required
+                        value={localLlmConfig.endpoint}
+                        placeholder="http://localhost:8000/v1"
+                        onChange={(event) => {
+                          setIsLocalConfigSaved(false);
+                          setLocalLlmConfig((previous) => ({
+                            ...previous,
+                            endpoint: event.target.value,
+                          }));
+                        }}
+                      />
+                    </label>
+
+                    <label className="local-llm-field">
+                      <span>{copy.localModelName}</span>
+                      <input
+                        type="text"
+                        required
+                        value={localLlmConfig.modelName}
+                        placeholder="meta-llama/Llama-3.3-70B-Instruct"
+                        onChange={(event) => {
+                          setIsLocalConfigSaved(false);
+                          setLocalLlmConfig((previous) => ({
+                            ...previous,
+                            modelName: event.target.value,
+                          }));
+                        }}
+                      />
+                    </label>
+
+                    <div className="local-llm-actions">
+                      <button type="submit" className="local-llm-save-btn">
+                        {copy.localSave}
+                      </button>
+                      {isLocalConfigSaved ? <p>{copy.localSaved}</p> : null}
+                    </div>
+                  </form>
+                </div>
+              </section>
+            </div>
+          ) : null}
           </div>
         </div>
 
         {hasStartedChat ? (
-          <div className="profile-chip is-compact chat-top-profile" aria-label="Signed in profile">
+          <button
+            type="button"
+            className="profile-chip profile-chip-btn is-compact chat-top-profile"
+            aria-label="Open profile"
+            onClick={onOpenProfile}
+          >
             <div className="profile-avatar" aria-hidden="true" title="Dominic Bechtold">
               DB
             </div>
-          </div>
+          </button>
         ) : null}
       </div>
 
-      {isLocalConfiguratorEnabled ? (
-        <section className="local-llm-config-panel" aria-label={copy.localConfigTitle}>
-          <div className="local-llm-config-header">
-            <h3>{copy.localConfigTitle}</h3>
-            <p>{copy.localConfigHint}</p>
-            <ol className="local-llm-steps">
-              {copy.localSetupSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </div>
-
-          <form className="local-llm-config-form" onSubmit={handleLocalConfigSubmit}>
-            <label className="local-llm-field">
-              <span>{copy.localEndpoint}</span>
-              <input
-                type="url"
-                required
-                value={localLlmConfig.endpoint}
-                placeholder="http://localhost:8000/v1"
-                onChange={(event) => {
-                  setIsLocalConfigSaved(false);
-                  setLocalLlmConfig((previous) => ({
-                    ...previous,
-                    endpoint: event.target.value,
-                  }));
-                }}
-              />
-            </label>
-
-            <label className="local-llm-field">
-              <span>{copy.localModelName}</span>
-              <input
-                type="text"
-                required
-                value={localLlmConfig.modelName}
-                placeholder="meta-llama/Llama-3.3-70B-Instruct"
-                onChange={(event) => {
-                  setIsLocalConfigSaved(false);
-                  setLocalLlmConfig((previous) => ({
-                    ...previous,
-                    modelName: event.target.value,
-                  }));
-                }}
-              />
-            </label>
-
-            <div className="local-llm-actions">
-              <button type="submit" className="local-llm-save-btn">
-                {copy.localSave}
-              </button>
-              {isLocalConfigSaved ? <p>{copy.localSaved}</p> : null}
-            </div>
-          </form>
-        </section>
-      ) : null}
-
       <div className="chat-log" ref={chatLogRef}>
+        {isBrainrotEnabled ? (
+          <p className="brainrot-mode-banner">
+            {copy.serviceLabels.brainrot} {copy.brainrotStyleActivePrefix}: {activeBrainrotStyleLabel}
+          </p>
+        ) : null}
+
         {!hasStartedChat && messages.length === 0 ? (
           <div className="chat-empty-state">
             <h2>{copy.emptyState}</h2>
@@ -700,8 +768,8 @@ export function ChatPanel({
               type="text"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder={copy.inputPlaceholder}
-              aria-label={copy.inputPlaceholder}
+              placeholder={inputPlaceholder}
+              aria-label={inputPlaceholder}
             />
 
             <div className="input-separator" />
@@ -752,7 +820,6 @@ export function ChatPanel({
         </div>
 
         <p className="chat-disclaimer">{copy.disclaimer}</p>
-        {speechStatusText !== null ? <p className="speech-status">{speechStatusText}</p> : null}
       </div>
     </section>
   );

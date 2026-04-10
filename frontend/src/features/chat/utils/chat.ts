@@ -1,7 +1,8 @@
-import type { Language } from "../types/chat";
+import type { BrainrotStyleKey, Language } from "../types/chat";
 
 interface ComposeAssistantReplyOptions {
   brainrotTone?: boolean;
+  brainrotStyle?: BrainrotStyleKey;
 }
 
 const pickRandom = (values: string[]): string => {
@@ -13,19 +14,49 @@ const pickRandom = (values: string[]): string => {
   return values[index] ?? values[0] ?? "";
 };
 
-const applyBrainrotTone = (text: string, language: Language): string => {
-  const variants =
+const applyBrainrotTone = (
+  text: string,
+  language: Language,
+  style: BrainrotStyleKey,
+): string => {
+  const variantsByStyle =
     language === "en"
-      ? [
-          `No cap: ${text} Tiny roast incoming: your prompt was chaos, but I cooked anyway.`,
-          `Brainrot mode online. ${text} Low-key unhinged ask, high-key solid outcome.`,
-          `Certified goofy energy detected. ${text} I still got your back though.`,
-        ]
-      : [
-          `No cap: ${text} Mini-Roast: Dein Prompt war wild, aber ich hab geliefert.`,
-          `Brainrot-Modus aktiv. ${text} Etwas cursed gefragt, trotzdem sauber beantwortet.`,
-          `Komplett goofy Vibe heute. ${text} Ich rette das trotzdem locker.`,
-        ];
+      ? {
+          meme67: [
+            `No cap: ${text} Chat at 67% meme density, still delivering hard facts.`,
+            `Meme-mode calibrated. ${text} Chaotic wording, clean result.`,
+            `Certified goofy signal. ${text} Answer still lands on target.`,
+          ],
+          aiFruits: [
+            `Fruit-core mode. ${text} This answer is ripe, juicy, and structured.`,
+            `AI Fruits online. ${text} Fresh blend: sweet tone, precise output.`,
+            `Banana-level absurdity, apple-level clarity. ${text}`,
+          ],
+          aiSlop: [
+            `AI Slop aesthetic enabled. ${text} Looks messy, logic is not.`,
+            `Slop-style shell, pro-grade core. ${text}`,
+            `Intentional chaos wrapper. ${text} Substance preserved.`,
+          ],
+        }
+      : {
+          meme67: [
+            `No cap: ${text} 67% Meme-Sprache, aber fachlich stabil.`,
+            `Meme-Modus aktiv. ${text} Wild formuliert, sauber geliefert.`,
+            `Goofy Vibe erkannt. ${text} Ergebnis bleibt praezise.`,
+          ],
+          aiFruits: [
+            `Frucht-Modus aktiv. ${text} Reif, saftig und strukturiert.`,
+            `AI-Fruechte online. ${text} Suesser Ton, klare Substanz.`,
+            `Banane im Stil, Apfel in der Logik. ${text}`,
+          ],
+          aiSlop: [
+            `AI-Slop-Look aktiv. ${text} Optisch chaotisch, inhaltlich sauber.`,
+            `Slop-Aussenhuelle, stabile Antwort im Kern. ${text}`,
+            `Absichtlich messy im Ton. ${text} Inhalt bleibt solide.`,
+          ],
+        };
+
+  const variants = variantsByStyle[style];
 
   return pickRandom(variants);
 };
@@ -57,7 +88,7 @@ export const composeAssistantReply = (
         ]);
 
   if (options.brainrotTone) {
-    return applyBrainrotTone(baseReply, language);
+    return applyBrainrotTone(baseReply, language, options.brainrotStyle ?? "meme67");
   }
 
   return baseReply;

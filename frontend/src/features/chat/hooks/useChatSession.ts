@@ -1,12 +1,13 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
-import type { ChatMessage, Language } from "../types/chat";
+import type { BrainrotStyleKey, ChatMessage, Language } from "../types/chat";
 import { composeAssistantReply, timeFormatter } from "../utils/chat";
 
 interface UseChatSessionOptions {
   selectedModelLabel: string;
   language: Language;
   isBrainrotEnabled?: boolean;
+  brainrotStyle?: BrainrotStyleKey;
   actionStartedPrefix: string;
   reasoningText: string;
   onFirstUserMessage?: () => void;
@@ -26,6 +27,7 @@ export function useChatSession({
   selectedModelLabel,
   language,
   isBrainrotEnabled = false,
+  brainrotStyle = "meme67",
   actionStartedPrefix,
   reasoningText,
   onFirstUserMessage,
@@ -116,6 +118,7 @@ export function useChatSession({
 
       const fullReply = composeAssistantReply(trimmed, selectedModelLabel, language, {
         brainrotTone: isBrainrotEnabled,
+        brainrotStyle,
       });
       const tokens = fullReply.split(" ");
 
@@ -176,6 +179,7 @@ export function useChatSession({
       isTyping,
       language,
       isBrainrotEnabled,
+      brainrotStyle,
       onFirstUserMessage,
       reasoningText,
       selectedModelLabel,

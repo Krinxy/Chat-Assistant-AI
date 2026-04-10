@@ -37,6 +37,11 @@ export interface WeatherStat {
   value: string;
 }
 
+export interface WeatherHourlyPoint {
+  hour: string;
+  temperature: string;
+}
+
 export interface WeatherCity {
   id: string;
   city: string;
@@ -45,6 +50,7 @@ export interface WeatherCity {
   updatedAt: string;
   imageUrl?: string;
   stats: WeatherStat[];
+  hourlyForecast?: WeatherHourlyPoint[];
 }
 
 export type ChatServiceKey =
@@ -53,6 +59,8 @@ export type ChatServiceKey =
   | "promptGuard"
   | "localConfigurator"
   | "brainrot";
+
+export type BrainrotStyleKey = "meme67" | "aiFruits" | "aiSlop";
 
 export interface LocalLlmConfig {
   endpoint: string;
@@ -65,6 +73,8 @@ export type Language = "de" | "en";
 export type ActiveView =
   | "dashboard"
   | "chat"
+  | "companies"
   | "recommendations"
   | "notifications"
-  | "profile";
+  | "profile"
+  | "guide";

@@ -25,8 +25,11 @@ describe("ChatPanel", () => {
     onModelSelect: () => {},
     onServiceAdd: () => {},
     onServiceRemove: () => {},
+    brainrotStyle: "meme67" as const,
+    onBrainrotStyleChange: () => {},
     onLocalLlmConfigSave: () => {},
     onReturnToDashboard: () => {},
+    onOpenProfile: () => {},
     copy: uiTextByLanguage.en.chat,
   };
 
@@ -50,7 +53,7 @@ describe("ChatPanel", () => {
       />,
     );
 
-    expect(screen.getByText(uiTextByLanguage.en.chat.localConfigTitle)).toBeInTheDocument();
+    expect(screen.getAllByText(uiTextByLanguage.en.chat.localConfigTitle).length).toBeGreaterThan(0);
     expect(screen.getByText(uiTextByLanguage.en.chat.localSetupSteps[0])).toBeInTheDocument();
     expect(screen.queryByText(uiTextByLanguage.en.chat.localApiKey)).not.toBeInTheDocument();
   });

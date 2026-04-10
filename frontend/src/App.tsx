@@ -18,11 +18,14 @@ import {
 import { useChatSession } from "./features/chat/hooks/useChatSession";
 import type {
   ActiveView,
+  BrainrotStyleKey,
   ChatServiceKey,
   Language,
   LocalLlmConfig,
   ModelOption,
 } from "./features/chat/types/chat";
+import { CompanyWorkspacePanel } from "./pages/CompanyWorkspacePage/CompanyWorkspacePanel";
+import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
@@ -87,6 +90,20 @@ const pickRandom = (values: string[], fallback: string): string => {
   return values[randomIndex] ?? fallback;
 };
 
+const getInitialBrainrotStyle = (): BrainrotStyleKey => {
+  try {
+    const stored = globalThis.localStorage.getItem("aura.brainrotStyle");
+
+    if (stored === "meme67" || stored === "aiFruits" || stored === "aiSlop") {
+      return stored;
+    }
+  } catch {
+    // Ignore storage failures and keep default style.
+  }
+
+  return "meme67";
+};
+
 export default function App() {
   const initialLanguageRef = useRef<Language>(getInitialLanguage());
   const initialLanguage = initialLanguageRef.current;
@@ -97,6 +114,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const [selectedModelId, setSelectedModelId] = useState<string>("gpt-5.3-codex");
   const [activeServices, setActiveServices] = useState<ChatServiceKey[]>([]);
+  const [brainrotStyle, setBrainrotStyle] = useState<BrainrotStyleKey>(getInitialBrainrotStyle);
   const [localModelOptions, setLocalModelOptions] = useState<ModelOption[]>([]);
   const [localLlmConfig, setLocalLlmConfig] = useState<LocalLlmConfig | null>(null);
   const [unixTime, setUnixTime] = useState<number>(Math.floor(Date.now() / 1000));
@@ -169,6 +187,14 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    try {
+      globalThis.localStorage.setItem("aura.brainrotStyle", brainrotStyle);
+    } catch {
+      // Ignore storage write failures and keep runtime style state.
+    }
+  }, [brainrotStyle]);
+
+  useEffect(() => {
     const timerId = globalThis.setInterval(() => {
       setUnixTime(Math.floor(Date.now() / 1000));
     }, 60000);
@@ -238,6 +264,7 @@ export default function App() {
     selectedModelLabel: selectedModel.label,
     language,
     isBrainrotEnabled: activeServices.includes("brainrot"),
+    brainrotStyle,
     actionStartedPrefix: ui.chat.actionStartedPrefix,
     reasoningText: ui.chat.reasoningText,
     onFirstUserMessage: () => {
@@ -311,6 +338,23 @@ export default function App() {
     setActiveView("chat");
     setIsSidebarOpen(false);
   }, [resetSession]);
+
+  const handleOpenProfile = useCallback((): void => {
+    setActiveView("profile");
+    setIsSidebarOpen(true);
+  }, []);
+
+  const handleOpenLocalLlmSetup = useCallback((): void => {
+    setActiveView("chat");
+    setIsSidebarOpen(false);
+    setActiveServices((previous) => {
+      if (previous.includes("localConfigurator")) {
+        return previous;
+      }
+
+      return [...previous, "localConfigurator"];
+    });
+  }, []);
 
   const handleAddService = useCallback((serviceKey: ChatServiceKey): void => {
     setActiveServices((previous) => {
@@ -414,7 +458,6 @@ export default function App() {
             setTheme((previous) => (previous === "dark" ? "light" : "dark"));
           }}
           copy={ui.sidebar}
-          selectedModelLabel={selectedModel.label}
           activeServiceLabels={activeServices.map((serviceKey) => ui.chat.serviceLabels[serviceKey])}
           latestMessagePreview={latestMessagePreview}
           onStartNewChat={handleStartNewChat}
@@ -428,6 +471,7 @@ export default function App() {
               hasStartedChat={hasStartedChat}
               showChatBrand={false}
               profileRole={ui.header.profileRole}
+              onOpenProfile={handleOpenProfile}
             />
           ) : null}
 
@@ -453,8 +497,11 @@ export default function App() {
                 activeServices={activeServices}
                 onServiceAdd={handleAddService}
                 onServiceRemove={handleRemoveService}
+                brainrotStyle={brainrotStyle}
+                onBrainrotStyleChange={setBrainrotStyle}
                 onLocalLlmConfigSave={handleSaveLocalLlmConfig}
                 onReturnToDashboard={handleReturnToDashboard}
+                onOpenProfile={handleOpenProfile}
                 copy={ui.chat}
               />
 
@@ -470,8 +517,18 @@ export default function App() {
           ) : null}
 
           {activeView === "profile" ? (
-            <ProfilePanel language={language} localLlmConfig={localLlmConfig} />
+            <ProfilePanel
+              language={language}
+              localLlmConfig={localLlmConfig}
+              onOpenLocalLlmSetup={handleOpenLocalLlmSetup}
+            />
           ) : null}
+
+          {activeView === "companies" ? (
+            <CompanyWorkspacePanel language={language} />
+          ) : null}
+
+          {activeView === "guide" ? <FeatureGuidePanel language={language} /> : null}
 
           {viewPanelText !== null ? (
             <section className="utility-view-panel" aria-label={viewPanelText.title}>

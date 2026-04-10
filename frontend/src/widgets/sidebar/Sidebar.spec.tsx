@@ -16,7 +16,6 @@ describe('Sidebar Widget', () => {
         theme="light"
         onToggleTheme={() => {}}
         copy={uiTextByLanguage.de.sidebar}
-        selectedModelLabel="GPT-5.3-Codex"
         activeServiceLabels={['Persona']}
         latestMessagePreview={null}
         onStartNewChat={() => {}}
@@ -26,8 +25,6 @@ describe('Sidebar Widget', () => {
     expect(screen.getByText('AURA')).toBeInTheDocument();
     expect(screen.getAllByText('Home').length).toBeGreaterThan(0);
     expect(screen.getByText('Letzte Chats')).toBeInTheDocument();
-    expect(screen.getByText('Modell')).toBeInTheDocument();
-    expect(screen.getByText('GPT-5.3-Codex')).toBeInTheDocument();
     expect(screen.getByText('DE')).toBeInTheDocument();
     expect(screen.getByText('EN')).toBeInTheDocument();
   });
@@ -44,7 +41,6 @@ describe('Sidebar Widget', () => {
         theme="dark"
         onToggleTheme={() => {}}
         copy={uiTextByLanguage.de.sidebar}
-        selectedModelLabel="GPT-5.3-Codex"
         activeServiceLabels={[]}
         latestMessagePreview={{ text: 'Testnachricht', time: '10:00' }}
         onStartNewChat={() => {}}
@@ -69,7 +65,6 @@ describe('Sidebar Widget', () => {
         theme="dark"
         onToggleTheme={() => {}}
         copy={uiTextByLanguage.de.sidebar}
-        selectedModelLabel="GPT-5.3-Codex"
         activeServiceLabels={[]}
         latestMessagePreview={{ text: 'Testnachricht', time: '10:00' }}
         onStartNewChat={() => {}}

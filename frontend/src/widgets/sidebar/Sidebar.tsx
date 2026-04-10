@@ -13,7 +13,6 @@ interface SidebarProps {
   theme: "light" | "dark";
   onToggleTheme: () => void;
   copy: UiText["sidebar"];
-  selectedModelLabel: string;
   activeServiceLabels: string[];
   latestMessagePreview: {
     text: string;
@@ -28,6 +27,7 @@ const navigationItems: Array<{
 }> = [
   { key: "home", view: "dashboard" },
   { key: "chat", view: "chat" },
+  { key: "companies", view: "companies" },
   { key: "recommendations", view: "recommendations" },
   { key: "notifications", view: "notifications" },
   { key: "profile", view: "profile" },
@@ -149,7 +149,6 @@ export function Sidebar({
   theme,
   onToggleTheme,
   copy,
-  selectedModelLabel,
   activeServiceLabels,
   latestMessagePreview,
   onStartNewChat,
@@ -204,6 +203,10 @@ export function Sidebar({
       return copy.nav.recommendations;
     }
 
+    if (activeView === "companies") {
+      return copy.nav.companies;
+    }
+
     if (activeView === "notifications") {
       return copy.nav.notifications;
     }
@@ -212,8 +215,21 @@ export function Sidebar({
       return copy.nav.profile;
     }
 
+    if (activeView === "guide") {
+      return copy.featureGuideButton;
+    }
+
     return copy.nav.chat;
-  }, [activeView, copy.nav.chat, copy.nav.home, copy.nav.notifications, copy.nav.profile, copy.nav.recommendations]);
+  }, [
+    activeView,
+    copy.featureGuideButton,
+    copy.nav.chat,
+    copy.nav.companies,
+    copy.nav.home,
+    copy.nav.notifications,
+    copy.nav.profile,
+    copy.nav.recommendations,
+  ]);
 
   const currentServicesLabel =
     activeServiceLabels.length > 0
@@ -308,10 +324,6 @@ export function Sidebar({
               <strong>{currentScopeLabel}</strong>
             </li>
             <li>
-              <span>{copy.modelLabel}</span>
-              <strong title={selectedModelLabel}>{selectedModelLabel}</strong>
-            </li>
-            <li>
               <span>{copy.servicesLabel}</span>
               <strong title={currentServicesLabel}>{currentServicesLabel}</strong>
             </li>
@@ -375,34 +387,40 @@ export function Sidebar({
       ) : null}
 
       <div className="sidebar-footer-actions">
-        <div className="language-ghost-switch" role="group" aria-label={copy.languageTitle}>
+        <div className={`sidebar-utility-row${isSidebarOpen ? "" : " is-compact"}`}>
           <button
             type="button"
-            className={`language-ghost-btn${language === "de" ? " is-active" : ""}`}
-            onClick={() => setLanguage("de")}
-            title={copy.languageDe}
+            className={`feature-guide-btn${activeView === "guide" ? " is-active" : ""}${
+              isSidebarOpen ? "" : " is-compact"
+            }`}
+            onClick={() => setActiveView("guide")}
+            title={copy.featureGuideButton}
           >
-            DE
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z" />
+              <line x1="8" y1="7" x2="15" y2="7" />
+              <line x1="8" y1="11" x2="15" y2="11" />
+            </svg>
+            {isSidebarOpen ? <span>{copy.featureGuideButton}</span> : null}
           </button>
-          <span>/</span>
-          <button
-            type="button"
-            className={`language-ghost-btn${language === "en" ? " is-active" : ""}`}
-            onClick={() => setLanguage("en")}
-            title={copy.languageEn}
-          >
-            EN
-          </button>
-        </div>
 
-        <button
-          onClick={onToggleTheme}
-          className={`theme-toggle-btn${isSidebarOpen ? "" : " is-compact"}`}
-          title="Toggle Theme"
-          type="button"
-        >
-          {theme === "dark" ? (
-            <>
+          <button
+            onClick={onToggleTheme}
+            className={`theme-toggle-btn${isSidebarOpen ? "" : " is-compact"}`}
+            title={theme === "dark" ? copy.themeLight : copy.themeDark}
+            aria-label={theme === "dark" ? copy.themeLight : copy.themeDark}
+            type="button"
+          >
+            {theme === "dark" ? (
               <svg
                 width="16"
                 height="16"
@@ -423,10 +441,7 @@ export function Sidebar({
                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
-              <span className="theme-toggle-text">{copy.themeLight}</span>
-            </>
-          ) : (
-            <>
+            ) : (
               <svg
                 width="16"
                 height="16"
@@ -439,10 +454,30 @@ export function Sidebar({
               >
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
-              <span className="theme-toggle-text">{copy.themeDark}</span>
-            </>
-          )}
-        </button>
+            )}
+          </button>
+        </div>
+
+        <div className="language-ghost-switch" role="group" aria-label={copy.languageTitle}>
+          <button
+            type="button"
+            className={`language-ghost-btn${language === "de" ? " is-active" : ""}`}
+            onClick={() => setLanguage("de")}
+            title={copy.languageDe}
+          >
+            DE
+          </button>
+          <span>/</span>
+          <button
+            type="button"
+            className={`language-ghost-btn${language === "en" ? " is-active" : ""}`}
+            onClick={() => setLanguage("en")}
+            title={copy.languageEn}
+          >
+            EN
+          </button>
+        </div>
+
       </div>
     </aside>
   );

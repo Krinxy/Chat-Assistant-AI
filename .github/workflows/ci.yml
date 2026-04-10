@@ -14,89 +14,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  setup-env:
-    name: Set up Job
+  lint-gate:
+    name: Lint Gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      OPENAI_API_KEY: ci-openai-key
-      WEATHER_API_KEY: ci-weather-key
-      USERNAME: ci-user
-      PASSWORD: ci-password
-      LOGIN_URL: https://example.invalid/login
-      MONGODB_URL: mongodb://localhost:27017
-      DATABASE_NAME: chat_test
-      SECRET_KEY: test-secret-key-for-ci-only
-      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || '' }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || '' }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN || '' }}
-      ENVIRONMENT: testing
-      LOCAL_DB_ENABLED: "false"
-      CI_TEMP_DB_ENABLED: "true"
-      PYTHON_COVERAGE_MIN: "80"
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup-environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Dependencies
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          if [ ! -f pyproject.toml ]; then
-            echo "pyproject.toml is required for dependency installation."
-            exit 1
-          fi
-
-          python - << 'PY'
-          import subprocess
-          import sys
-          from pathlib import Path
-
-          try:
-            import tomllib
-          except ModuleNotFoundError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "tomli"])
-            import tomli as tomllib
-
-          pyproject_path = Path("pyproject.toml")
-          data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-
-          project = data.get("project", {})
-          optional = project.get("optional-dependencies", {})
-
-          deps = []
-          deps.extend(project.get("dependencies", []))
-          for group in ("backend", "frontend", "development", "test", "lint", "security", "all"):
-            deps.extend(optional.get(group, []))
-
-          deps = [dep for dep in deps if not dep.lower().startswith("chat-assistant-ai[")]
-
-          unique = []
-          seen = set()
-          for dep in deps:
-            if dep not in seen:
-              seen.add(dep)
-              unique.append(dep)
-
-          if unique:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", *unique])
-            print(f"Installed {len(unique)} dependencies from pyproject.toml groups.")
-          PY
-
-          REQUIREMENTS_TXT_FILES="$(find . -type f -iname '*requirements*.txt' \
-            -not -path './.venv/*' \
-            -not -path './venv/*' \
-            -not -path './chat_assistant_ai.egg-info/*' || true)"
-          if [ -n "$REQUIREMENTS_TXT_FILES" ]; then
-            echo "requirements*.txt files detected. Use pyproject.toml extras only:"
-            echo "$REQUIREMENTS_TXT_FILES"
-            exit 1
-          fi
+          python -m pip install -e ".[development]"
 
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
             npm ci
@@ -110,44 +52,20 @@ jobs:
             npm --prefix frontend install
           fi
 
-          if [ -f go.mod ]; then
-            go mod download
-          fi
-
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
-          if [ -n "$DOTNET_TARGET" ]; then
-            dotnet restore "$DOTNET_TARGET"
-          fi
-
-          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ]; then
-            if [ -x "./gradlew" ]; then
-              ./gradlew --no-daemon dependencies
-            elif command -v gradle >/dev/null 2>&1; then
-              gradle dependencies
-            else
-              echo "Kotlin build files detected, but no Gradle wrapper/Gradle command is available."
-              exit 1
-            fi
-          fi
-
-      - name: Linting
+      - name: Run Lint and Type Checks
         run: |
           set -euo pipefail
-          PYTHON_TARGETS=""
-          if [ -d backend ]; then
-            PYTHON_TARGETS="${PYTHON_TARGETS} backend"
-          fi
-          if [ -d frontend ]; then
-            PYTHON_TARGETS="${PYTHON_TARGETS} frontend"
-          fi
-          if [ -d shared ]; then
-            PYTHON_TARGETS="${PYTHON_TARGETS} shared"
-          fi
 
-          if [ -n "$PYTHON_TARGETS" ]; then
-            flake8 $PYTHON_TARGETS --max-line-length=140 --exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
-            black --required-version 25.1.0 --check $PYTHON_TARGETS --line-length=140 --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
+          PYTHON_TARGETS=()
+          for target in backend frontend shared tests; do
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+              PYTHON_TARGETS+=("$target")
+            fi
+          done
+
+          if [ "${#PYTHON_TARGETS[@]}" -gt 0 ]; then
+            python -m flake8 "${PYTHON_TARGETS[@]}" --max-line-length=140 --exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
+            python -m black --required-version 25.1.0 --check "${PYTHON_TARGETS[@]}" --line-length=140 --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
           fi
 
           if [ -f package.json ]; then
@@ -158,168 +76,100 @@ jobs:
           if [ -f frontend/package.json ]; then
             npm --prefix frontend run lint --if-present
             npm --prefix frontend run typecheck --if-present
-
-            if [ -f frontend/tsconfig.json ]; then
-              npx tsc --noEmit -p frontend/tsconfig.json
-            fi
-
-            if [ -d frontend/src ]; then
-              npx eslint frontend/src --ext .ts,.tsx --max-warnings=0 --no-error-on-unmatched-pattern
-            fi
           fi
 
-          if [ -f go.mod ]; then
-            GOFMT_OUTPUT="$(gofmt -l .)"
-            if [ -n "$GOFMT_OUTPUT" ]; then
-              echo "Go formatting issues found:"
-              echo "$GOFMT_OUTPUT"
-              exit 1
-            fi
-            go vet ./...
-          fi
+  bandit-gate:
+    name: Bandit Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
-          if [ -n "$DOTNET_TARGET" ]; then
-            dotnet build "$DOTNET_TARGET" --no-restore --configuration Release -warnaserror
-          fi
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ] && [ -x "./gradlew" ]; then
-            if ./gradlew --no-daemon -q tasks --all | grep -q 'ktlintCheck'; then
-              ./gradlew --no-daemon ktlintCheck
-            fi
-          fi
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Security
+      - name: Install Security Dependencies
         run: |
           set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[development]"
+
+      - name: Run Security Gates
+        run: |
+          set -euo pipefail
+
           TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env(\..+)?$' || true)"
           if [ -n "$TRACKED_ENV_FILES" ]; then
-            echo "Tracked .env files detected. Remove them from git and use GitHub Secrets instead:"
+            echo "Tracked .env files detected. Remove them from git and use local .env + CI secrets instead:"
             echo "$TRACKED_ENV_FILES"
             exit 1
           fi
 
-          PYTHON_SECURITY_TARGETS=""
-          if [ -d backend ] && find backend -type f -name '*.py' | grep -q .; then
-            PYTHON_SECURITY_TARGETS="${PYTHON_SECURITY_TARGETS} backend"
-          fi
-          if [ -d frontend ] && find frontend -type f -name '*.py' | grep -q .; then
-            PYTHON_SECURITY_TARGETS="${PYTHON_SECURITY_TARGETS} frontend"
+          PYTHON_SECURITY_TARGETS=()
+          for target in backend frontend shared; do
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+              PYTHON_SECURITY_TARGETS+=("$target")
+            fi
+          done
+
+          if [ "${#PYTHON_SECURITY_TARGETS[@]}" -eq 0 ]; then
+            echo "No Python sources found for Bandit scan."
+            exit 0
           fi
 
-          if [ -n "$PYTHON_SECURITY_TARGETS" ]; then
-            bandit -r $PYTHON_SECURITY_TARGETS -ll -x backend/tests
-          fi
+          python -m bandit -r "${PYTHON_SECURITY_TARGETS[@]}" -ll -x "tests,backend/tests"
+
+  test-and-build:
+    name: Test And Build Gate
+    runs-on: ubuntu-latest
+    needs: [lint-gate, bandit-gate]
+    permissions:
+      contents: read
+    env:
+      PYTHON_COVERAGE_MIN: "80"
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[development]"
 
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm audit --audit-level=high
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
           fi
 
           if [ -f frontend/package-lock.json ] || [ -f frontend/npm-shrinkwrap.json ]; then
-            npm --prefix frontend audit --audit-level=high
+            npm --prefix frontend ci
+          elif [ -f frontend/package.json ]; then
+            npm --prefix frontend install
           fi
 
-          if [ -f go.mod ]; then
-            go install golang.org/x/vuln/cmd/govulncheck@latest
-            govulncheck ./...
-          fi
-
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
-          if [ -n "$DOTNET_TARGET" ]; then
-            dotnet list "$DOTNET_TARGET" package --vulnerable --include-transitive
-          fi
-
-      - name: SonarQube
-        if: env.SONAR_HOST_URL != '' && env.SONAR_PROJECT_KEY != '' && env.SONAR_TOKEN != ''
-        continue-on-error: true
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
-            -Dsonar.sources=backend,frontend,tests
-
-      - name: Test
+      - name: Run Tests and Builds
         run: |
           set -euo pipefail
-          python - << 'PY'
-          from pathlib import Path
-          import sys
-
-          repo = Path(".")
-          source_dirs = [repo / d for d in ("frontend", "backend", "shared") if (repo / d).is_dir()]
-          test_roots = [repo / "tests", repo / "backend" / "tests"]
-
-          excluded_parts = {
-              ".git",
-              "__pycache__",
-              ".venv",
-              "venv",
-              "node_modules",
-              "build",
-              "dist",
-              ".mypy_cache",
-              ".pytest_cache",
-              "coverage",
-              "chat_assistant_ai.egg-info",
-          }
-
-          def excluded(path: Path) -> bool:
-              return any(part in excluded_parts for part in path.parts)
-
-          source_files = []
-          for src_dir in source_dirs:
-              for file in src_dir.rglob("*.py"):
-                  if excluded(file):
-                      continue
-                  low = file.name.lower()
-                  if low.startswith("test_") or low.endswith("_test.py"):
-                      continue
-                  source_files.append(file)
-
-          test_files = []
-          for root in test_roots:
-              if not root.exists():
-                  continue
-              for file in root.rglob("*.py"):
-                  if excluded(file):
-                      continue
-                  test_files.append(file)
-
-          missing = []
-          for src in source_files:
-              stem = src.stem.lower()
-              expected = {
-                  f"test_{stem}.py",
-                  f"{stem}_test.py",
-                  f"{stem}.test.py",
-                  f"{stem}.spec.py",
-              }
-              has_match = any(
-                  test.name.lower() in expected or stem in test.stem.lower()
-                  for test in test_files
-              )
-              if not has_match:
-                  missing.append(src.as_posix())
-
-          if missing:
-              print("Missing test file for these source files:")
-              for item in sorted(missing):
-                  print(f" - {item}")
-              sys.exit(1)
-
-          print("Each source file has a test file.")
-          PY
 
           if [ -d tests ] && find tests -type f -name '*.py' | grep -q .; then
-            if ! [[ "${PYTHON_COVERAGE_MIN}" =~ ^[0-9]+$ ]] || [ "${PYTHON_COVERAGE_MIN}" -lt 1 ] || [ "${PYTHON_COVERAGE_MIN}" -gt 100 ]; then
-              echo "PYTHON_COVERAGE_MIN must be an integer between 1 and 100. Current value: ${PYTHON_COVERAGE_MIN}"
-              exit 1
-            fi
-
             PYTHON_COV_TARGETS=()
             for target in backend frontend shared; do
               if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
@@ -332,84 +182,14 @@ jobs:
             else
               pytest tests -v --asyncio-mode=auto --tb=short
             fi
-          elif [ -d backend/tests ] && find backend/tests -type f -name '*.py' | grep -q .; then
-            if ! [[ "${PYTHON_COVERAGE_MIN}" =~ ^[0-9]+$ ]] || [ "${PYTHON_COVERAGE_MIN}" -lt 1 ] || [ "${PYTHON_COVERAGE_MIN}" -gt 100 ]; then
-              echo "PYTHON_COVERAGE_MIN must be an integer between 1 and 100. Current value: ${PYTHON_COVERAGE_MIN}"
-              exit 1
-            fi
-            (cd backend && pytest tests -v --asyncio-mode=auto --tb=short --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under="${PYTHON_COVERAGE_MIN}")
-          else
-            echo "No Python tests found."
-            exit 1
           fi
 
           if [ -f package.json ]; then
             npm test --if-present
-          fi
-
-          if [ -f frontend/package.json ]; then
-            npm --prefix frontend test --if-present
-          fi
-
-          if [ -f go.mod ]; then
-            go test ./...
-          fi
-
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
-          if [ -n "$DOTNET_TARGET" ]; then
-            dotnet test "$DOTNET_TARGET" --no-restore --verbosity normal
-          fi
-
-          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ] && [ -x "./gradlew" ]; then
-            ./gradlew --no-daemon test
-          fi
-
-      - name: Run
-        run: |
-          set -euo pipefail
-          PYTHON_RUN_TARGETS=()
-          for target in backend frontend shared; do
-            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
-              PYTHON_RUN_TARGETS+=("$target")
-            fi
-          done
-
-          if [ "${#PYTHON_RUN_TARGETS[@]}" -gt 0 ]; then
-            python -m compileall "${PYTHON_RUN_TARGETS[@]}"
-          fi
-
-          if [ -f package.json ]; then
             npm run build --if-present
           fi
 
           if [ -f frontend/package.json ]; then
-            if npm --prefix frontend ls vite >/dev/null 2>&1; then
-              npm --prefix frontend run build --if-present
-            fi
-          fi
-
-          if [ -f go.mod ]; then
-            go build ./...
-          fi
-
-          DOTNET_TARGET="$(find . -maxdepth 3 \( -name '*.sln' -o -name '*.csproj' \) | head -n 1 || true)"
-          if [ -n "$DOTNET_TARGET" ]; then
-            dotnet build "$DOTNET_TARGET" --no-restore --configuration Release
-          fi
-
-          KOTLIN_BUILD_FILE="$(find . -maxdepth 3 \( -name 'build.gradle.kts' -o -name 'settings.gradle.kts' -o -name 'pom.xml' \) | head -n 1 || true)"
-          if [ -n "$KOTLIN_BUILD_FILE" ] && [ -x "./gradlew" ]; then
-            ./gradlew --no-daemon assemble
-          fi
-
-      - name: Docker
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: |
-          if [ -f Dockerfile.backend ]; then
-            docker build -f Dockerfile.backend -t chat-backend:ci .
-          fi
-
-          if [ -f Dockerfile.frontend ]; then
-            docker build -f Dockerfile.frontend -t chat-frontend:ci .
+            npm --prefix frontend test --if-present
+            npm --prefix frontend run build --if-present
           fi

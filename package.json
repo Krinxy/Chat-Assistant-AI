@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "eslint . --ext .ts,.tsx,.js --max-warnings=0 --no-error-on-unmatched-pattern",
+    "lint": "eslint services packages tests --ext .ts,.js --max-warnings=0 --no-error-on-unmatched-pattern",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest --passWithNoTests",
     "test:coverage": "jest --coverage --passWithNoTests",

@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        args: ["--check", "--line-length", "140"]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: ["--max-line-length=140", "--exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache"]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        name: bandit-security-gate
+        args: ["-r", "backend", "frontend", "shared", "-ll", "-x", "tests,backend/tests"]
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: frontend-lint-gate
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false

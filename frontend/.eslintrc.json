@@ -1,13 +1,14 @@
 {
   "root": true,
   "env": {
-    "node": true,
+    "browser": true,
     "es2022": true,
+    "node": true,
     "jest": true
   },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": ["./tsconfig.json", "./frontend/tsconfig.json"],
+    "project": ["./tsconfig.json"],
     "sourceType": "module"
   },
   "plugins": ["@typescript-eslint"],
@@ -17,7 +18,7 @@
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier"
   ],
-  "ignorePatterns": ["dist/", "build/", "coverage/", "node_modules/", "frontend/node_modules/", "frontend/dist/", "frontend/vite.config.ts", "frontend/vitest.config.ts"],
+  "ignorePatterns": ["dist/", "node_modules/", "vite.config.ts", "vitest.config.ts"],
   "rules": {
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/no-misused-promises": "error",

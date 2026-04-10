@@ -24,6 +24,7 @@ A modular multi-agent AI assistant for mobile applications, combining conversati
 - [docs](docs)
 - [backend](backend)
 - [frontend](frontend)
+- [Frontend Module README](frontend/README.md)
 - [tests](tests)
 - [coverage](coverage)
 
@@ -36,3 +37,22 @@ Current repository quality pattern:
 - Keep API contract boundaries explicit.
 - Keep source and tests paired by language conventions.
 - Run lint, type checks, tests, and coverage before push.
+
+Frontend steering highlights:
+
+- New chat creation is handled from the sidebar Current Session action.
+- Voice input uses browser microphone permission and speech recognition.
+- Profile includes a help/forum section for feature lookup.
+
+## Quality Gates For Main
+
+The main branch is protected by required CI checks:
+
+- Lint Gate
+- Bandit Gate
+- Test And Build Gate
+
+For local enforcement before commit, install hooks once:
+
+1. `python -m pip install pre-commit`
+2. `pre-commit install`

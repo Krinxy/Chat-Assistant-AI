@@ -98,30 +98,25 @@ Git does not track empty folders, only files.
 - If a directory is empty and has no tracked file, it will not be part of a commit.
 - To avoid noise, this repository keeps `.gitkeep` only where an empty directory must be versioned.
 
+## Local Development
 
-## ?? Lokale Entwicklung starten
+Run from repository root:
 
-Wann immer du das Projekt frisch auscheckst oder neue Packages via KI hinzugefuegt wurden (wie framer-motion), **musst** du die Abhaengigkeiten neu installieren:
+```bash
+npm --prefix frontend install
+npm --prefix frontend run dev
+```
 
-1. **In das Frontend-Verzeichnis wechseln:**
-`ash
-cd frontend
-``n2. **Abhaengigkeiten installieren:**
-`ash
-npm install
-``n3. **Entwicklungsserver starten:**
-`ash
-npm run dev
-``n
-Das Frontend laeuft danach standardmaessig auf http://localhost:5173.
+Frontend default URL: http://localhost:5173
 
----
+## Interaction Notes
 
-## ?? Bekannte UI/UX Fehlerquellen & Troubleshooting
+- New chat: the plus button in Current Session always starts a fresh chat session.
+- Voice input: click the microphone button in the chat composer, allow browser microphone access, and speak to insert text.
+- Profile help: the Profile page contains a Help and Feature Forum section with quick how-to entries.
 
-Sollte das Layout nach Code-Aenderungen komplett zerschossen sein (ueberschneidende Boxen, fehlende Margins, Sidebar kaputt):
+## Troubleshooting
 
-- **Grid-Mismatch durch React:** 
-  Verstecke Elemente wie die Sidebar **nie** per \eturn null;\ in React, wenn das umschliessende CSS (\.dashboard-shell\) explizit mehrere Spalten verlangt (\grid-template-columns\). Nutze stattdessen CSS-Klassen zum Ausblenden (z.B. \.is-collapsed\), andernfalls bricht das Grid zusammen und alle Contents rutschen unkontrolliert in die linke, kleine Spalte.
-- **Fehlende UI-Boxen:** 
-  Achte in der \dashboard.css\ darauf, dass Widgets einen echten Hintergrund (\ackground: var(--panel)\) und eine feste Umrandung (\ox-shadow: var(--shadow-sm); border: 1px solid var(--line);\) haben. Transparenz-Variablen wie \--panel-soft\ lassen das Dashboard unstrukturiert wirken.
+- If panel layout breaks, avoid removing sidebar nodes from React tree; toggle with CSS state classes instead.
+- If voice input does not start, verify browser microphone permission and SpeechRecognition API support.
+- If dark mode looks wrong, ensure the root element has data-theme="dark" and no overriding custom CSS variables.

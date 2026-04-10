@@ -5,6 +5,7 @@
 - Coverage target is minimum 80%.
 - Every source file should have a corresponding test file.
 - Linting must pass before push.
+- Bandit security scan must pass before push.
 - Every new source file must include the required project header and contributor metadata defined in [04 Contribution Principles](04_contribution_principles.md).
 
 ## Language Gates
@@ -39,17 +40,33 @@ Kotlin:
 
 ## CI/CD Stage Order
 
-The pipeline is intentionally bundled as one job with this order:
+The CI pipeline enforces three required GitHub checks:
 
-1. Setup Environment
-2. Dependencies
-3. Linting
-4. Security
-5. SonarQube
-6. Test
-7. Run
-8. Docker
-9. Complete Job
+1. Lint Gate
+2. Bandit Gate
+3. Test And Build Gate
+
+`Test And Build Gate` depends on `Lint Gate` and `Bandit Gate`, so it only runs after both quality gates are green.
+
+For branch protection on `main`, mark these checks as required:
+
+- `Lint Gate`
+- `Bandit Gate`
+- `Test And Build Gate`
+
+## Local Hooks
+
+Repository includes `.pre-commit-config.yaml` with mandatory local checks:
+
+- `black --check`
+- `flake8`
+- `bandit`
+- `npm --prefix frontend run lint`
+
+Install once:
+
+1. `python -m pip install pre-commit`
+2. `pre-commit install`
 
 ## Coverage Gate
 

@@ -1,6 +1,12 @@
-import type { Language } from "../../features/chat/types/chat";
+import type { BrainrotStyleKey, Language } from "../../features/chat/types/chat";
 
-type NavKey = "home" | "chat" | "recommendations" | "notifications" | "profile";
+type NavKey =
+  | "home"
+  | "chat"
+  | "companies"
+  | "recommendations"
+  | "notifications"
+  | "profile";
 
 type ServiceKey =
   | "persona"
@@ -26,6 +32,7 @@ export interface UiText {
     noActiveServices: string;
     noMessagesYet: string;
     activeNow: string;
+    featureGuideButton: string;
     themeLight: string;
     themeDark: string;
   };
@@ -40,6 +47,9 @@ export interface UiText {
     servicesTitle: string;
     servicesActiveLabel: string;
     serviceLabels: Record<ServiceKey, string>;
+    brainrotStyleLabel: string;
+    brainrotStyleActivePrefix: string;
+    brainrotStyles: Record<BrainrotStyleKey, string>;
     removeService: string;
     localConfigTitle: string;
     localConfigHint: string;
@@ -71,6 +81,7 @@ export interface UiText {
     searchCityPlaceholder: string;
     addCityAction: string;
     cityAlreadyAdded: string;
+    hourlyForecastTitle: string;
     recommendedNews: string;
     updatedPrefix: string;
     generatedCondition: string[];
@@ -91,6 +102,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       nav: {
         home: "Home",
         chat: "Chat",
+        companies: "Workspace",
         recommendations: "Empfehlungen",
         notifications: "Benachrichtigungen",
         profile: "Profil",
@@ -109,6 +121,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       noActiveServices: "Keine aktiven Services",
       noMessagesYet: "Noch keine Nachrichten",
       activeNow: "Aktiv",
+      featureGuideButton: "Help",
       themeLight: "Light Mode",
       themeDark: "Dark Mode",
     },
@@ -128,6 +141,13 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         promptGuard: "Prompt Guard",
         localConfigurator: "Lokales LLM Setup",
         brainrot: "Brainrot",
+      },
+      brainrotStyleLabel: "Brainrot Style",
+      brainrotStyleActivePrefix: "Stil",
+      brainrotStyles: {
+        meme67: "67 Meme Sprache",
+        aiFruits: "AI Fruechte",
+        aiSlop: "AI Slop",
       },
       removeService: "Service entfernen",
       localConfigTitle: "Lokales LLM anbinden",
@@ -166,6 +186,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       searchCityPlaceholder: "Ortschaft suchen...",
       addCityAction: "Hinzufuegen",
       cityAlreadyAdded: "Ort ist bereits vorhanden",
+      hourlyForecastTitle: "Stuendliche Prognose",
       recommendedNews: "Empfohlene News",
       updatedPrefix: "Aktualisiert",
       generatedCondition: [
@@ -189,6 +210,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       nav: {
         home: "Home",
         chat: "Chat",
+        companies: "Workspace",
         recommendations: "Recommendations",
         notifications: "Notifications",
         profile: "Profile",
@@ -207,6 +229,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       noActiveServices: "No active services",
       noMessagesYet: "No messages yet",
       activeNow: "Active",
+      featureGuideButton: "Help",
       themeLight: "Light Mode",
       themeDark: "Dark Mode",
     },
@@ -226,6 +249,13 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         promptGuard: "Prompt Guard",
         localConfigurator: "Local LLM Setup",
         brainrot: "Brainrot",
+      },
+      brainrotStyleLabel: "Brainrot style",
+      brainrotStyleActivePrefix: "Style",
+      brainrotStyles: {
+        meme67: "67 Meme Language",
+        aiFruits: "AI Fruits",
+        aiSlop: "AI Slop",
       },
       removeService: "Remove service",
       localConfigTitle: "Connect local LLM",
@@ -264,6 +294,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       searchCityPlaceholder: "Search location...",
       addCityAction: "Add",
       cityAlreadyAdded: "Location already added",
+      hourlyForecastTitle: "Hourly forecast",
       recommendedNews: "Recommended News",
       updatedPrefix: "Updated",
       generatedCondition: [

@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type PointerEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import type { Language, NewsItem, WeatherCity } from "../../features/chat/types/chat";
+import type {
+  Language,
+  NewsItem,
+  WeatherCity,
+  WeatherHourlyPoint,
+} from "../../features/chat/types/chat";
 import { useHorizontalWheelScroll } from "../../shared/hooks/useHorizontalWheelScroll";
 import { useOutsideClick } from "../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../shared/i18n/uiText";
@@ -11,6 +16,14 @@ interface DashboardAsideProps {
   weatherCities: WeatherCity[];
   copy: UiText["weather"];
   language: Language;
+}
+
+type HourlyWeatherState = "sun" | "cloud" | "rain" | "storm";
+
+interface HourlyForecastDisplay extends WeatherHourlyPoint {
+  humidity: string;
+  state: HourlyWeatherState;
+  stateLabel: string;
 }
 
 const quickCitySuggestions: string[] = [
@@ -46,6 +59,104 @@ const quickCitySuggestions: string[] = [
   "Singapore",
 ];
 
+const buildHourlyForecast = (baseTemperature: number): WeatherHourlyPoint[] => {
+  const startHour = new Date().getHours();
+
+  return Array.from({ length: 8 }, (_, index) => {
+    const hour = (startHour + index) % 24;
+    const wave = Math.round(Math.sin((index / 7) * Math.PI) * 2);
+    const drift = index > 5 ? -1 : 0;
+
+    return {
+      hour: `${hour.toString().padStart(2, "0")}:00`,
+      temperature: `${baseTemperature + wave + drift}C`,
+    };
+  });
+};
+
+const resolveBaseTemperature = (city: WeatherCity): number => {
+  const rawTemperature = city.stats.find((item) => item.label.toLowerCase().includes("temp"))?.value;
+
+  if (rawTemperature === undefined) {
+    return 18;
+  }
+
+  const parsed = Number.parseInt(rawTemperature, 10);
+  return Number.isNaN(parsed) ? 18 : parsed;
+};
+
+const resolveBaseStatNumber = (city: WeatherCity, key: string, fallback: number): number => {
+  const statValue = city.stats.find((item) => item.label.toLowerCase().includes(key))?.value;
+
+  if (statValue === undefined) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(statValue, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+};
+
+const resolveHourlyState = (
+  humidity: number,
+  windSpeed: number,
+  conditionText: string,
+): HourlyWeatherState => {
+  const lowerCondition = conditionText.toLowerCase();
+
+  if (lowerCondition.includes("storm") || windSpeed >= 28) {
+    return "storm";
+  }
+
+  if (lowerCondition.includes("rain") || humidity >= 72) {
+    return "rain";
+  }
+
+  if (lowerCondition.includes("sun") || humidity <= 45) {
+    return "sun";
+  }
+
+  return "cloud";
+};
+
+const renderStateIcon = (state: HourlyWeatherState): JSX.Element => {
+  if (state === "sun") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="4" />
+        <line x1="12" y1="2" x2="12" y2="5" />
+        <line x1="12" y1="19" x2="12" y2="22" />
+        <line x1="2" y1="12" x2="5" y2="12" />
+        <line x1="19" y1="12" x2="22" y2="12" />
+      </svg>
+    );
+  }
+
+  if (state === "rain") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5 1.2A3.5 3.5 0 0 1 18 18H7a3 3 0 0 1-3-4z" />
+        <line x1="9" y1="19" x2="8" y2="22" />
+        <line x1="13" y1="19" x2="12" y2="22" />
+      </svg>
+    );
+  }
+
+  if (state === "storm") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5 1.2A3.5 3.5 0 0 1 18 18H8" />
+        <polyline points="13 15 10 20 13 20 11 24" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5 1.2A3.5 3.5 0 0 1 18 18H7a3 3 0 0 1-3-4z" />
+    </svg>
+  );
+};
+
 const buildGeneratedCity = (
   name: string,
   language: Language,
@@ -80,6 +191,7 @@ const buildGeneratedCity = (
       { label: "Humidity", value: `${humidity}%` },
       { label: "Wind", value: `${wind} km/h` },
     ],
+    hourlyForecast: buildHourlyForecast(temperature),
   };
 };
 
@@ -98,9 +210,15 @@ export function DashboardAside({
     {},
   );
   const cityStripRef = useRef<HTMLDivElement | null>(null);
+  const hourlyScrollRef = useRef<HTMLDivElement | null>(null);
   const weatherAddWrapRef = useRef<HTMLDivElement | null>(null);
+  const isHourlyDraggingRef = useRef<boolean>(false);
+  const hourlyDragStartXRef = useRef<number>(0);
+  const hourlyDragStartScrollRef = useRef<number>(0);
+  const [isHourlyDragging, setIsHourlyDragging] = useState<boolean>(false);
 
   useHorizontalWheelScroll(cityStripRef);
+  useHorizontalWheelScroll(hourlyScrollRef);
   useOutsideClick([weatherAddWrapRef], () => setIsAddOpen(false), {
     enabled: isAddOpen,
   });
@@ -150,6 +268,45 @@ export function DashboardAside({
     });
   }, [cities, citySearch]);
 
+  const activeHourlyForecast = useMemo(() => {
+    if (activeCity.hourlyForecast !== undefined && activeCity.hourlyForecast.length > 0) {
+      return activeCity.hourlyForecast;
+    }
+
+    return buildHourlyForecast(resolveBaseTemperature(activeCity));
+  }, [activeCity]);
+
+  const activeHourlyDisplay = useMemo<HourlyForecastDisplay[]>(() => {
+    const baseHumidity = resolveBaseStatNumber(activeCity, "humid", 58);
+    const baseWind = resolveBaseStatNumber(activeCity, "wind", 16);
+    const stateLabels = language === "de"
+      ? {
+        sun: "Sonne",
+        cloud: "Wolke",
+        rain: "Regen",
+        storm: "Sturm",
+      }
+      : {
+        sun: "Sun",
+        cloud: "Cloud",
+        rain: "Rain",
+        storm: "Storm",
+      };
+
+    return activeHourlyForecast.map((point, index) => {
+      const humidity = Math.min(96, Math.max(28, baseHumidity + ((index % 4) - 1) * 5));
+      const windSpeed = Math.max(4, baseWind + ((index % 5) - 2) * 2);
+      const state = resolveHourlyState(humidity, windSpeed, activeCity.condition);
+
+      return {
+        ...point,
+        humidity: `${humidity}%`,
+        state,
+        stateLabel: stateLabels[state],
+      };
+    });
+  }, [activeCity.condition, activeCity, activeHourlyForecast, language]);
+
   const handleMove = (direction: -1 | 1): void => {
     if (cities.length <= 1) {
       return;
@@ -197,6 +354,44 @@ export function DashboardAside({
     setCitySearch("");
     setCityError("");
     setIsAddOpen(false);
+  };
+
+  const handleHourlyPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
+    const scrollElement = hourlyScrollRef.current;
+
+    if (scrollElement === null) {
+      return;
+    }
+
+    isHourlyDraggingRef.current = true;
+    hourlyDragStartXRef.current = event.clientX;
+    hourlyDragStartScrollRef.current = scrollElement.scrollLeft;
+    setIsHourlyDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleHourlyPointerMove = (event: PointerEvent<HTMLDivElement>): void => {
+    if (!isHourlyDraggingRef.current) {
+      return;
+    }
+
+    const scrollElement = hourlyScrollRef.current;
+
+    if (scrollElement === null) {
+      return;
+    }
+
+    const delta = event.clientX - hourlyDragStartXRef.current;
+    scrollElement.scrollLeft = hourlyDragStartScrollRef.current - delta;
+  };
+
+  const handleHourlyPointerEnd = (event: PointerEvent<HTMLDivElement>): void => {
+    if (isHourlyDraggingRef.current) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    isHourlyDraggingRef.current = false;
+    setIsHourlyDragging(false);
   };
 
   return (
@@ -368,6 +563,34 @@ export function DashboardAside({
               <strong>{item.value}</strong>
             </div>
           ))}
+        </div>
+
+        <div className="weather-hourly-block" aria-label={copy.hourlyForecastTitle}>
+          <p className="weather-hourly-title">{copy.hourlyForecastTitle}</p>
+          <div
+            ref={hourlyScrollRef}
+            className={`weather-hourly-scroll-box${isHourlyDragging ? " is-dragging" : ""}`}
+            onPointerDown={handleHourlyPointerDown}
+            onPointerMove={handleHourlyPointerMove}
+            onPointerUp={handleHourlyPointerEnd}
+            onPointerCancel={handleHourlyPointerEnd}
+            onPointerLeave={handleHourlyPointerEnd}
+          >
+            <div className="weather-hourly-track">
+              {activeHourlyDisplay.map((point) => (
+                <article key={`${point.hour}-${point.temperature}`} className="weather-hourly-row-item">
+                  <span className={`weather-hourly-state is-${point.state}`}>
+                    {renderStateIcon(point.state)}
+                  </span>
+                  <div className="weather-hourly-copy">
+                    <strong>{point.hour}</strong>
+                    <span>{point.temperature}</span>
+                    <small>{point.humidity} · {point.stateLabel}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

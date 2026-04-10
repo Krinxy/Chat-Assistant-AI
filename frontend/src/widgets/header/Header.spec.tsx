@@ -11,6 +11,7 @@ describe('Header Widget', () => {
         hasStartedChat={false}
         showChatBrand={false}
         profileRole="Software Architect"
+        onOpenProfile={() => {}}
       />,
     );
 
@@ -27,6 +28,7 @@ describe('Header Widget', () => {
         hasStartedChat={true}
         showChatBrand={true}
         profileRole="Software Architect"
+        onOpenProfile={() => {}}
       />,
     );
 
@@ -44,6 +46,7 @@ describe('Header Widget', () => {
         hasStartedChat={true}
         showChatBrand={false}
         profileRole="Software Architect"
+        onOpenProfile={() => {}}
       />,
     );
 

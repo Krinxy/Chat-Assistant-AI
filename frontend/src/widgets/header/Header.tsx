@@ -4,6 +4,7 @@ interface HeaderProps {
   hasStartedChat: boolean;
   showChatBrand: boolean;
   profileRole: string;
+  onOpenProfile: () => void;
 }
 
 export function Header({
@@ -12,6 +13,7 @@ export function Header({
   hasStartedChat,
   showChatBrand,
   profileRole,
+  onOpenProfile,
 }: HeaderProps) {
   return (
     <header className={`top-bar ${hasStartedChat ? "chat-active" : ""}`}>
@@ -31,7 +33,12 @@ export function Header({
         </div>
       </div>
 
-      <div className={`profile-chip ${hasStartedChat ? "is-compact" : ""}`} aria-label="Signed in profile">
+      <button
+        type="button"
+        className={`profile-chip profile-chip-btn ${hasStartedChat ? "is-compact" : ""}`}
+        aria-label="Open profile"
+        onClick={onOpenProfile}
+      >
         <div
           className="profile-avatar"
           aria-hidden="true"
@@ -45,7 +52,7 @@ export function Header({
             <p className="profile-role">{profileRole}</p>
           </div>
         )}
-      </div>
+      </button>
     </header>
   );
 }

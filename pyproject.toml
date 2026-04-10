@@ -2,6 +2,14 @@
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+# This repository is a multi-runtime workspace (frontend/tests/docs) and does not
+# publish importable top-level Python packages from the repo root.
+# Disable automatic discovery so editable installs do not fail on directories like
+# `coverage/` and `frontend/` in CI.
+packages = []
+py-modules = []
+
 [project]
 name = "chat-assistant-ai"
 version = "0.1.0"

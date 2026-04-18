@@ -688,6 +688,11 @@
   color: var(--ink-500);
 }
 
+.speech-status.is-listening {
+  color: color-mix(in srgb, var(--accent-1) 74%, var(--ink-900));
+  font-weight: 600;
+}
+
 .skeleton-bubble {
   width: min(82%, 720px);
   padding: 10px 14px;

@@ -129,6 +129,7 @@ export function ChatPanel({
   const attachWrapperRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const latestDraftRef = useRef<string>(draft);
+  const speechSessionInitialDraftRef = useRef<string>("");
 
   useEffect(() => {
     latestDraftRef.current = draft;
@@ -141,7 +142,9 @@ export function ChatPanel({
   }, []);
 
   const stopSpeechRecognition = useCallback((): void => {
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+    recognition?.stop();
     setIsRecordingSpeech(false);
     setSpeechStatusText(null);
   }, []);
@@ -169,35 +172,34 @@ export function ChatPanel({
 
   const handleSpeechResult = useCallback((event: SpeechRecognitionEventLike): void => {
     const finalSegments: string[] = [];
+    const interimSegments: string[] = [];
 
-    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+    for (let index = 0; index < event.results.length; index += 1) {
       const result = event.results[index];
-
-      if (result?.isFinal !== true) {
-        continue;
-      }
-
       const transcript = result[0]?.transcript?.trim() ?? "";
 
       if (transcript.length > 0) {
-        finalSegments.push(transcript);
+        if (result?.isFinal === true) {
+          finalSegments.push(transcript);
+        } else {
+          interimSegments.push(transcript);
+        }
       }
     }
 
-    if (finalSegments.length === 0) {
+    if (finalSegments.length === 0 && interimSegments.length === 0) {
       return;
     }
 
-    const spokenText = finalSegments.join(" ").trim();
+    const spokenText = [...finalSegments, ...interimSegments].join(" ").trim();
 
     if (spokenText.length === 0) {
       return;
     }
 
-    const baseDraft = latestDraftRef.current.trim();
+    const baseDraft = speechSessionInitialDraftRef.current;
     const nextDraft = baseDraft.length > 0 ? `${baseDraft} ${spokenText}` : spokenText;
     setDraft(nextDraft);
-    setSpeechStatusText(null);
   }, [setDraft]);
 
   const handleAudioInput = useCallback(async (): Promise<void> => {
@@ -228,28 +230,44 @@ export function ChatPanel({
 
     const recognition = new RecognitionCtor();
     recognition.lang = copy.speechLocale;
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.onresult = handleSpeechResult;
     recognition.onerror = (event) => {
+      if (event.error === "aborted") {
+        return;
+      }
+
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setSpeechStatusText(copy.speechPermissionDenied);
       } else {
         setSpeechStatusText(copy.speechUnsupported);
       }
 
+      recognitionRef.current = null;
       setIsRecordingSpeech(false);
     };
     recognition.onend = () => {
+      recognitionRef.current = null;
       setIsRecordingSpeech(false);
-      setSpeechStatusText(null);
+      setSpeechStatusText((previous) =>
+        previous === copy.speechListening ? null : previous,
+      );
     };
 
+    speechSessionInitialDraftRef.current = latestDraftRef.current.trim();
     recognitionRef.current = recognition;
     setSpeechStatusText(copy.speechListening);
     setIsRecordingSpeech(true);
-    recognition.start();
+
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setIsRecordingSpeech(false);
+      setSpeechStatusText(copy.speechUnsupported);
+    }
   }, [
     copy.speechListening,
     copy.speechLocale,
@@ -371,7 +389,9 @@ export function ChatPanel({
 
   const inputPlaceholder = isRecordingSpeech
     ? copy.speechListening
-    : (speechStatusText ?? copy.inputPlaceholder);
+    : copy.inputPlaceholder;
+  const speechFeedbackText = isRecordingSpeech ? copy.speechListening : speechStatusText;
+  const shouldShowAudioButton = isRecordingSpeech || draft.trim().length === 0;
 
   return (
     <section className="chat-panel" aria-label="LLM chat window">
@@ -774,27 +794,13 @@ export function ChatPanel({
 
             <div className="input-separator" />
 
-            {draft.trim().length > 0 ? (
-              <button type="submit" className="send-btn" title={copy.sendTitle}>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </button>
-            ) : (
+            {shouldShowAudioButton ? (
               <button
                 type="button"
                 className={`audio-btn${isRecordingSpeech ? " is-recording" : ""}`}
                 title={isRecordingSpeech ? copy.audioStopTitle : copy.audioTitle}
+                aria-label={isRecordingSpeech ? copy.audioStopTitle : copy.audioTitle}
+                aria-pressed={isRecordingSpeech}
                 onClick={() => {
                   void handleAudioInput();
                 }}
@@ -815,9 +821,34 @@ export function ChatPanel({
                   <line x1="8" y1="23" x2="16" y2="23" />
                 </svg>
               </button>
+            ) : (
+              <button type="submit" className="send-btn" title={copy.sendTitle}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
             )}
           </form>
         </div>
+
+        {speechFeedbackText !== null ? (
+          <p
+            className={`speech-status${isRecordingSpeech ? " is-listening" : ""}`}
+            aria-live="polite"
+          >
+            {speechFeedbackText}
+          </p>
+        ) : null}
 
         <p className="chat-disclaimer">{copy.disclaimer}</p>
       </div>

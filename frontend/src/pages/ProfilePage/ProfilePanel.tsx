@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { Language, LocalLlmConfig } from "../../features/chat/types/chat";
+import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 
 interface ProfilePanelProps {
   language: Language;
@@ -152,7 +153,7 @@ const formatSigned = (value: number): string => {
 };
 
 const getRoleLabel = (): string => {
-  return "Product Owner";
+  return ACTIVE_DEV_PROFILE.role;
 };
 
 export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: ProfilePanelProps) {
@@ -284,8 +285,8 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
     ? {
       title: "Profil",
       subtitle: "Persoenliche Einstellungen fuer deinen Assistant",
-      fullName: "Dominic Bechtold",
-      email: "dominic@aura.local",
+      fullName: ACTIVE_DEV_PROFILE.fullName,
+      email: ACTIVE_DEV_PROFILE.email,
       roleLabel: "Rolle",
       subscriptionLabel: "Subscription",
       subscriptionValue: "Pro Annual",
@@ -320,8 +321,8 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
     : {
       title: "Profile",
       subtitle: "Personal settings for your assistant",
-      fullName: "Dominic Bechtold",
-      email: "dominic@aura.local",
+      fullName: ACTIVE_DEV_PROFILE.fullName,
+      email: ACTIVE_DEV_PROFILE.email,
       roleLabel: "Role",
       subscriptionLabel: "Subscription",
       subscriptionValue: "Pro Annual",

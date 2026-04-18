@@ -11,6 +11,7 @@ import {
 import { ChatSkeletonMessage } from "../../../shared/components/feedback/ChatSkeletonMessage";
 import { useOutsideClick } from "../../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../../shared/i18n/uiText";
+import { ACTIVE_DEV_PROFILE } from "../../../shared/constants/devProfiles";
 import type {
   AttachmentAction,
   BrainrotStyleKey,
@@ -658,8 +659,8 @@ export function ChatPanel({
             aria-label="Open profile"
             onClick={onOpenProfile}
           >
-            <div className="profile-avatar" aria-hidden="true" title="Dominic Bechtold">
-              DB
+            <div className="profile-avatar" aria-hidden="true" title={ACTIVE_DEV_PROFILE.fullName}>
+              {ACTIVE_DEV_PROFILE.initials}
             </div>
           </button>
         ) : null}

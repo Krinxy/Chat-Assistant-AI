@@ -1,3 +1,5 @@
+import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
+
 interface HeaderProps {
   greeting: string;
   randomHeaderQuestion: string;
@@ -25,7 +27,7 @@ export function Header({
                 AURA
               </span>
             )}
-            {!hasStartedChat && `${greeting}, Dominic`}
+            {!hasStartedChat && `${greeting}, ${ACTIVE_DEV_PROFILE.firstName}`}
           </h2>
           {!hasStartedChat && (
             <p className="header-question">{randomHeaderQuestion}</p>
@@ -42,13 +44,13 @@ export function Header({
         <div
           className="profile-avatar"
           aria-hidden="true"
-          title="Dominic Bechtold"
+          title={ACTIVE_DEV_PROFILE.fullName}
         >
-          DB
+          {ACTIVE_DEV_PROFILE.initials}
         </div>
         {!hasStartedChat && (
           <div>
-            <p className="profile-name">Dominic Bechtold</p>
+            <p className="profile-name">{ACTIVE_DEV_PROFILE.fullName}</p>
             <p className="profile-role">{profileRole}</p>
           </div>
         )}

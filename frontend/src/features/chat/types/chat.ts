@@ -40,6 +40,11 @@ export interface WeatherStat {
 export interface WeatherHourlyPoint {
   hour: string;
   temperature: string;
+  feelsLike?: string;
+  dayLabel?: string;
+  dayOffset?: number;
+  humidityOverride?: number;
+  windOverride?: number;
 }
 
 export interface WeatherCity {

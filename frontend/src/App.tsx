@@ -29,6 +29,7 @@ import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
+import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
 import { WelcomeOverlay } from "./shared/components/ui/WelcomeOverlay";
 import { DashboardAside } from "./widgets/dashboard/DashboardAside";
 import { Header } from "./widgets/header/Header";
@@ -430,7 +431,7 @@ export default function App() {
     <div className={`dashboard-root ${hasStartedChat ? "chat-mode-root" : "is-dashboard"}`}>
       {isWelcomeVisible ? (
         <WelcomeOverlay
-          userName="Dominic"
+          userName={ACTIVE_DEV_PROFILE.firstName}
           isLeaving={isWelcomeLeaving}
           onSkip={skipWelcome}
           titlePrefix={welcomeTitlePrefix}

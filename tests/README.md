@@ -22,3 +22,8 @@ Coverage gate script location:
 - Keep active tests directly under `tests/` and group by domain when needed (for example `tests/frontend`, `tests/backend`, `tests/integration`).
 - Keep test names aligned to source files (`test_<module>.py` or `<module>_test.py`) to satisfy CI mapping checks.
 - Add tests for each new source file so linting, security, and coverage gates stay green.
+
+## Feature Grouping Convention
+
+- Speech and transcription-related tests are grouped under `tests/chatfeature/transcription/`.
+- New chat-feature tests should follow this layout to keep growth predictable as coverage expands.

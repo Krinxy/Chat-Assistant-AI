@@ -41,8 +41,17 @@ Current repository quality pattern:
 Frontend steering highlights:
 
 - New chat creation is handled from the sidebar Current Session action.
-- Voice input uses browser microphone permission and speech recognition.
+- Voice input triggers a dedicated speech service from the microphone button and streams text back live.
 - Profile includes a help/forum section for feature lookup.
+
+Local voice stack launch:
+
+1. `npm run dev`
+
+Manual fallback (two terminals):
+
+1. `npm --prefix backend run dev`
+2. `npm --prefix frontend run dev`
 
 ## Quality Gates For Main
 

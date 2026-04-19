@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { ActiveView, Language } from "../../features/chat/types/chat";
 import type { UiText } from "../../shared/i18n/uiText";
 
+interface RecentChatItem {
+  id: string;
+  title: string;
+  lastUpdate: string;
+  preview: string;
+}
+
 interface SidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -19,6 +26,7 @@ interface SidebarProps {
     time: string;
   } | null;
   onStartNewChat: () => void;
+  onOpenRecentChat: (previewText: string, timeLabel: string) => void;
 }
 
 const navigationItems: Array<{
@@ -33,10 +41,7 @@ const navigationItems: Array<{
   { key: "profile", view: "profile" },
 ];
 
-const recentChatsByLanguage: Record<
-  Language,
-  Array<{ id: string; title: string; lastUpdate: string; preview: string }>
-> = {
+const seedRecentChatsByLanguage: Record<Language, RecentChatItem[]> = {
   de: [
     {
       id: "chat-001",
@@ -139,6 +144,15 @@ const recentChatsByLanguage: Record<
   ],
 };
 
+const formatRecentChatTimestamp = (value: Date, language: Language): string => {
+  const locale = language === "de" ? "de-DE" : "en-US";
+
+  return value.toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export function Sidebar({
   isSidebarOpen,
   setIsSidebarOpen,
@@ -152,12 +166,19 @@ export function Sidebar({
   activeServiceLabels,
   latestMessagePreview,
   onStartNewChat,
+  onOpenRecentChat,
 }: SidebarProps) {
   const [showAllChats, setShowAllChats] = useState<boolean>(false);
+  const [recentChatsByLanguageState, setRecentChatsByLanguageState] = useState<
+    Record<Language, RecentChatItem[]>
+  >(() => ({
+    de: [...seedRecentChatsByLanguage.de],
+    en: [...seedRecentChatsByLanguage.en],
+  }));
 
   const recentChats = useMemo(() => {
-    return recentChatsByLanguage[language];
-  }, [language]);
+    return recentChatsByLanguageState[language] ?? [];
+  }, [language, recentChatsByLanguageState]);
 
   const [activeRecentChatId, setActiveRecentChatId] = useState<string | null>(
     recentChats[0]?.id ?? null,
@@ -193,6 +214,8 @@ export function Sidebar({
   }, [activeRecentChatId]);
 
   const visibleRecentChats = showAllChats ? recentChats : recentChats.slice(0, 8);
+
+  const currentSessionPreview = latestMessagePreview;
 
   const currentScopeLabel = useMemo(() => {
     if (activeView === "dashboard") {
@@ -298,7 +321,39 @@ export function Sidebar({
               title={copy.newChatTitle}
               type="button"
               onClick={() => {
-                setActiveRecentChatId(null);
+                const nextChatId = `chat-${Date.now()}`;
+                const now = new Date();
+                const latestPreviewText = latestMessagePreview?.text.trim() ?? "";
+
+                setRecentChatsByLanguageState((previous) => ({
+                  de: [
+                    {
+                      id: nextChatId,
+                      title: "Neue Session",
+                      lastUpdate: formatRecentChatTimestamp(now, "de"),
+                      preview:
+                        latestPreviewText.length > 0
+                          ? latestPreviewText
+                          : "Neue Session gestartet",
+                    },
+                    ...previous.de,
+                  ].slice(0, 40),
+                  en: [
+                    {
+                      id: nextChatId,
+                      title: "New session",
+                      lastUpdate: formatRecentChatTimestamp(now, "en"),
+                      preview:
+                        latestPreviewText.length > 0
+                          ? latestPreviewText
+                          : "Started a new session",
+                    },
+                    ...previous.en,
+                  ].slice(0, 40),
+                }));
+
+                setShowAllChats(true);
+                setActiveRecentChatId(nextChatId);
                 onStartNewChat();
               }}
             >
@@ -329,12 +384,12 @@ export function Sidebar({
             </li>
           </ul>
 
-          {latestMessagePreview === null ? (
+          {currentSessionPreview === null ? (
             <p className="sidebar-session-empty">{copy.noMessagesYet}</p>
           ) : (
-            <article className="sidebar-session-preview" title={latestMessagePreview.text}>
-              <p>{latestMessagePreview.text}</p>
-              <small>{latestMessagePreview.time}</small>
+            <article className="sidebar-session-preview" title={currentSessionPreview.text}>
+              <p>{currentSessionPreview.text}</p>
+              <small>{currentSessionPreview.time}</small>
             </article>
           )}
         </section>
@@ -357,7 +412,7 @@ export function Sidebar({
                     className={`history-item${isActiveChat ? " is-active-chat" : ""}`}
                     onClick={() => {
                       setActiveRecentChatId(chat.id);
-                      setActiveView("chat");
+                      onOpenRecentChat(chat.preview, chat.lastUpdate);
                     }}
                   >
                     <span>{chat.title}</span>

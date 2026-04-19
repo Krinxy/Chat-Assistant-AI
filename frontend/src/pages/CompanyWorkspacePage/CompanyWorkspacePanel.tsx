@@ -1,370 +1,73 @@
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { Language } from "../../features/chat/types/chat";
+import { userProfile } from "../../shared/data/userProfile";
+import { CompanyAppointmentsTab } from "./CompanyAppointmentsTab";
+import { CompanyNotesTab } from "./CompanyNotesTab";
+import { CompanyTeamTab } from "./CompanyTeamTab";
+import { OverviewPie } from "./OverviewPie";
+import {
+  companyRecords,
+  tabVisibilityByRole,
+  weekdayLabelsByLanguage,
+} from "./companyWorkspace.data";
+import { getCompanyWorkspaceText } from "./companyWorkspace.text";
+import type {
+  CompanyNoteEntry,
+  CompanyTeamMemberEntry,
+  CompanyWorkspacePanelProps,
+  CompanyTab,
+  UploadedCompanyDocument,
+  WorkspaceDocumentItem,
+} from "./companyWorkspace.types";
+import {
+  buildCompanyTeamMembers,
+  formatFileSize,
+  getCompanyInitials,
+  inferMimeTypeFromName,
+  parseAppointmentItem,
+  readDbAssignedRole,
+} from "./companyWorkspace.utils";
 
-type AccessRole = "admin" | "customer" | "salesConsultant" | "analyst";
-type DisplayRole = AccessRole | "guest";
+export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorkspacePanelProps) {
+  const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
 
-type CompanyTab =
-  | "overview"
-  | "portfolio"
-  | "performance"
-  | "documents"
-  | "hypotheses"
-  | "appointments"
-  | "notes"
-  | "team"
-  | "newsfeed";
-
-interface CompanyRecord {
-  id: string;
-  name: string;
-  segment: string;
-  lastVisited: string;
-  isFavorite: boolean;
-  assignedRoles: AccessRole[];
-  owner: string;
-  openQuestions: number;
-  pendingMeetings: number;
-  documents: string[];
-  hypotheses: string[];
-  appointments: string[];
-  notes: string[];
-  teamMembers: string[];
-  personas: string[];
-  newsfeed: string[];
-  recentEvents: string[];
-  portfolioSummary: string;
-  performanceSummary: string;
-}
-
-interface CompanyWorkspacePanelProps {
-  language: Language;
-}
-
-const companyRecords: CompanyRecord[] = [
-  {
-    id: "aurora-bank",
-    name: "Aurora Bank",
-    segment: "Fintech",
-    lastVisited: "10:22",
-    isFavorite: true,
-    assignedRoles: ["admin", "salesConsultant", "analyst"],
-    owner: "M. Ritter",
-    openQuestions: 6,
-    pendingMeetings: 2,
-    documents: ["Q2 Risiko-Radar", "Roadmap API Consent", "Journey Mapping v3"],
-    hypotheses: [
-      "Antwortquote steigt mit persona-spezifischen Follow-ups.",
-      "Dokumenten-Shortcuts reduzieren offene Tickets > 20%.",
-    ],
-    appointments: ["Mo 11:00 Steering", "Mi 15:30 Enablement", "Fr 09:00 Sales Review"],
-    notes: [
-      "Decision Maker will benchmark against two competitors.",
-      "Need legal review for data retention wording.",
-    ],
-    teamMembers: ["Sales: Lena", "CSM: Amir", "Solution: Carla", "Legal: Jens"],
-    personas: ["Head of Risk", "Ops Lead", "Data Officer"],
-    newsfeed: [
-      "Pilot region expanded to DACH branch network.",
-      "Internal KPI target updated to response-time below 2.1s.",
-    ],
-    recentEvents: [
-      "Heute 09:40: Follow-up Meeting geplant.",
-      "Gestern: Persona Mapping aktualisiert.",
-      "Montag: Dokumenten-Freigabe durch Legal.",
-    ],
-    portfolioSummary: "2 aktive Produkte, Upsell-Potenzial im Governance-Paket.",
-    performanceSummary: "81% beantwortete Fragen, 14 offen, 2 kritische Follow-ups.",
-  },
-  {
-    id: "nordlicht-logistics",
-    name: "Nordlicht Logistics",
-    segment: "Transport",
-    lastVisited: "09:58",
-    isFavorite: false,
-    assignedRoles: ["admin", "salesConsultant"],
-    owner: "D. Reimann",
-    openQuestions: 3,
-    pendingMeetings: 1,
-    documents: ["Fleet AI Review", "SLA Delta 2026", "Renewal Negotiation Notes"],
-    hypotheses: ["Dispatch-Assist Feature senkt Eskalationen in Peak-Slots."],
-    appointments: ["Di 14:00 KPI Review", "Do 10:30 Renewal Prep"],
-    notes: ["Customer asks for dashboard access by region managers."],
-    teamMembers: ["Sales: Daria", "CSM: Faris", "Ops: Kim"],
-    personas: ["Head of Dispatch", "Regional Manager"],
-    newsfeed: ["Two new depots are onboarding in Q3."],
-    recentEvents: [
-      "Heute 08:15: SLA Delta kommentiert.",
-      "Gestern: Erster Renewal-Entwurf versendet.",
-      "Letzte Woche: Dispatch KPI Flag gesetzt.",
-    ],
-    portfolioSummary: "Starke Nutzung im Dispatch, Dokumentenmodul noch gering.",
-    performanceSummary: "74% beantwortete Fragen, 6 offen, 1 Termin in Vorbereitung.",
-  },
-  {
-    id: "cobalt-health",
-    name: "Cobalt Health",
-    segment: "Healthcare",
-    lastVisited: "Gestern",
-    isFavorite: true,
-    assignedRoles: ["admin", "analyst"],
-    owner: "S. Nguyen",
-    openQuestions: 9,
-    pendingMeetings: 3,
-    documents: ["Compliance Snapshot", "Patient Journey Mapping", "Insights Q1"],
-    hypotheses: [
-      "Mehr Kontextfelder verbessern Relevanz fuer Medical Persona.",
-      "Weekly Summary mit offenen Themen reduziert Churn-Risiko.",
-    ],
-    appointments: ["Mo 08:30 Compliance Sync", "Do 16:00 Product Board"],
-    notes: ["Need role-based masking for sensitive patient hints."],
-    teamMembers: ["Analyst: Sina", "CSM: Daniel", "Security: Lea"],
-    personas: ["Medical Ops", "Compliance Lead", "Support Manager"],
-    newsfeed: ["New procurement framework approved for EMEA rollout."],
-    recentEvents: [
-      "Heute 07:50: Compliance Notiz aktualisiert.",
-      "Gestern: Risiko-Hypothese bestaetigt.",
-      "Montag: Review mit Security Team.",
-    ],
-    portfolioSummary: "Hoher Value im Analysebereich, Pilot fuer Team-Workflow geplant.",
-    performanceSummary: "69% beantwortete Fragen, 18 offen, 3 Termine kommende Woche.",
-  },
-  {
-    id: "greenforge-energy",
-    name: "Greenforge Energy",
-    segment: "Energy",
-    lastVisited: "Gestern",
-    isFavorite: false,
-    assignedRoles: ["admin", "customer"],
-    owner: "R. Novak",
-    openQuestions: 2,
-    pendingMeetings: 1,
-    documents: ["Grid Overview", "Portfolio Fit", "Executive Summary"],
-    hypotheses: ["Automation bundle should be placed in next offer."],
-    appointments: ["Fr 13:00 Site Review"],
-    notes: ["Customer account sees only own entities by default."],
-    teamMembers: ["Customer Admin: R. Novak", "Advisor: Mira"],
-    personas: ["Plant Manager", "Finance Lead"],
-    newsfeed: ["Leadership announced modernization budget for 2026."],
-    recentEvents: [
-      "Gestern: Site Review vorbereitet.",
-      "Montag: Product fit Dokument abgelegt.",
-      "Letzte Woche: Meeting Slot abgestimmt.",
-    ],
-    portfolioSummary: "Single-account visibility, moderate upsell readiness.",
-    performanceSummary: "88% beantwortete Fragen, 3 offen, stabiler Health-Score.",
-  },
-  {
-    id: "sunset-insurance",
-    name: "Sunset Insurance",
-    segment: "Insurance",
-    lastVisited: "11:36",
-    isFavorite: true,
-    assignedRoles: ["admin", "salesConsultant", "analyst"],
-    owner: "P. Kramer",
-    openQuestions: 5,
-    pendingMeetings: 2,
-    documents: ["Claims Overview", "Renewal Draft", "Risk Signals Q2"],
-    hypotheses: [
-      "Persona snippets in claims context improve resolution speed.",
-      "Compact weekly summary lowers escalation volume.",
-    ],
-    appointments: ["Di 09:30 Claims Sync", "Do 14:00 Renewal Board"],
-    notes: ["Prefers short summaries and explicit risk tags."],
-    teamMembers: ["Sales: Jo", "CSM: Mel", "Analyst: Tim"],
-    personas: ["Claims Lead", "Operations Manager", "IT Security"],
-    newsfeed: ["Board approved pilot for automated document routing."],
-    recentEvents: [
-      "Heute 10:10: Review-Notiz hinzugefuegt.",
-      "Gestern: Renewal Draft abgestimmt.",
-      "Montag: KPI-Alert geschlossen.",
-    ],
-    portfolioSummary: "Starker Fit im Claims-Workflow, Upsell im Reporting moeglich.",
-    performanceSummary: "77% beantwortete Fragen, 9 offen, 2 priorisierte Meetings.",
-  },
-  {
-    id: "nova-commerce",
-    name: "Nova Commerce",
-    segment: "Retail",
-    lastVisited: "Heute",
-    isFavorite: false,
-    assignedRoles: ["admin", "salesConsultant", "customer"],
-    owner: "L. Ortmann",
-    openQuestions: 4,
-    pendingMeetings: 1,
-    documents: ["Store Rollout Plan", "Support SOP", "Executive Notes"],
-    hypotheses: ["Store-level prompts can reduce ticket handovers by 18%."],
-    appointments: ["Mi 13:00 Weekly Ops"],
-    notes: ["Needs region-level visibility for store managers."],
-    teamMembers: ["Sales: Nia", "CSM: Olek", "Ops: Rene"],
-    personas: ["Retail Ops", "Regional Lead"],
-    newsfeed: ["Five new stores scheduled for pilot onboarding."],
-    recentEvents: [
-      "Heute 09:05: Store KPI export geteilt.",
-      "Gestern: SOP finalisiert.",
-      "Letzte Woche: Pilot-Scope erweitert.",
-    ],
-    portfolioSummary: "Gute Nutzung im Tagesbetrieb, Potenzial bei Team-Modulen.",
-    performanceSummary: "83% beantwortete Fragen, 5 offen, stabiler Rollout.",
-  },
-  {
-    id: "polaris-media",
-    name: "Polaris Media",
-    segment: "Media",
-    lastVisited: "08:42",
-    isFavorite: false,
-    assignedRoles: ["admin", "salesConsultant"],
-    owner: "A. Weber",
-    openQuestions: 7,
-    pendingMeetings: 2,
-    documents: ["Campaign Brief", "Persona Cluster", "Q3 Theme Map"],
-    hypotheses: [
-      "Persona-driven briefing templates increase response precision.",
-      "Faster tagging lowers content QA loops.",
-    ],
-    appointments: ["Mo 16:00 Editorial", "Fr 10:00 Stakeholder Sync"],
-    notes: ["Wants explicit confidence hints in recommendations."],
-    teamMembers: ["Sales: Pia", "CSM: Andre", "Creative: Kim"],
-    personas: ["Editorial Lead", "Campaign Owner"],
-    newsfeed: ["Editorial board approved Q3 experimentation budget."],
-    recentEvents: [
-      "Heute 08:00: Theme Map aktualisiert.",
-      "Gestern: Campaign Brief kommentiert.",
-      "Dienstag: Persona Cluster erweitert.",
-    ],
-    portfolioSummary: "Hohe Aktivitaet im Kampagnenbereich, Reporting noch ausbaufahig.",
-    performanceSummary: "71% beantwortete Fragen, 11 offen, 2 Fokus-Meetings.",
-  },
-  {
-    id: "urban-harbor",
-    name: "Urban Harbor",
-    segment: "Real Estate",
-    lastVisited: "12:11",
-    isFavorite: true,
-    assignedRoles: ["admin", "customer", "analyst"],
-    owner: "C. Sahin",
-    openQuestions: 3,
-    pendingMeetings: 1,
-    documents: ["Tenant Insights", "Portfolio Mix", "Risk Brief"],
-    hypotheses: ["Weekly open-item digest improves board readiness."],
-    appointments: ["Do 11:00 Portfolio Review"],
-    notes: ["Customer team requests cleaner handover templates."],
-    teamMembers: ["Customer Admin: C. Sahin", "Analyst: Noor"],
-    personas: ["Portfolio Manager", "Finance Controller"],
-    newsfeed: ["Two properties moved into modernization planning."],
-    recentEvents: [
-      "Heute 11:20: Risk Brief ueberarbeitet.",
-      "Gestern: Tenant Insights geteilt.",
-      "Montag: Portfolio Mix finalisiert.",
-    ],
-    portfolioSummary: "Stark in Portfolio-Transparenz, mittleres Upsell-Potenzial.",
-    performanceSummary: "86% beantwortete Fragen, 4 offen, 1 Termin geplant.",
-  },
-];
-
-const tabVisibilityByRole: Record<DisplayRole, CompanyTab[]> = {
-  admin: [
-    "overview",
-    "portfolio",
-    "performance",
-    "documents",
-    "hypotheses",
-    "appointments",
-    "notes",
-    "team",
-    "newsfeed",
-  ],
-  salesConsultant: [
-    "overview",
-    "portfolio",
-    "performance",
-    "documents",
-    "hypotheses",
-    "appointments",
-    "notes",
-    "team",
-    "newsfeed",
-  ],
-  analyst: ["overview", "portfolio", "performance", "documents", "hypotheses", "newsfeed"],
-  customer: ["overview", "portfolio", "performance", "documents", "appointments", "newsfeed"],
-  guest: ["overview", "documents"],
-};
-
-interface OverviewPieProps {
-  openQuestions: number;
-  pendingMeetings: number;
-  language: Language;
-}
-
-function OverviewPie({ openQuestions, pendingMeetings, language }: OverviewPieProps) {
-  const total = Math.max(1, openQuestions + pendingMeetings);
-  const openSliceDegree = (openQuestions / total) * 360;
-
-  const openLabel = language === "de" ? "Offene Fragen" : "Open questions";
-  const meetingLabel = language === "de" ? "Offene Meetings" : "Open meetings";
-
-  return (
-    <div className="company-overview-pie-wrap">
-      <div
-        className="company-overview-pie"
-        style={{
-          background: `conic-gradient(
-            var(--feature-lilac) 0deg ${openSliceDegree}deg,
-            color-mix(in srgb, var(--accent-3) 68%, var(--panel-solid)) ${openSliceDegree}deg 360deg
-          )`,
-        }}
-        aria-label="Open item split"
-      >
-        <span>{openQuestions + pendingMeetings}</span>
-      </div>
-
-      <ul className="company-overview-legend">
-        <li>
-          <em className="company-legend-dot is-open" />
-          <span>{openLabel}</span>
-          <strong>{openQuestions}</strong>
-        </li>
-        <li>
-          <em className="company-legend-dot is-meeting" />
-          <span>{meetingLabel}</span>
-          <strong>{pendingMeetings}</strong>
-        </li>
-      </ul>
-    </div>
-  );
-}
-
-const readDbAssignedRole = (): DisplayRole => {
-  try {
-    const rawRole = globalThis.localStorage.getItem("aura.workspace.role");
-
-    if (rawRole === "admin" || rawRole === "customer" || rawRole === "salesConsultant" || rawRole === "analyst") {
-      return rawRole;
-    }
-
-    if (rawRole === null) {
-      return "salesConsultant";
-    }
-
-    return "guest";
-  } catch {
-    return "salesConsultant";
-  }
-};
-
-export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) {
-  const [assignedRole] = useState<DisplayRole>(readDbAssignedRole);
+  const [assignedRole] = useState(readDbAssignedRole);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<CompanyTab>("overview");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [uploadedDocumentsByCompany, setUploadedDocumentsByCompany] = useState<Record<string, string[]>>({});
+
+  const [uploadedDocumentsByCompany, setUploadedDocumentsByCompany] = useState<
+    Record<string, UploadedCompanyDocument[]>
+  >({});
+  const [dismissedDocumentsByCompany, setDismissedDocumentsByCompany] = useState<Record<string, string[]>>({});
+  const [openedDocumentByCompany, setOpenedDocumentByCompany] = useState<Record<string, string>>({});
+  const [focusedDocumentByCompany, setFocusedDocumentByCompany] = useState<Record<string, string>>({});
   const [documentSearch, setDocumentSearch] = useState<string>("");
+
+  const [uploadedNotesByCompany, setUploadedNotesByCompany] = useState<Record<string, CompanyNoteEntry[]>>({});
+  const [activeNoteByCompany, setActiveNoteByCompany] = useState<Record<string, string>>({});
+  const [noteDraft, setNoteDraft] = useState<string>("");
+  const [noteDraftLabels, setNoteDraftLabels] = useState<string[]>([]);
+  const [noteDraftLinkedEvent, setNoteDraftLinkedEvent] = useState<string>("");
+  const [editNoteTitle, setEditNoteTitle] = useState<string>("");
+  const [editNoteContent, setEditNoteContent] = useState<string>("");
+  const [editNoteLabels, setEditNoteLabels] = useState<string[]>([]);
+  const [editNoteLinkedEvent, setEditNoteLinkedEvent] = useState<string>("");
+
+  const [teamMembersByCompany, setTeamMembersByCompany] = useState<Record<string, CompanyTeamMemberEntry[]>>({});
+  const [editingTeamMemberId, setEditingTeamMemberId] = useState<string>("");
+  const [teamEditFunction, setTeamEditFunction] = useState<string>("");
+  const [teamEditName, setTeamEditName] = useState<string>("");
+
+  const [meetingAssigneesByCompany, setMeetingAssigneesByCompany] = useState<Record<string, Record<string, string>>>({});
+
   const documentFileInputRef = useRef<HTMLInputElement | null>(null);
+  const noteFileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadedDocumentsRegistryRef = useRef<Record<string, UploadedCompanyDocument[]>>({});
 
   const roleScopedCompanies = useMemo(() => {
     if (assignedRole === "guest") {
-      return [] as CompanyRecord[];
+      return [];
     }
 
     return companyRecords.filter((company) => company.assignedRoles.includes(assignedRole));
@@ -378,96 +81,6 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
 
     setSelectedCompanyId((previous) => previous || roleScopedCompanies[0].id);
   }, [roleScopedCompanies]);
-
-  const text = language === "de"
-    ? {
-      title: "Workspace",
-      rolePrefix: "Role:",
-      roles: {
-        admin: "Admin",
-        customer: "Customer",
-        salesConsultant: "Sales Consultant",
-        analyst: "Analyst",
-        guest: "Guest",
-      },
-      recentlyVisited: "Recently visited",
-      favorites: "Favoriten",
-      searchLabel: "Search companies",
-      searchPlaceholder: "Name, Segment oder Owner suchen",
-      noResult: "Kein Unternehmen gefunden.",
-      ownerLabel: "Owner",
-      openLabel: "Offen",
-      meetingsLabel: "Meetings",
-      recentEventsTitle: "Recent events",
-      tabs: {
-        overview: "Overview",
-        portfolio: "Portfolio",
-        performance: "Performance",
-        documents: "Dokumente",
-        hypotheses: "Hypothesen",
-        appointments: "Termine",
-        notes: "Notizen",
-        team: "Team",
-        newsfeed: "Newsfeed",
-      },
-      personaTitle: "Personas im Unternehmen",
-      addFile: "Add file",
-      fileSearch: "Search file",
-      noDocumentResult: "Keine Dokumente gefunden.",
-      kpiOneLabel: "Durchschnittliche Antwortzeit",
-      kpiTwoLabel: "Antwortquote",
-      kpiThreeLabel: "Prioritaet",
-      kpiOneHint: "Median ueber offene Threads",
-      kpiTwoHint: "Anteil geklaerter Punkte",
-      kpiThreeLow: "Niedrig",
-      kpiThreeMedium: "Mittel",
-      kpiThreeHigh: "Hoch",
-      kpiThreeHint: "Basierend auf offenen Fragen/Meetings",
-    }
-    : {
-      title: "Workspace",
-      rolePrefix: "Role:",
-      roles: {
-        admin: "Admin",
-        customer: "Customer",
-        salesConsultant: "Sales Consultant",
-        analyst: "Analyst",
-        guest: "Guest",
-      },
-      recentlyVisited: "Recently visited",
-      favorites: "Favorites",
-      searchLabel: "Search companies",
-      searchPlaceholder: "Search by name, segment, or owner",
-      noResult: "No company found.",
-      ownerLabel: "Owner",
-      openLabel: "Open",
-      meetingsLabel: "Meetings",
-      recentEventsTitle: "Recent events",
-      tabs: {
-        overview: "Overview",
-        portfolio: "Portfolio",
-        performance: "Performance",
-        documents: "Documents",
-        hypotheses: "Hypotheses",
-        appointments: "Appointments",
-        notes: "Notes",
-        team: "Team",
-        newsfeed: "Newsfeed",
-      },
-      personaTitle: "Personas in this company",
-      addFile: "Add file",
-      fileSearch: "Search file",
-      noDocumentResult: "No documents found.",
-      kpiOneLabel: "Average response time",
-      kpiTwoLabel: "Response completion",
-      kpiThreeLabel: "Priority",
-      kpiOneHint: "Median over active threads",
-      kpiTwoHint: "Share of resolved points",
-      kpiThreeLow: "Low",
-      kpiThreeMedium: "Medium",
-      kpiThreeHigh: "High",
-      kpiThreeHint: "Derived from open questions and meetings",
-    };
 
   const filteredCompanies = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -495,17 +108,122 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
     }
   }, [filteredCompanies, selectedCompanyId]);
 
+  const selectedCompany = useMemo(() => {
+    return filteredCompanies.find((company) => company.id === selectedCompanyId) ?? null;
+  }, [filteredCompanies, selectedCompanyId]);
+
+  const activeTeamMembers = useMemo(() => {
+    if (selectedCompany === null) {
+      return [];
+    }
+
+    return teamMembersByCompany[selectedCompany.id] ?? buildCompanyTeamMembers(selectedCompany);
+  }, [selectedCompany, teamMembersByCompany]);
+
+  useEffect(() => {
+    if (selectedCompany === null) {
+      return;
+    }
+
+    setTeamMembersByCompany((previous) => {
+      if (previous[selectedCompany.id] !== undefined) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [selectedCompany.id]: buildCompanyTeamMembers(selectedCompany),
+      };
+    });
+  }, [selectedCompany]);
+
+  const appointmentItems = useMemo(() => {
+    if (selectedCompany === null) {
+      return [];
+    }
+
+    const weekDays = weekdayLabelsByLanguage[language];
+    return selectedCompany.appointments.map((item, index) => {
+      return parseAppointmentItem(item, index % weekDays.length, selectedCompany.id, index);
+    });
+  }, [language, selectedCompany]);
+
+  const visibleDayIndices = useMemo(() => {
+    const hasWeekendAppointments = appointmentItems.some((item) => item.dayIndex >= 5);
+    return hasWeekendAppointments ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 2, 3, 4];
+  }, [appointmentItems]);
+
+  const appointmentLabelById = useMemo(() => {
+    const weekDays = weekdayLabelsByLanguage[language];
+    return new Map(
+      appointmentItems.map((item) => [
+        item.id,
+        `${weekDays[item.dayIndex] ?? ""} ${item.timeLabel} ${item.title}`.trim(),
+      ]),
+    );
+  }, [appointmentItems, language]);
+
+  const notesForSelectedCompany = useMemo(() => {
+    if (selectedCompany === null) {
+      return [] as CompanyNoteEntry[];
+    }
+
+    const baseNotes: CompanyNoteEntry[] = selectedCompany.notes.map((item, index) => ({
+      id: `base-note-${selectedCompany.id}-${index}`,
+      title: item.length > 56 ? `${item.slice(0, 56)}...` : item,
+      content: item,
+      createdAt: selectedCompany.lastVisited,
+      source: "base",
+      labels: [],
+      linkedEvent: null,
+    }));
+
+    const attachedNotes = uploadedNotesByCompany[selectedCompany.id] ?? [];
+    return [...attachedNotes, ...baseNotes];
+  }, [selectedCompany, uploadedNotesByCompany]);
+
+  const activeNoteId = useMemo(() => {
+    if (selectedCompany === null) {
+      return "";
+    }
+
+    return activeNoteByCompany[selectedCompany.id] ?? notesForSelectedCompany[0]?.id ?? "";
+  }, [activeNoteByCompany, notesForSelectedCompany, selectedCompany]);
+
+  const activeNote = useMemo(() => {
+    return notesForSelectedCompany.find((note) => note.id === activeNoteId) ?? null;
+  }, [activeNoteId, notesForSelectedCompany]);
+
+  useEffect(() => {
+    if (activeNote === null) {
+      setEditNoteTitle("");
+      setEditNoteContent("");
+      setEditNoteLabels([]);
+      setEditNoteLinkedEvent("");
+      return;
+    }
+
+    setEditNoteTitle(activeNote.title);
+    setEditNoteContent(activeNote.content);
+    setEditNoteLabels(activeNote.labels);
+    setEditNoteLinkedEvent(activeNote.linkedEvent ?? "");
+  }, [activeNote]);
+
+  const noteLabelLookup = useMemo(() => {
+    return new Map(text.noteLabels.map((label) => [label.id, label.label]));
+  }, [text.noteLabels]);
+
   useEffect(() => {
     setActiveTab("overview");
   }, [selectedCompanyId]);
 
   useEffect(() => {
     setDocumentSearch("");
+    setNoteDraft("");
+    setNoteDraftLabels([]);
+    setNoteDraftLinkedEvent("");
+    setEditingTeamMemberId("");
   }, [selectedCompanyId]);
-
-  const selectedCompany = useMemo(() => {
-    return filteredCompanies.find((company) => company.id === selectedCompanyId) ?? null;
-  }, [filteredCompanies, selectedCompanyId]);
 
   const recentCompanies = useMemo(() => {
     return roleScopedCompanies.slice(0, 12);
@@ -525,28 +243,384 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
     setActiveTab("overview");
   }, [activeTab, visibleTabs]);
 
+  useEffect(() => {
+    uploadedDocumentsRegistryRef.current = uploadedDocumentsByCompany;
+  }, [uploadedDocumentsByCompany]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(uploadedDocumentsRegistryRef.current)
+        .flat()
+        .forEach((entry) => {
+          URL.revokeObjectURL(entry.objectUrl);
+        });
+    };
+  }, []);
+
+  const buildTimeLabel = useCallback((): string => {
+    return new Intl.DateTimeFormat(language === "de" ? "de-DE" : "en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+  }, [language]);
+
   const handleDocumentUpload = (event: ChangeEvent<HTMLInputElement>): void => {
     if (selectedCompany === null) {
+      event.target.value = "";
       return;
     }
 
-    const fileNames = Array.from(event.target.files ?? [])
-      .map((file) => file.name.trim())
-      .filter((name) => name.length > 0);
-
-    if (fileNames.length === 0) {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
       return;
     }
 
     setUploadedDocumentsByCompany((previous) => {
       const existing = previous[selectedCompany.id] ?? [];
+      const existingNames = new Set(existing.map((entry) => entry.name.toLowerCase()));
+      const nextEntries = [...existing];
+
+      files.forEach((file, index) => {
+        const normalizedName = file.name.trim();
+        if (normalizedName.length === 0) {
+          return;
+        }
+
+        const normalizedKey = normalizedName.toLowerCase();
+        if (existingNames.has(normalizedKey)) {
+          return;
+        }
+
+        nextEntries.unshift({
+          id: `upload-${selectedCompany.id}-${Date.now()}-${index}`,
+          name: normalizedName,
+          mimeType: file.type.trim().length > 0 ? file.type : inferMimeTypeFromName(normalizedName),
+          sizeLabel: formatFileSize(file.size),
+          objectUrl: URL.createObjectURL(file),
+          uploadedAt: buildTimeLabel(),
+        });
+        existingNames.add(normalizedKey);
+      });
+
       return {
         ...previous,
-        [selectedCompany.id]: Array.from(new Set([...existing, ...fileNames])),
+        [selectedCompany.id]: nextEntries,
       };
     });
 
     event.target.value = "";
+  };
+
+  const triggerDocumentDownload = useCallback((companyName: string, docItem: WorkspaceDocumentItem): void => {
+    const generatedContent = [
+      `${docItem.name}`,
+      "",
+      `Company: ${companyName}`,
+      `Source: ${docItem.source}`,
+      `Type: ${docItem.mimeType}`,
+      "",
+      "Generated preview export from AURA workspace.",
+    ].join("\n");
+
+    const temporaryUrl =
+      docItem.objectUrl ??
+      URL.createObjectURL(new Blob([generatedContent], { type: "text/plain;charset=utf-8" }));
+
+    const link = document.createElement("a");
+    link.href = temporaryUrl;
+    link.download = docItem.name;
+    link.click();
+
+    if (docItem.objectUrl === null) {
+      URL.revokeObjectURL(temporaryUrl);
+    }
+  }, []);
+
+  const triggerDocumentPrint = useCallback((companyName: string, docItem: WorkspaceDocumentItem): void => {
+    if (docItem.objectUrl !== null) {
+      const previewWindow = globalThis.open(docItem.objectUrl, "_blank", "noopener,noreferrer");
+      if (previewWindow !== null) {
+        previewWindow.focus();
+        previewWindow.addEventListener("load", () => {
+          previewWindow.print();
+        }, { once: true });
+      }
+      return;
+    }
+
+    const printWindow = globalThis.open("", "_blank", "noopener,noreferrer");
+    if (printWindow === null) {
+      return;
+    }
+
+    printWindow.document.write([
+      "<html><head><title>Document Preview</title></head><body style='font-family:Segoe UI,sans-serif;padding:20px;'>",
+      `<h2>${docItem.name}</h2>`,
+      `<p><strong>Company:</strong> ${companyName}</p>`,
+      `<p><strong>Type:</strong> ${docItem.mimeType}</p>`,
+      "<p>Preview is unavailable for this source document in-browser.</p>",
+      "</body></html>",
+    ].join(""));
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }, []);
+
+  const handleDeleteDocument = useCallback((companyId: string, docItem: WorkspaceDocumentItem): void => {
+    if (docItem.source === "upload") {
+      setUploadedDocumentsByCompany((previous) => {
+        const existing = previous[companyId] ?? [];
+        const removed = existing.find((entry) => entry.id === docItem.id);
+        const filtered = existing.filter((entry) => entry.id !== docItem.id);
+
+        if (removed !== undefined) {
+          URL.revokeObjectURL(removed.objectUrl);
+        }
+
+        return {
+          ...previous,
+          [companyId]: filtered,
+        };
+      });
+    } else {
+      setDismissedDocumentsByCompany((previous) => {
+        const existing = previous[companyId] ?? [];
+        if (existing.includes(docItem.name)) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          [companyId]: [...existing, docItem.name],
+        };
+      });
+    }
+
+    setOpenedDocumentByCompany((previous) => {
+      if (previous[companyId] !== docItem.id) {
+        return previous;
+      }
+
+      const next = { ...previous };
+      delete next[companyId];
+      return next;
+    });
+
+    setFocusedDocumentByCompany((previous) => {
+      if (previous[companyId] !== docItem.id) {
+        return previous;
+      }
+
+      const next = { ...previous };
+      delete next[companyId];
+      return next;
+    });
+  }, []);
+
+  const toggleCreateNoteLabel = (labelId: string): void => {
+    setNoteDraftLabels((previous) => {
+      if (previous.includes(labelId)) {
+        return previous.filter((entry) => entry !== labelId);
+      }
+
+      return [...previous, labelId];
+    });
+  };
+
+  const toggleEditNoteLabel = (labelId: string): void => {
+    setEditNoteLabels((previous) => {
+      if (previous.includes(labelId)) {
+        return previous.filter((entry) => entry !== labelId);
+      }
+
+      return [...previous, labelId];
+    });
+  };
+
+  const handleAddNote = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+
+    if (selectedCompany === null) {
+      return;
+    }
+
+    const content = noteDraft.trim();
+    if (content.length === 0) {
+      return;
+    }
+
+    const title = content.length > 56 ? `${content.slice(0, 56)}...` : content;
+    const newNote: CompanyNoteEntry = {
+      id: `manual-note-${selectedCompany.id}-${Date.now()}`,
+      title,
+      content,
+      createdAt: buildTimeLabel(),
+      source: "manual",
+      labels: [...noteDraftLabels],
+      linkedEvent: noteDraftLinkedEvent.trim().length > 0 ? noteDraftLinkedEvent : null,
+    };
+
+    setUploadedNotesByCompany((previous) => {
+      const existing = previous[selectedCompany.id] ?? [];
+      return {
+        ...previous,
+        [selectedCompany.id]: [newNote, ...existing],
+      };
+    });
+
+    setActiveNoteByCompany((previous) => ({
+      ...previous,
+      [selectedCompany.id]: newNote.id,
+    }));
+    setNoteDraft("");
+    setNoteDraftLabels([]);
+    setNoteDraftLinkedEvent("");
+  };
+
+  const handleAttachNoteFile = (event: ChangeEvent<HTMLInputElement>): void => {
+    if (selectedCompany === null) {
+      event.target.value = "";
+      return;
+    }
+
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    const mappedNotes = files
+      .map((file, index): CompanyNoteEntry | null => {
+        const normalizedName = file.name.trim();
+        if (normalizedName.length === 0) {
+          return null;
+        }
+
+        return {
+          id: `file-note-${selectedCompany.id}-${Date.now()}-${index}`,
+          title: normalizedName,
+          content: `${text.noteAttachedPrefix}: ${normalizedName} (${formatFileSize(file.size)})`,
+          createdAt: buildTimeLabel(),
+          source: "file",
+          labels: [],
+          linkedEvent: null,
+        };
+      })
+      .filter((entry): entry is CompanyNoteEntry => entry !== null);
+
+    if (mappedNotes.length === 0) {
+      event.target.value = "";
+      return;
+    }
+
+    setUploadedNotesByCompany((previous) => {
+      const existing = previous[selectedCompany.id] ?? [];
+      return {
+        ...previous,
+        [selectedCompany.id]: [...mappedNotes, ...existing],
+      };
+    });
+
+    setActiveNoteByCompany((previous) => ({
+      ...previous,
+      [selectedCompany.id]: mappedNotes[0].id,
+    }));
+
+    event.target.value = "";
+  };
+
+  const handleSaveNoteEdit = (): void => {
+    if (selectedCompany === null || activeNote === null || activeNote.source === "base") {
+      return;
+    }
+
+    const trimmedTitle = editNoteTitle.trim();
+    const trimmedContent = editNoteContent.trim();
+    if (trimmedTitle.length === 0 || trimmedContent.length === 0) {
+      return;
+    }
+
+    setUploadedNotesByCompany((previous) => {
+      const existing = previous[selectedCompany.id] ?? [];
+      const updated = existing.map((note) => {
+        if (note.id !== activeNote.id) {
+          return note;
+        }
+
+        return {
+          ...note,
+          title: trimmedTitle,
+          content: trimmedContent,
+          labels: [...editNoteLabels],
+          linkedEvent: editNoteLinkedEvent.trim().length > 0 ? editNoteLinkedEvent : null,
+        };
+      });
+
+      return {
+        ...previous,
+        [selectedCompany.id]: updated,
+      };
+    });
+  };
+
+  const handleMeetingAssigneeChange = (appointmentId: string, teamMemberId: string): void => {
+    if (selectedCompany === null) {
+      return;
+    }
+
+    setMeetingAssigneesByCompany((previous) => ({
+      ...previous,
+      [selectedCompany.id]: {
+        ...(previous[selectedCompany.id] ?? {}),
+        [appointmentId]: teamMemberId,
+      },
+    }));
+  };
+
+  const handleStartTeamEdit = (member: CompanyTeamMemberEntry): void => {
+    setEditingTeamMemberId(member.id);
+    setTeamEditFunction(member.functionName);
+    setTeamEditName(member.fullName);
+  };
+
+  const handleCancelTeamEdit = (): void => {
+    setEditingTeamMemberId("");
+    setTeamEditFunction("");
+    setTeamEditName("");
+  };
+
+  const handleSaveTeamEdit = (): void => {
+    if (selectedCompany === null || editingTeamMemberId.length === 0) {
+      return;
+    }
+
+    const normalizedFunction = teamEditFunction.trim();
+    const normalizedName = teamEditName.trim();
+
+    if (normalizedFunction.length === 0 || normalizedName.length === 0) {
+      return;
+    }
+
+    setTeamMembersByCompany((previous) => {
+      const existing = previous[selectedCompany.id] ?? buildCompanyTeamMembers(selectedCompany);
+      const updated = existing.map((member) => {
+        if (member.id !== editingTeamMemberId) {
+          return member;
+        }
+
+        return {
+          ...member,
+          functionName: normalizedFunction,
+          fullName: normalizedName,
+        };
+      });
+
+      return {
+        ...previous,
+        [selectedCompany.id]: updated,
+      };
+    });
+
+    handleCancelTeamEdit();
   };
 
   const renderDetailBody = (): JSX.Element | null => {
@@ -563,6 +637,29 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
         : totalOpen >= 6
           ? text.kpiThreeMedium
           : text.kpiThreeLow;
+      const scopeProgress = [
+        {
+          id: "scope-discovery",
+          label: text.scopeDiscovery,
+          value: Math.min(100, Math.max(24, Math.round(34 + selectedCompany.hypotheses.length * 17))),
+        },
+        {
+          id: "scope-validation",
+          label: text.scopeValidation,
+          value: Math.min(100, Math.max(26, Math.round(completionRate - selectedCompany.pendingMeetings * 2))),
+        },
+        {
+          id: "scope-delivery",
+          label: text.scopeDelivery,
+          value: Math.min(
+            100,
+            Math.max(22, Math.round(28 + selectedCompany.documents.length * 10 + selectedCompany.appointments.length * 7)),
+          ),
+        },
+      ];
+      const scopeCoverage = Math.round(
+        scopeProgress.reduce((sum, item) => sum + item.value, 0) / Math.max(1, scopeProgress.length),
+      );
 
       return (
         <div className="company-overview-layout">
@@ -583,6 +680,39 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
             </ul>
           </div>
 
+          <div className="company-overview-scopes-wrap">
+            <div className="company-overview-block company-overview-progress-block">
+              <h4>{text.overviewScopeTitle}</h4>
+              <ul className="company-scope-progress-list">
+                {scopeProgress.map((scope) => (
+                  <li key={scope.id}>
+                    <div className="company-scope-progress-head">
+                      <span>{scope.label}</span>
+                      <strong>{scope.value}%</strong>
+                    </div>
+                    <div className="company-scope-progress-track" aria-label={`${scope.label} ${scope.value}%`}>
+                      <span className="company-scope-progress-fill" style={{ width: `${scope.value}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="company-overview-priority-stack">
+              <article className="company-overview-kpi-card company-overview-kpi-card-spotlight">
+                <span>{text.kpiThreeLabel}</span>
+                <strong>{priorityLabel}</strong>
+                <small>{text.kpiThreeHint}</small>
+              </article>
+
+              <article className="company-overview-kpi-card company-overview-kpi-card-spotlight">
+                <span>{text.kpiFourLabel}</span>
+                <strong>{scopeCoverage}%</strong>
+                <small>{text.kpiFourHint}</small>
+              </article>
+            </div>
+          </div>
+
           <div className="company-overview-kpi-grid">
             <article className="company-overview-kpi-card">
               <span>{text.kpiOneLabel}</span>
@@ -597,9 +727,15 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
             </article>
 
             <article className="company-overview-kpi-card">
-              <span>{text.kpiThreeLabel}</span>
-              <strong>{priorityLabel}</strong>
-              <small>{text.kpiThreeHint}</small>
+              <span>{text.openLabel}</span>
+              <strong>{selectedCompany.openQuestions}</strong>
+              <small>{text.openKpiHint}</small>
+            </article>
+
+            <article className="company-overview-kpi-card">
+              <span>{text.meetingsLabel}</span>
+              <strong>{selectedCompany.pendingMeetings}</strong>
+              <small>{text.meetingsKpiHint}</small>
             </article>
           </div>
         </div>
@@ -611,16 +747,100 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
     }
 
     if (activeTab === "performance") {
-      return <p>{selectedCompany.performanceSummary}</p>;
+      const totalOpen = selectedCompany.openQuestions + selectedCompany.pendingMeetings;
+      const performanceRows = [
+        {
+          id: "response",
+          label: text.perfResponseLabel,
+          value: Math.max(58, Math.round(96 - selectedCompany.pendingMeetings * 7 - selectedCompany.openQuestions * 2)),
+        },
+        {
+          id: "resolution",
+          label: text.perfResolutionLabel,
+          value: Math.max(48, Math.round(100 - totalOpen * 4)),
+        },
+        {
+          id: "sla",
+          label: text.perfSlaLabel,
+          value: Math.max(50, Math.round(95 - selectedCompany.pendingMeetings * 9)),
+        },
+        {
+          id: "knowledge",
+          label: text.perfKnowledgeLabel,
+          value: Math.min(100, 52 + selectedCompany.documents.length * 11),
+        },
+        {
+          id: "meeting-load",
+          label: text.perfMeetingLoadLabel,
+          value: Math.min(100, 16 + selectedCompany.pendingMeetings * 17),
+        },
+        {
+          id: "hypothesis",
+          label: text.perfHypothesisLabel,
+          value: Math.min(100, 30 + selectedCompany.hypotheses.length * 18),
+        },
+      ];
+
+      return (
+        <div className="company-performance-layout">
+          <h4>{text.performanceTitle}</h4>
+          <div className="company-performance-grid">
+            {performanceRows.map((metric) => (
+              <article className="company-performance-card" key={metric.id}>
+                <div className="company-performance-head">
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}%</strong>
+                </div>
+                <div className="company-scope-progress-track" aria-label={`${metric.label} ${metric.value}%`}>
+                  <span className="company-scope-progress-fill" style={{ width: `${metric.value}%` }} />
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="company-performance-summary">
+            <strong>{text.perfSummaryLabel}: </strong>
+            {selectedCompany.performanceSummary}
+          </p>
+        </div>
+      );
     }
 
     if (activeTab === "documents") {
       const uploadedDocuments = uploadedDocumentsByCompany[selectedCompany.id] ?? [];
-      const allDocuments = Array.from(new Set([...selectedCompany.documents, ...uploadedDocuments]));
+      const dismissedNames = new Set(
+        (dismissedDocumentsByCompany[selectedCompany.id] ?? []).map((name) => name.toLowerCase()),
+      );
+      const baseDocuments: WorkspaceDocumentItem[] = selectedCompany.documents
+        .filter((name) => !dismissedNames.has(name.toLowerCase()))
+        .map((name, index) => ({
+          id: `base-document-${selectedCompany.id}-${index}`,
+          name,
+          source: "base",
+          mimeType: inferMimeTypeFromName(name),
+          sizeLabel: "-",
+          objectUrl: null,
+          uploadedAt: "-",
+        }));
+      const uploadedDocumentItems: WorkspaceDocumentItem[] = uploadedDocuments
+        .filter((entry) => !dismissedNames.has(entry.name.toLowerCase()))
+        .map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          source: "upload",
+          mimeType: entry.mimeType,
+          sizeLabel: entry.sizeLabel,
+          objectUrl: entry.objectUrl,
+          uploadedAt: entry.uploadedAt,
+        }));
+      const allDocuments = [...uploadedDocumentItems, ...baseDocuments];
       const docQuery = documentSearch.trim().toLowerCase();
       const visibleDocuments = docQuery.length === 0
         ? allDocuments
-        : allDocuments.filter((item) => item.toLowerCase().includes(docQuery));
+        : allDocuments.filter((item) => item.name.toLowerCase().includes(docQuery));
+      const focusedDocumentId = focusedDocumentByCompany[selectedCompany.id] ?? "";
+      const openedDocumentId = openedDocumentByCompany[selectedCompany.id] ?? "";
+      const openedDocument =
+        allDocuments.find((item) => item.id === openedDocumentId) ?? null;
 
       return (
         <div className="company-documents-panel">
@@ -651,12 +871,110 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
             />
           </div>
 
-          <ul className="company-detail-list company-detail-list-lined company-documents-list">
-            {visibleDocuments.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-            {visibleDocuments.length === 0 ? <li>{text.noDocumentResult}</li> : null}
-          </ul>
+          <p className="company-documents-hint">{text.documentsHint}</p>
+
+          <div className="company-documents-layout">
+            <ul className="company-detail-list company-detail-list-lined company-documents-list">
+              {visibleDocuments.map((item) => {
+                const isFocused = focusedDocumentId === item.id;
+                const isOpened = openedDocumentId === item.id;
+                const documentButtonClassName = `company-document-btn${
+                  isFocused ? " is-focused" : ""
+                }${isOpened ? " is-opened" : ""}`;
+
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={documentButtonClassName}
+                      onClick={() => {
+                        setFocusedDocumentByCompany((previous) => ({
+                          ...previous,
+                          [selectedCompany.id]: item.id,
+                        }));
+                        setOpenedDocumentByCompany((previous) => ({
+                          ...previous,
+                          [selectedCompany.id]: item.id,
+                        }));
+                      }}
+                    >
+                      <span>{item.name}</span>
+                      <small>
+                        {item.source === "upload"
+                          ? `${text.uploadedLabel}: ${item.uploadedAt} Ã‚Â· ${item.sizeLabel}`
+                          : text.openPreviewHint}
+                      </small>
+                    </button>
+                  </li>
+                );
+              })}
+              {visibleDocuments.length === 0 ? <li>{text.noDocumentResult}</li> : null}
+            </ul>
+
+            <aside className="company-document-preview-panel" aria-label={text.previewTitle}>
+              <h4>{text.previewTitle}</h4>
+
+              {openedDocument === null ? (
+                <p className="company-document-preview-empty">{text.previewEmpty}</p>
+              ) : (
+                <div className="company-document-preview-body">
+                  <p className="company-document-preview-name">{openedDocument.name}</p>
+                  <p className="company-document-preview-meta">
+                    {openedDocument.mimeType || text.unknownFileType}
+                    {openedDocument.sizeLabel.length > 0 && openedDocument.sizeLabel !== "-"
+                      ? ` Ã‚Â· ${openedDocument.sizeLabel}`
+                      : ""}
+                  </p>
+
+                  {openedDocument.objectUrl !== null && openedDocument.mimeType.startsWith("image/") ? (
+                    <img
+                      src={openedDocument.objectUrl}
+                      alt={openedDocument.name}
+                      className="company-document-preview-image"
+                    />
+                  ) : null}
+
+                  {openedDocument.objectUrl !== null && openedDocument.mimeType === "application/pdf" ? (
+                    <iframe
+                      src={openedDocument.objectUrl}
+                      title={openedDocument.name}
+                      className="company-document-preview-frame"
+                    />
+                  ) : null}
+
+                  {openedDocument.objectUrl === null ? (
+                    <div className="company-document-preview-placeholder">
+                      <p>{openedDocument.name}</p>
+                      <small>{text.openPreviewHint}</small>
+                    </div>
+                  ) : null}
+
+                  <div className="company-document-actions">
+                    <button
+                      type="button"
+                      onClick={() => triggerDocumentDownload(selectedCompany.name, openedDocument)}
+                    >
+                      {text.downloadFile}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => triggerDocumentPrint(selectedCompany.name, openedDocument)}
+                    >
+                      {text.printFile}
+                    </button>
+                    <button
+                      type="button"
+                      className="is-danger"
+                      onClick={() => handleDeleteDocument(selectedCompany.id, openedDocument)}
+                    >
+                      {text.deleteFile}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </aside>
+          </div>
+
         </div>
       );
     }
@@ -672,40 +990,74 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
     }
 
     if (activeTab === "appointments") {
+      const companyAssignees = meetingAssigneesByCompany[selectedCompany.id] ?? {};
+
       return (
-        <ul className="company-detail-list company-detail-list-lined">
-          {selectedCompany.appointments.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+        <CompanyAppointmentsTab
+          language={language}
+          text={text}
+          appointmentItems={appointmentItems}
+          visibleDayIndices={visibleDayIndices}
+          activeTeamMembers={activeTeamMembers}
+          companyAssignees={companyAssignees}
+          onAssigneeChange={handleMeetingAssigneeChange}
+        />
       );
     }
 
     if (activeTab === "notes") {
       return (
-        <ul className="company-detail-list company-detail-list-lined">
-          {selectedCompany.notes.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+        <CompanyNotesTab
+          text={text}
+          notesForSelectedCompany={notesForSelectedCompany}
+          activeNoteId={activeNoteId}
+          activeNote={activeNote}
+          noteLabelLookup={noteLabelLookup}
+          appointmentItems={appointmentItems}
+          appointmentLabelById={appointmentLabelById}
+          noteFileInputRef={noteFileInputRef}
+          onAttachNoteFile={handleAttachNoteFile}
+          onSelectNote={(noteId) => {
+            setActiveNoteByCompany((previous) => ({
+              ...previous,
+              [selectedCompany.id]: noteId,
+            }));
+          }}
+          editNoteTitle={editNoteTitle}
+          editNoteContent={editNoteContent}
+          editNoteLabels={editNoteLabels}
+          editNoteLinkedEvent={editNoteLinkedEvent}
+          onEditNoteTitleChange={setEditNoteTitle}
+          onEditNoteContentChange={setEditNoteContent}
+          onToggleEditNoteLabel={toggleEditNoteLabel}
+          onEditNoteLinkedEventChange={setEditNoteLinkedEvent}
+          onSaveNoteEdit={handleSaveNoteEdit}
+          noteDraft={noteDraft}
+          noteDraftLabels={noteDraftLabels}
+          noteDraftLinkedEvent={noteDraftLinkedEvent}
+          onNoteDraftChange={setNoteDraft}
+          onToggleCreateNoteLabel={toggleCreateNoteLabel}
+          onNoteDraftLinkedEventChange={setNoteDraftLinkedEvent}
+          onAddNote={handleAddNote}
+        />
       );
     }
 
     if (activeTab === "team") {
       return (
-        <div>
-          <p className="company-team-title">{text.personaTitle}</p>
-          <div className="company-persona-row">
-            {selectedCompany.personas.map((persona) => (
-              <span key={persona} className="company-pill">{persona}</span>
-            ))}
-          </div>
-          <ul className="company-detail-list company-detail-list-lined">
-            {selectedCompany.teamMembers.map((member) => (
-              <li key={member}>{member}</li>
-            ))}
-          </ul>
-        </div>
+        <CompanyTeamTab
+          text={text}
+          selectedCompany={selectedCompany}
+          activeTeamMembers={activeTeamMembers}
+          editingTeamMemberId={editingTeamMemberId}
+          teamEditFunction={teamEditFunction}
+          teamEditName={teamEditName}
+          onTeamEditFunctionChange={setTeamEditFunction}
+          onTeamEditNameChange={setTeamEditName}
+          onStartTeamEdit={handleStartTeamEdit}
+          onSaveTeamEdit={handleSaveTeamEdit}
+          onCancelTeamEdit={handleCancelTeamEdit}
+        />
       );
     }
 
@@ -725,9 +1077,22 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
           <h2>{text.title}</h2>
         </div>
 
-        <div className="company-assigned-role" aria-label="Role">
-          <span>{text.rolePrefix}</span>
-          <strong>{text.roles[assignedRole]}</strong>
+        <div className="company-workspace-header-right">
+          <div className="company-assigned-role" aria-label="Role">
+            <span>{text.rolePrefix}</span>
+            <strong>{text.roles[assignedRole]}</strong>
+          </div>
+
+          <button
+            type="button"
+            className="profile-chip profile-chip-btn profile-chip-workspace"
+            aria-label="Open profile"
+            onClick={onOpenProfile}
+          >
+            <div className="profile-avatar" aria-hidden="true" title={userProfile.fullName}>
+              {userProfile.initials}
+            </div>
+          </button>
         </div>
       </header>
 
@@ -743,7 +1108,10 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
                     className={`company-sublist-item-btn${company.id === selectedCompanyId ? " is-active" : ""}`}
                     onClick={() => setSelectedCompanyId(company.id)}
                   >
-                    <span className="company-sublist-main">{company.name}</span>
+                    <span className="company-sublist-main-row">
+                      <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
+                      <span className="company-sublist-main">{company.name}</span>
+                    </span>
                     <span className="company-sublist-time">{company.lastVisited}</span>
                   </button>
                 </li>
@@ -761,7 +1129,10 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
                     className={`company-sublist-item-btn${company.id === selectedCompanyId ? " is-active" : ""}`}
                     onClick={() => setSelectedCompanyId(company.id)}
                   >
-                    {company.name}
+                    <span className="company-sublist-main-row">
+                      <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
+                      <span className="company-sublist-main">{company.name}</span>
+                    </span>
                   </button>
                 </li>
               ))}
@@ -789,9 +1160,12 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
                     className={`company-item-btn${isActive ? " is-active" : ""}`}
                     onClick={() => setSelectedCompanyId(company.id)}
                   >
-                    <div>
-                      <strong>{company.name}</strong>
-                      <small>{company.segment}</small>
+                    <div className="company-item-main">
+                      <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
+                      <div>
+                        <strong>{company.name}</strong>
+                        <small>{company.segment}</small>
+                      </div>
                     </div>
                     <div className="company-item-meta">
                       <span>{company.lastVisited}</span>
@@ -812,9 +1186,14 @@ export function CompanyWorkspacePanel({ language }: CompanyWorkspacePanelProps) 
           ) : (
             <>
               <header className="company-detail-header">
-                <div>
-                  <h3>{selectedCompany.name}</h3>
-                  <p>{selectedCompany.segment}</p>
+                <div className="company-detail-title-row">
+                  <span className="company-list-avatar" aria-hidden="true">
+                    {getCompanyInitials(selectedCompany.name)}
+                  </span>
+                  <div>
+                    <h3>{selectedCompany.name}</h3>
+                    <p>{selectedCompany.segment}</p>
+                  </div>
                 </div>
 
                 <ul className="company-detail-metrics-inline">

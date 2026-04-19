@@ -112,11 +112,11 @@ Frontend default URL: http://localhost:5173
 ## Interaction Notes
 
 - New chat: the plus button in Current Session always starts a fresh chat session.
-- Voice input: click the microphone button in the chat composer, allow browser microphone access, and speak to insert text.
+- Voice input: click the microphone button in the chat composer to call the speech lambda-style backend service and stream text into the draft.
 - Profile help: the Profile page contains a Help and Feature Forum section with quick how-to entries.
 
 ## Troubleshooting
 
 - If panel layout breaks, avoid removing sidebar nodes from React tree; toggle with CSS state classes instead.
-- If voice input does not start, verify browser microphone permission and SpeechRecognition API support.
+- If voice input does not start, verify browser microphone permission and that the speech backend service is running.
 - If dark mode looks wrong, ensure the root element has data-theme="dark" and no overriding custom CSS variables.

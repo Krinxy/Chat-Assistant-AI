@@ -28,6 +28,7 @@ production = []
 backend = [
   "fastapi>=0.115.0",
   "uvicorn>=0.30.0",
+  "redis>=5.2.0",
   "motor>=3.6.0",
   "pymongo>=4.8.0",
   "pydantic>=2.8.0",
@@ -40,7 +41,12 @@ backend = [
   "tenacity>=9.0.0",
   "orjson>=3.10.0",
   "python-dotenv>=1.0.1",
-  "PyYAML>=6.0.2"
+  "PyYAML>=6.0.2",
+  "torch>=2.4.0",
+  "transformers>=4.45.0",
+  "accelerate>=0.34.0",
+  "safetensors>=0.4.5",
+  "imageio-ffmpeg>=0.5.1"
 ]
 
 frontend = [

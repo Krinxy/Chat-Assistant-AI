@@ -27,9 +27,7 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         preload_on_startup = _parse_bool_env("TRANSCRIPTION_PRELOAD_ON_STARTUP", True)
-        report = await run_in_threadpool(
-            lambda: run_transcription_preflight(preload_runtime=preload_on_startup)
-        )
+        report = await run_in_threadpool(lambda: run_transcription_preflight(preload_runtime=preload_on_startup))
         print_preflight_report(report)
         yield
 

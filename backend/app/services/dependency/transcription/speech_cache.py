@@ -37,9 +37,7 @@ class SpeechTranscriptionCache:
         config: SpeechCacheConfig | None = None,
     ) -> None:
         self._redis_cache = redis_cache or _try_create_redis_cache_from_env() or FakeRedisCache()
-        self._config = config or SpeechCacheConfig(
-            ttl_seconds=_resolve_ttl_seconds_from_env(default_value=20)
-        )
+        self._config = config or SpeechCacheConfig(ttl_seconds=_resolve_ttl_seconds_from_env(default_value=20))
 
     @property
     def backend_name(self) -> str:

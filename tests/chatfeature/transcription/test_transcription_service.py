@@ -52,9 +52,7 @@ def test_transcribe_chunk_returns_stripped_text_and_language_kwargs() -> None:
     result = transcriber.transcribe_chunk(b"bytes", language="de-DE")
 
     assert result == "hello world"
-    assert fake_pipeline.calls[0][1] == {
-        "generate_kwargs": {"language": "de", "task": "transcribe"}
-    }
+    assert fake_pipeline.calls[0][1] == {"generate_kwargs": {"language": "de", "task": "transcribe"}}
 
 
 def test_transcribe_chunk_short_circuits_empty_payload() -> None:
@@ -66,9 +64,7 @@ def test_transcribe_chunk_short_circuits_empty_payload() -> None:
 
 
 def test_transcribe_chunk_wraps_pipeline_failure() -> None:
-    transcriber = WhisperChunkTranscriber(
-        pipeline_factory=lambda: _FakePipeline(should_raise=True)
-    )
+    transcriber = WhisperChunkTranscriber(pipeline_factory=lambda: _FakePipeline(should_raise=True))
 
     with pytest.raises(WhisperInferenceError):
         transcriber.transcribe_chunk(b"broken-audio")
@@ -174,9 +170,7 @@ def test_transcriber_raises_when_dependencies_missing_and_fallback_disabled(monk
 
     monkeypatch.setattr(builtins, "__import__", _failing_import)
 
-    transcriber = WhisperChunkTranscriber(
-        config=WhisperRuntimeConfig(enable_fake_fallback=False)
-    )
+    transcriber = WhisperChunkTranscriber(config=WhisperRuntimeConfig(enable_fake_fallback=False))
 
     with pytest.raises(WhisperDependenciesMissingError):
         transcriber.transcribe_chunk(b"audio")

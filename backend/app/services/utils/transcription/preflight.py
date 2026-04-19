@@ -80,10 +80,7 @@ def print_preflight_report(report: TranscriptionPreflightReport) -> None:
     if len(report.missing_packages) == 0:
         print("[transcription] dependencies: ok")
     else:
-        print(
-            "[transcription] missing python packages: "
-            + ", ".join(report.missing_packages)
-        )
+        print("[transcription] missing python packages: " + ", ".join(report.missing_packages))
 
     if report.ffmpeg_path is None:
         print("[transcription] ffmpeg: missing")

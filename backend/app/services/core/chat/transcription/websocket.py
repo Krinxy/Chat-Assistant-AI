@@ -165,9 +165,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
                 payload_type = payload.get("type")
                 if payload_type == "start":
                     language = payload.get("language")
-                    active_language = session_handler.normalize_language(
-                        language if isinstance(language, str) else None
-                    )
+                    active_language = session_handler.normalize_language(language if isinstance(language, str) else None)
 
                     mime_type = payload.get("mime_type")
                     if isinstance(mime_type, str) and len(mime_type.strip()) > 0:

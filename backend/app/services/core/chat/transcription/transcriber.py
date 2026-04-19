@@ -133,16 +133,11 @@ def _decode_audio_chunk_with_ffmpeg(
             out_bytes, err_bytes = ffmpeg_process.communicate(audio_chunk)
             return_code = ffmpeg_process.returncode
     except FileNotFoundError as error:
-        raise ValueError(
-            "ffmpeg binary was not found and is required for audio decoding"
-        ) from error
+        raise ValueError("ffmpeg binary was not found and is required for audio decoding") from error
 
     if return_code not in (0, None):
         stderr_text = err_bytes.decode("utf-8", errors="ignore").strip()
-        raise ValueError(
-            "ffmpeg decode failed"
-            + (f": {stderr_text}" if len(stderr_text) > 0 else "")
-        )
+        raise ValueError("ffmpeg decode failed" + (f": {stderr_text}" if len(stderr_text) > 0 else ""))
 
     audio = np.frombuffer(out_bytes, np.float32)
     if audio.shape[0] == 0:
@@ -183,16 +178,12 @@ def _patch_transformers_ffmpeg_reader(
             ) as ffmpeg_process:
                 output_stream = ffmpeg_process.communicate(bpayload)
         except FileNotFoundError as error:
-            raise ValueError(
-                "ffmpeg binary was not found and is required for audio decoding"
-            ) from error
+            raise ValueError("ffmpeg binary was not found and is required for audio decoding") from error
 
         out_bytes = output_stream[0]
         audio = np.frombuffer(out_bytes, np.float32)
         if audio.shape[0] == 0:
-            raise ValueError(
-                "Soundfile is either malformed or unsupported by the current decoder"
-            )
+            raise ValueError("Soundfile is either malformed or unsupported by the current decoder")
 
         return audio
 
@@ -294,15 +285,11 @@ def _reset_pipeline_call_count(pipe: Any) -> None:
 
 @dataclass(frozen=True)
 class WhisperRuntimeConfig:
-    model_id: str = field(
-        default_factory=lambda: os.getenv("WHISPER_MODEL_ID", "openai/whisper-large-v3-turbo")
-    )
+    model_id: str = field(default_factory=lambda: os.getenv("WHISPER_MODEL_ID", "openai/whisper-large-v3-turbo"))
     model_revision: str = field(default_factory=_resolve_model_revision)
     low_cpu_mem_usage: bool = True
     use_safetensors: bool = True
-    enable_fake_fallback: bool = field(
-        default_factory=lambda: _parse_bool_env("WHISPER_ENABLE_FAKE_FALLBACK", True)
-    )
+    enable_fake_fallback: bool = field(default_factory=lambda: _parse_bool_env("WHISPER_ENABLE_FAKE_FALLBACK", True))
     fake_transcript_text: str = field(default_factory=_resolve_fake_transcript_text)
 
 
@@ -362,18 +349,14 @@ class WhisperChunkTranscriber:
             if self._config.enable_fake_fallback:
                 return self._build_fake_pipeline()
 
-            raise WhisperDependenciesMissingError(
-                'Whisper dependencies missing. Install with: pip install -e ".[backend]"'
-            ) from exc
+            raise WhisperDependenciesMissingError('Whisper dependencies missing. Install with: pip install -e ".[backend]"') from exc
 
         ffmpeg_binary_path = _resolve_ffmpeg_binary_path()
         if ffmpeg_binary_path is None:
             if self._config.enable_fake_fallback:
                 return self._build_fake_pipeline()
 
-            raise WhisperDependenciesMissingError(
-                'ffmpeg binary missing. Install with: pip install -e ".[backend]"'
-            )
+            raise WhisperDependenciesMissingError('ffmpeg binary missing. Install with: pip install -e ".[backend]"')
 
         _patch_transformers_ffmpeg_reader(hf_audio_utils, ffmpeg_binary_path)
 

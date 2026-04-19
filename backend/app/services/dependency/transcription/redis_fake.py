@@ -48,8 +48,6 @@ class FakeRedisCache:
 
     def _purge_expired_locked(self) -> None:
         now = self._time_fn()
-        expired_keys = [
-            key for key, (expires_at, _value) in self._entries.items() if expires_at <= now
-        ]
+        expired_keys = [key for key, (expires_at, _value) in self._entries.items() if expires_at <= now]
         for key in expired_keys:
             del self._entries[key]

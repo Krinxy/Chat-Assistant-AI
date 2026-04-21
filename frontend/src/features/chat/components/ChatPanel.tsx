@@ -10,9 +10,9 @@ import {
 } from "react";
 
 import { ChatSkeletonMessage } from "../../../shared/components/feedback/ChatSkeletonMessage";
-import { userProfile } from "../../../shared/data/userProfile";
 import { useOutsideClick } from "../../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../../shared/i18n/uiText";
+import { ACTIVE_DEV_PROFILE } from "../../../shared/constants/devProfiles";
 import type {
   AttachmentAction,
   BrainrotStyleKey,
@@ -1283,8 +1283,8 @@ export function ChatPanel({
             aria-label="Open profile"
             onClick={onOpenProfile}
           >
-            <div className="profile-avatar" aria-hidden="true" title={userProfile.fullName}>
-              {userProfile.initials}
+            <div className="profile-avatar" aria-hidden="true" title={ACTIVE_DEV_PROFILE.fullName}>
+              {ACTIVE_DEV_PROFILE.initials}
             </div>
           </button>
         ) : null}

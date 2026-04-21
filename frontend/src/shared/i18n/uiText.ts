@@ -99,6 +99,7 @@ export interface UiText {
     addCityAction: string;
     cityAlreadyAdded: string;
     hourlyForecastTitle: string;
+    feelsLikeToggle: string;
     recommendedNews: string;
     updatedPrefix: string;
     generatedCondition: string[];
@@ -228,7 +229,8 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       searchCityPlaceholder: "Ortschaft suchen...",
       addCityAction: "Hinzufügen",
       cityAlreadyAdded: "Ort ist bereits vorhanden",
-      hourlyForecastTitle: "Stündliche Prognose",
+      hourlyForecastTitle: "Stuendliche Prognose",
+      feelsLikeToggle: "Gefuehlt",
       recommendedNews: "Empfohlene News",
       updatedPrefix: "Aktualisiert",
       generatedCondition: [
@@ -362,6 +364,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       addCityAction: "Add",
       cityAlreadyAdded: "Location already added",
       hourlyForecastTitle: "Hourly forecast",
+      feelsLikeToggle: "Feels like",
       recommendedNews: "Recommended News",
       updatedPrefix: "Updated",
       generatedCondition: [

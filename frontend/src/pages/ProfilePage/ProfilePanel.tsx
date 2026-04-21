@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { userProfile } from "../../shared/data/userProfile";
 import type { Language, LocalLlmConfig } from "../../features/chat/types/chat";
+import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 
 interface ProfilePanelProps {
   language: Language;
@@ -152,8 +152,8 @@ const formatSigned = (value: number): string => {
   return value.toFixed(2);
 };
 
-const getRoleLabel = (language: Language): string => {
-  return language === "de" ? "Produkt Owner" : "Product Owner";
+const getRoleLabel = (): string => {
+  return ACTIVE_DEV_PROFILE.role;
 };
 
 export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: ProfilePanelProps) {
@@ -324,9 +324,9 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
   const text = language === "de"
     ? {
       title: "Profil",
-      subtitle: "Persönliche Einstellungen für deinen Assistant",
-      fullName: userProfile.fullName,
-      email: userProfile.email,
+      subtitle: "Persoenliche Einstellungen fuer deinen Assistant",
+      fullName: ACTIVE_DEV_PROFILE.fullName,
+      email: ACTIVE_DEV_PROFILE.email,
       roleLabel: "Rolle",
       subscriptionLabel: "Subscription",
       subscriptionValue: "Pro Annual",
@@ -371,8 +371,8 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
     : {
       title: "Profile",
       subtitle: "Personal settings for your assistant",
-      fullName: userProfile.fullName,
-      email: userProfile.email,
+      fullName: ACTIVE_DEV_PROFILE.fullName,
+      email: ACTIVE_DEV_PROFILE.email,
       roleLabel: "Role",
       subscriptionLabel: "Subscription",
       subscriptionValue: "Pro Annual",
@@ -451,7 +451,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
         <aside className="profile-header-identity" aria-label={text.fullName}>
           <strong>{text.fullName}</strong>
           <span>{text.email}</span>
-          <span>{getRoleLabel(language)}</span>
+          <span>{getRoleLabel()}</span>
         </aside>
       </header>
 
@@ -466,7 +466,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
             </div>
             <div className="profile-chip-row">
               <span>{text.roleLabel}</span>
-              <strong>{getRoleLabel(language)}</strong>
+              <strong>{getRoleLabel()}</strong>
             </div>
             <small>{text.planRenewal}</small>
           </article>

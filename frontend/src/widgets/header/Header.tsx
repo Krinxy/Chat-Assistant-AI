@@ -1,7 +1,7 @@
 import { type PointerEvent, useMemo, useRef, useState } from "react";
 
 import type { CompanyStoryItem } from "../../features/chat/types/chat";
-import { userProfile } from "../../shared/data/userProfile";
+import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 
 interface HeaderProps {
   greeting: string;
@@ -149,7 +149,7 @@ export function Header({
                   AURA
                 </span>
               )}
-              {!hasStartedChat && `${greeting}, ${userProfile.firstName}`}
+              {!hasStartedChat && `${greeting}, ${ACTIVE_DEV_PROFILE.firstName}`}
             </h2>
             {!hasStartedChat && (
               <p className="header-question">{randomHeaderQuestion}</p>
@@ -203,14 +203,14 @@ export function Header({
             <div
               className="profile-avatar"
               aria-hidden="true"
-              title={userProfile.fullName}
+              title={ACTIVE_DEV_PROFILE.fullName}
             >
-              {userProfile.initials}
+              {ACTIVE_DEV_PROFILE.initials}
             </div>
           </div>
           {!hasStartedChat && (
             <div>
-              <p className="profile-name">{userProfile.fullName}</p>
+              <p className="profile-name">{ACTIVE_DEV_PROFILE.fullName}</p>
               <p className="profile-role">{profileRole}</p>
             </div>
           )}

@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "lint": "eslint services packages tests --ext .ts,.js --max-warnings=0 --no-error-on-unmatched-pattern",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest --passWithNoTests",
@@ -23,6 +24,7 @@
     "@types/node": "^22.7.4",
     "@typescript-eslint/eslint-plugin": "^8.8.1",
     "@typescript-eslint/parser": "^8.8.1",
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "jest": "^29.7.0",

@@ -10,6 +10,7 @@ import {
 import { ChatPanel } from "./features/chat/components/ChatPanel";
 import {
   attachmentActionsByLanguage,
+  companyStoriesByLanguage,
   headerQuestionsByLanguage,
   modelProviders,
   recommendedNewsByLanguage,
@@ -23,11 +24,13 @@ import type {
   Language,
   LocalLlmConfig,
   ModelOption,
+  PersonaQuestionnaireAnswers,
 } from "./features/chat/types/chat";
 import { CompanyWorkspacePanel } from "./pages/CompanyWorkspacePage/CompanyWorkspacePanel";
 import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
+import { userProfile } from "./shared/data/userProfile";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
 import { WelcomeOverlay } from "./shared/components/ui/WelcomeOverlay";
@@ -148,6 +151,10 @@ export default function App() {
     return recommendedNewsByLanguage[language];
   }, [language]);
 
+  const companyStories = useMemo(() => {
+    return companyStoriesByLanguage[language];
+  }, [language]);
+
   const weatherCities = useMemo(() => {
     return weatherCitiesByLanguage[language];
   }, [language]);
@@ -260,8 +267,11 @@ export default function App() {
     isTyping,
     sendMessage,
     addAttachmentActionMessage,
+    addUploadedFilesMessage,
     resetSession,
+    openSessionFromPreview,
   } = useChatSession({
+    selectedModelId,
     selectedModelLabel: selectedModel.label,
     language,
     isBrainrotEnabled: activeServices.includes("brainrot"),
@@ -329,6 +339,14 @@ export default function App() {
     addAttachmentActionMessage(action.label);
   };
 
+  const handleAttachmentUpload = useCallback((files: File[]): void => {
+    if (files.length === 0) {
+      return;
+    }
+
+    addUploadedFilesMessage(files);
+  }, [addUploadedFilesMessage]);
+
   const handleReturnToDashboard = (): void => {
     setActiveView("dashboard");
     setIsSidebarOpen(true);
@@ -339,6 +357,12 @@ export default function App() {
     setActiveView("chat");
     setIsSidebarOpen(false);
   }, [resetSession]);
+
+  const handleOpenRecentChat = useCallback((previewText: string, timeLabel: string): void => {
+    openSessionFromPreview(previewText, timeLabel);
+    setActiveView("chat");
+    setIsSidebarOpen(false);
+  }, [openSessionFromPreview]);
 
   const handleOpenProfile = useCallback((): void => {
     setActiveView("profile");
@@ -399,6 +423,26 @@ export default function App() {
     addAttachmentActionMessage(localSavedLabel);
   }, [addAttachmentActionMessage, language]);
 
+  const handlePersonaProfileReady = useCallback((answers: PersonaQuestionnaireAnswers): void => {
+    const summary = language === "de"
+      ? [
+        "Persona Kontext gesetzt:",
+        `Projekt=${answers.projectType};`,
+        `Funktion=${answers.functionType};`,
+        `Struktur=${answers.responseStructure};`,
+        `Ziel=${answers.analysisGoal}`,
+      ].join(" ")
+      : [
+        "Persona context configured:",
+        `Project=${answers.projectType};`,
+        `Function=${answers.functionType};`,
+        `Structure=${answers.responseStructure};`,
+        `Goal=${answers.analysisGoal}`,
+      ].join(" ");
+
+    addAttachmentActionMessage(summary);
+  }, [addAttachmentActionMessage, language]);
+
   const hasStartedChat = activeView === "chat";
 
   const showChatAndDashboardLayout = activeView === "dashboard" || activeView === "chat";
@@ -436,8 +480,8 @@ export default function App() {
           onSkip={skipWelcome}
           titlePrefix={welcomeTitlePrefix}
           kicker={ui.welcome.kicker}
-          subtitle={ui.welcome.subtitle}
-          subline={ui.welcome.subline}
+          subtitle={randomHeaderQuestion}
+          subline=""
           skipLabel={ui.welcome.skip}
         />
       ) : null}
@@ -462,16 +506,21 @@ export default function App() {
           activeServiceLabels={activeServices.map((serviceKey) => ui.chat.serviceLabels[serviceKey])}
           latestMessagePreview={latestMessagePreview}
           onStartNewChat={handleStartNewChat}
+          onOpenRecentChat={handleOpenRecentChat}
         />
 
         <main className="main-stage">
-          {!hasStartedChat ? (
+          {activeView === "dashboard" ? (
             <Header
               greeting={greeting}
               randomHeaderQuestion={randomHeaderQuestion}
               hasStartedChat={hasStartedChat}
               showChatBrand={false}
               profileRole={ui.header.profileRole}
+              storiesLabel={ui.header.storiesLabel}
+              storyNewsLabel={ui.header.storyNewsLabel}
+              storyCloseLabel={ui.header.storyCloseLabel}
+              companyStories={companyStories}
               onOpenProfile={handleOpenProfile}
             />
           ) : null}
@@ -494,6 +543,7 @@ export default function App() {
                 attachmentActions={attachmentActions}
                 onSendMessage={handleSendMessage}
                 onAttachmentAction={handleAttachmentAction}
+                onAttachmentUpload={handleAttachmentUpload}
                 onModelSelect={setSelectedModelId}
                 activeServices={activeServices}
                 onServiceAdd={handleAddService}
@@ -501,6 +551,7 @@ export default function App() {
                 brainrotStyle={brainrotStyle}
                 onBrainrotStyleChange={setBrainrotStyle}
                 onLocalLlmConfigSave={handleSaveLocalLlmConfig}
+                onPersonaProfileReady={handlePersonaProfileReady}
                 onReturnToDashboard={handleReturnToDashboard}
                 onOpenProfile={handleOpenProfile}
                 copy={ui.chat}
@@ -526,14 +577,26 @@ export default function App() {
           ) : null}
 
           {activeView === "companies" ? (
-            <CompanyWorkspacePanel language={language} />
+            <CompanyWorkspacePanel language={language} onOpenProfile={handleOpenProfile} />
           ) : null}
 
           {activeView === "guide" ? <FeatureGuidePanel language={language} /> : null}
 
           {viewPanelText !== null ? (
             <section className="utility-view-panel" aria-label={viewPanelText.title}>
-              <h2>{viewPanelText.title}</h2>
+              <header className="utility-view-header">
+                <h2>{viewPanelText.title}</h2>
+                <button
+                  type="button"
+                  className="profile-chip profile-chip-btn profile-chip-inline"
+                  aria-label="Open profile"
+                  onClick={handleOpenProfile}
+                >
+                  <div className="profile-avatar" aria-hidden="true" title={userProfile.fullName}>
+                    {userProfile.initials}
+                  </div>
+                </button>
+              </header>
               <p>{viewPanelText.description}</p>
             </section>
           ) : null}

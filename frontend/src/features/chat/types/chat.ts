@@ -1,5 +1,12 @@
 export type ChatRole = "assistant" | "user";
 
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  isImage: boolean;
+  previewUrl?: string;
+}
+
 export interface ChatMessage {
   id: number;
   role: ChatRole;
@@ -8,6 +15,7 @@ export interface ChatMessage {
   isThinking?: boolean;
   reasoning?: string;
   isStreaming?: boolean;
+  attachments?: ChatAttachment[];
 }
 
 export interface AttachmentAction {
@@ -30,6 +38,20 @@ export interface NewsItem {
   id: string;
   title: string;
   source: string;
+}
+
+export interface CompanyStoryItem {
+  id: string;
+  company: string;
+  shortLabel: string;
+  updates: string[];
+}
+
+export interface PersonaQuestionnaireAnswers {
+  projectType: string;
+  functionType: string;
+  responseStructure: string;
+  analysisGoal: string;
 }
 
 export interface WeatherStat {

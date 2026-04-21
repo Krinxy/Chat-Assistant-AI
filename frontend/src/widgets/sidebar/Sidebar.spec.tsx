@@ -19,12 +19,14 @@ describe('Sidebar Widget', () => {
         activeServiceLabels={['Persona']}
         latestMessagePreview={null}
         onStartNewChat={() => {}}
+        onOpenRecentChat={() => {}}
       />,
     );
 
     expect(screen.getByText('AURA')).toBeInTheDocument();
     expect(screen.getAllByText('Home').length).toBeGreaterThan(0);
     expect(screen.getByText('Letzte Chats')).toBeInTheDocument();
+    expect(screen.getByText('Noch keine Nachrichten')).toBeInTheDocument();
     expect(screen.getByText('DE')).toBeInTheDocument();
     expect(screen.getByText('EN')).toBeInTheDocument();
   });
@@ -44,6 +46,7 @@ describe('Sidebar Widget', () => {
         activeServiceLabels={[]}
         latestMessagePreview={{ text: 'Testnachricht', time: '10:00' }}
         onStartNewChat={() => {}}
+        onOpenRecentChat={() => {}}
       />,
     );
 
@@ -68,6 +71,7 @@ describe('Sidebar Widget', () => {
         activeServiceLabels={[]}
         latestMessagePreview={{ text: 'Testnachricht', time: '10:00' }}
         onStartNewChat={() => {}}
+        onOpenRecentChat={() => {}}
       />,
     );
 

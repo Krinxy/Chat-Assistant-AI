@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { userProfile } from "../../shared/data/userProfile";
 import type { Language, LocalLlmConfig } from "../../features/chat/types/chat";
 import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 
@@ -161,6 +162,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
   const [considerations, setConsiderations] = useState<string>(() => getInitialText("aura.profile.considerations"));
   const [tuning, setTuning] = useState<TuningConfig>(getInitialTuningConfig);
   const [activePresetKey, setActivePresetKey] = useState<string | null>(getInitialActivePresetKey);
+  const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(getInitialActivePresetKey);
   const [customPresetName, setCustomPresetName] = useState<string>("");
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(getInitialCustomPresets);
   const [isSaved, setIsSaved] = useState<boolean>(false);
@@ -168,10 +170,10 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
   const builtInPresets = useMemo<BuiltInPreset[]>(() => {
     const presetLabels = language === "de"
       ? {
-        balanced: "Balanced",
-        precise: "Praezise",
+        balanced: "Ausgewogen",
+        precise: "Präzise",
         creative: "Kreativ",
-        research: "Research",
+        research: "Recherche",
       }
       : {
         balanced: "Balanced",
@@ -230,7 +232,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
 
   const setConfigValue = (key: keyof TuningConfig, value: number): void => {
     setIsSaved(false);
-    setActivePresetKey(null);
+    setSelectedPresetKey(null);
     setTuning((previous) => ({
       ...previous,
       [key]: value,
@@ -239,13 +241,13 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
 
   const applyBuiltInPreset = (preset: BuiltInPreset): void => {
     setIsSaved(false);
-    setActivePresetKey(`builtin:${preset.id}`);
+    setSelectedPresetKey(`builtin:${preset.id}`);
     setTuning(preset.values);
   };
 
   const applyCustomPreset = (preset: CustomPreset): void => {
     setIsSaved(false);
-    setActivePresetKey(`custom:${preset.id}`);
+    setSelectedPresetKey(`custom:${preset.id}`);
     setTuning(preset.values);
   };
 
@@ -262,9 +264,48 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
       values: { ...tuning },
     };
 
-    setCustomPresets((previous) => [newPreset, ...previous].slice(0, 20));
-    setActivePresetKey(`custom:${newPreset.id}`);
+    setCustomPresets((previous) => {
+      const nextPresets = [newPreset, ...previous].slice(0, 20);
+      try {
+        globalThis.localStorage.setItem("aura.profile.customPresets", JSON.stringify(nextPresets));
+      } catch {
+        // Ignore storage failures in restrictive browser contexts.
+      }
+
+      return nextPresets;
+    });
+    setSelectedPresetKey(`custom:${newPreset.id}`);
     setCustomPresetName("");
+    setIsSaved(false);
+  };
+
+  const deleteCustomPreset = (presetId: string): void => {
+    setCustomPresets((previous) => {
+      const nextPresets = previous.filter((preset) => preset.id !== presetId);
+      try {
+        globalThis.localStorage.setItem("aura.profile.customPresets", JSON.stringify(nextPresets));
+      } catch {
+        // Ignore storage failures in restrictive browser contexts.
+      }
+
+      return nextPresets;
+    });
+
+    const presetKey = `custom:${presetId}`;
+    if (selectedPresetKey === presetKey) {
+      setSelectedPresetKey(null);
+    }
+
+    if (activePresetKey === presetKey) {
+      setActivePresetKey(null);
+      try {
+        globalThis.localStorage.setItem("aura.profile.activePreset", "custom");
+      } catch {
+        // Ignore storage failures in restrictive browser contexts.
+      }
+    }
+
+    setIsSaved(false);
   };
 
   useEffect(() => {
@@ -290,32 +331,42 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
       roleLabel: "Rolle",
       subscriptionLabel: "Subscription",
       subscriptionValue: "Pro Annual",
-      planRenewal: "Verlaengert am 16.08.2026",
+      planRenewal: "Verlängert am 16.08.2026",
       localModelTitle: "Lokales LLM",
       localModelFallback: "Noch kein lokales LLM konfiguriert",
-      localSetupTitle: "vLLM Setup oeffnen",
-      aboutYouTitle: "About you",
-      aboutYouHint: "Kurzer Kontext zu deiner Rolle, deinem Fokus und deiner Arbeitsweise.",
-      considerationsTitle: "What should I keep in mind?",
-      considerationsHint: "Regeln, Prioritaeten und No-Gos fuer Antworten.",
-      tuningTitle: "Model Parameter",
-      tuningHint: "Einstellungen fuer LangChain/OpenAI-kompatible Generation.",
-      applyTuning: "Uebernehmen",
+      localSetupTitle: "vLLM Setup öffnen",
+      aboutYouTitle: "Über dich",
+      aboutYouHint: "Kurzer Kontext zu Rolle, Fokus und Arbeitsweise.",
+      considerationsTitle: "Was soll ich beachten?",
+      considerationsHint: "Regeln, Prioritäten und No-Gos für Antworten.",
+      tuningTitle: "Modellparameter",
+      tuningHint: "Einstellungen für LangChain/OpenAI-kompatible Generation.",
+      applyTuning: "Übernehmen",
       presetsTitle: "Presets",
-      customPresetsTitle: "Custom presets",
-      customPresetPlaceholder: "Preset Name",
-      customPresetSave: "Custom speichern",
+      customPresetsTitle: "Eigene Presets",
+      customPresetPlaceholder: "Preset-Name",
+      customPresetSave: "Preset speichern",
+      customPresetDelete: "Preset löschen",
       temperature: "Temperature",
       topP: "Top P",
       topK: "Top K",
       presencePenalty: "Presence penalty",
       frequencyPenalty: "Frequency penalty",
-      temperatureHint: "Steuert Kreativitaet (niedrig = stabiler).",
+      temperatureHint: "Steuert Kreativität (niedrig = stabiler).",
+      temperatureLowLabel: "Konservativ",
+      temperatureHighLabel: "Kreativ",
       topPHint: "Begrenzt Wahrscheinlichkeitssumme der Token-Auswahl.",
-      topKHint: "Beschraenkt Auswahl auf Top-K Kandidaten.",
-      presencePenaltyHint: "Foerdert neue Inhalte statt Wiederholung.",
-      frequencyPenaltyHint: "Reduziert wiederholte Woerter/Phrasen.",
-      save: "Speichern",
+      topPLowLabel: "Fokussiert",
+      topPHighLabel: "Vielfältig",
+      topKHint: "Beschränkt Auswahl auf Top-K Kandidaten.",
+      topKLowLabel: "Präzise",
+      topKHighLabel: "Breit",
+      presencePenaltyHint: "Fördert neue Inhalte statt Wiederholung.",
+      presencePenaltyLowLabel: "Bleibt beim Kontext",
+      presencePenaltyHighLabel: "Neue Aspekte",
+      frequencyPenaltyHint: "Reduziert wiederholte Wörter/Phrasen.",
+      frequencyPenaltyLowLabel: "Wiederholt eher",
+      frequencyPenaltyHighLabel: "Wiederholt weniger",
       saved: "Gespeichert",
     }
     : {
@@ -340,18 +391,28 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
       presetsTitle: "Presets",
       customPresetsTitle: "Custom presets",
       customPresetPlaceholder: "Preset name",
-      customPresetSave: "Save custom",
+      customPresetSave: "Save preset",
+      customPresetDelete: "Delete preset",
       temperature: "Temperature",
       topP: "Top P",
       topK: "Top K",
       presencePenalty: "Presence penalty",
       frequencyPenalty: "Frequency penalty",
       temperatureHint: "Controls creativity (lower = more deterministic).",
+      temperatureLowLabel: "Conservative",
+      temperatureHighLabel: "Creative",
       topPHint: "Limits token selection by probability mass.",
+      topPLowLabel: "Focused",
+      topPHighLabel: "Diverse",
       topKHint: "Caps token selection to top-k candidates.",
+      topKLowLabel: "Precise",
+      topKHighLabel: "Broad",
       presencePenaltyHint: "Encourages introducing new information.",
+      presencePenaltyLowLabel: "Context anchored",
+      presencePenaltyHighLabel: "Novel directions",
       frequencyPenaltyHint: "Reduces repeated words and phrases.",
-      save: "Save",
+      frequencyPenaltyLowLabel: "More repetition",
+      frequencyPenaltyHighLabel: "Less repetition",
       saved: "Saved",
     };
 
@@ -360,40 +421,39 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
     : "e.g. I am a product owner, data-driven, and I prioritize clarity.";
 
   const considerationsPlaceholder = language === "de"
-    ? "z. B. Bitte antworte kompakt, gib Risiken zuerst an und nenne naechste Schritte."
+    ? "z. B. Bitte antworte kompakt, gib Risiken zuerst an und nenne nächste Schritte."
     : "e.g. Keep replies concise, start with risks, and suggest next steps.";
 
-  const handleSave = (): void => {
+  const handleApplyTuning = (): void => {
+    const resolvedPresetKey = selectedPresetKey ?? "custom";
+
     try {
       globalThis.localStorage.setItem("aura.profile.aboutYou", aboutYou);
       globalThis.localStorage.setItem("aura.profile.considerations", considerations);
       globalThis.localStorage.setItem("aura.profile.tuning", JSON.stringify(tuning));
-      globalThis.localStorage.setItem("aura.profile.activePreset", activePresetKey ?? "custom");
+      globalThis.localStorage.setItem("aura.profile.activePreset", resolvedPresetKey);
       globalThis.localStorage.setItem("aura.profile.customPresets", JSON.stringify(customPresets));
     } catch {
       // Ignore storage failures in restrictive browser contexts.
     }
 
-    setIsSaved(true);
-  };
-
-  const handleApplyTuning = (): void => {
-    try {
-      globalThis.localStorage.setItem("aura.profile.tuning", JSON.stringify(tuning));
-      globalThis.localStorage.setItem("aura.profile.activePreset", activePresetKey ?? "custom");
-      globalThis.localStorage.setItem("aura.profile.customPresets", JSON.stringify(customPresets));
-    } catch {
-      // Ignore storage failures in restrictive browser contexts.
-    }
-
+    setActivePresetKey(resolvedPresetKey);
     setIsSaved(true);
   };
 
   return (
     <section className="profile-panel" aria-label={text.title}>
       <header className="profile-panel-header">
-        <h2>{text.title}</h2>
-        <p>{text.subtitle}</p>
+        <div className="profile-panel-title-wrap">
+          <h2>{text.title}</h2>
+          <p>{text.subtitle}</p>
+        </div>
+
+        <aside className="profile-header-identity" aria-label={text.fullName}>
+          <strong>{text.fullName}</strong>
+          <span>{text.email}</span>
+          <span>{getRoleLabel(language)}</span>
+        </aside>
       </header>
 
       <div className="profile-layout-grid">
@@ -407,7 +467,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
             </div>
             <div className="profile-chip-row">
               <span>{text.roleLabel}</span>
-              <strong>{getRoleLabel()}</strong>
+              <strong>{getRoleLabel(language)}</strong>
             </div>
             <small>{text.planRenewal}</small>
           </article>
@@ -471,9 +531,12 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
         <div className="profile-tuning-header">
           <div className="profile-tuning-headline-row">
             <h3>{text.tuningTitle}</h3>
-            <button type="button" className="profile-tuning-apply-btn" onClick={handleApplyTuning}>
-              + {text.applyTuning}
-            </button>
+            <div className="profile-tuning-actions">
+              <button type="button" className="profile-tuning-apply-btn" onClick={handleApplyTuning}>
+                + {text.applyTuning}
+              </button>
+              {isSaved ? <span className="profile-tuning-saved-pill">{text.saved}</span> : null}
+            </div>
           </div>
         </div>
 
@@ -496,7 +559,11 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                     setConfigValue("temperature", Number.parseFloat(event.target.value));
                   }}
                 />
-                <small>{text.temperatureHint}</small>
+                <div className="profile-parameter-scale-row">
+                  <span>{text.temperatureLowLabel}</span>
+                  <small>{text.temperatureHint}</small>
+                  <span>{text.temperatureHighLabel}</span>
+                </div>
               </label>
 
               <label className="profile-parameter-slider">
@@ -515,7 +582,11 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                     setConfigValue("topP", Number.parseFloat(event.target.value));
                   }}
                 />
-                <small>{text.topPHint}</small>
+                <div className="profile-parameter-scale-row">
+                  <span>{text.topPLowLabel}</span>
+                  <small>{text.topPHint}</small>
+                  <span>{text.topPHighLabel}</span>
+                </div>
               </label>
 
               <label className="profile-parameter-slider">
@@ -534,7 +605,11 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                     setConfigValue("topK", Number.parseInt(event.target.value, 10));
                   }}
                 />
-                <small>{text.topKHint}</small>
+                <div className="profile-parameter-scale-row">
+                  <span>{text.topKLowLabel}</span>
+                  <small>{text.topKHint}</small>
+                  <span>{text.topKHighLabel}</span>
+                </div>
               </label>
 
               <label className="profile-parameter-slider">
@@ -553,7 +628,11 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                     setConfigValue("presencePenalty", Number.parseFloat(event.target.value));
                   }}
                 />
-                <small>{text.presencePenaltyHint}</small>
+                <div className="profile-parameter-scale-row">
+                  <span>{text.presencePenaltyLowLabel}</span>
+                  <small>{text.presencePenaltyHint}</small>
+                  <span>{text.presencePenaltyHighLabel}</span>
+                </div>
               </label>
 
               <label className="profile-parameter-slider">
@@ -572,7 +651,11 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                     setConfigValue("frequencyPenalty", Number.parseFloat(event.target.value));
                   }}
                 />
-                <small>{text.frequencyPenaltyHint}</small>
+                <div className="profile-parameter-scale-row">
+                  <span>{text.frequencyPenaltyLowLabel}</span>
+                  <small>{text.frequencyPenaltyHint}</small>
+                  <span>{text.frequencyPenaltyHighLabel}</span>
+                </div>
               </label>
             </div>
           </div>
@@ -584,7 +667,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                 <button
                   key={preset.id}
                   type="button"
-                  className={`profile-preset-btn${activePresetKey === `builtin:${preset.id}` ? " is-active" : ""}`}
+                  className={`profile-preset-btn${selectedPresetKey === `builtin:${preset.id}` ? " is-active" : ""}`}
                   onClick={() => applyBuiltInPreset(preset)}
                 >
                   {preset.label}
@@ -595,14 +678,24 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
             <p className="profile-presets-title">{text.customPresetsTitle}</p>
             <div className="profile-presets-list">
               {customPresets.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={`profile-preset-btn${activePresetKey === `custom:${preset.id}` ? " is-active" : ""}`}
-                  onClick={() => applyCustomPreset(preset)}
-                >
-                  {preset.name}
-                </button>
+                <div className="profile-custom-preset-row" key={preset.id}>
+                  <button
+                    type="button"
+                    className={`profile-preset-btn${selectedPresetKey === `custom:${preset.id}` ? " is-active" : ""}`}
+                    onClick={() => applyCustomPreset(preset)}
+                  >
+                    {preset.name}
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-custom-preset-delete"
+                    aria-label={`${text.customPresetDelete}: ${preset.name}`}
+                    title={`${text.customPresetDelete}: ${preset.name}`}
+                    onClick={() => deleteCustomPreset(preset.id)}
+                  >
+                    x
+                  </button>
+                </div>
               ))}
             </div>
 
@@ -611,18 +704,14 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
                 type="text"
                 value={customPresetName}
                 placeholder={text.customPresetPlaceholder}
-                onChange={(event) => setCustomPresetName(event.target.value)}
+                onChange={(event) => {
+                  setIsSaved(false);
+                  setCustomPresetName(event.target.value);
+                }}
               />
               <button type="button" onClick={saveCustomPreset}>{text.customPresetSave}</button>
             </div>
           </aside>
-        </div>
-
-        <div className="profile-preprompt-actions">
-          <button type="button" onClick={handleSave}>
-            {text.save}
-          </button>
-          {isSaved ? <span>{text.saved}</span> : null}
         </div>
       </article>
     </section>

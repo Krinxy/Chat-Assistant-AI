@@ -12,6 +12,7 @@ dist/
 build/
 coverage/*
 !coverage/coverage_gate.py
+frontend/coverage/
 .coverage
 .coverage.*
 

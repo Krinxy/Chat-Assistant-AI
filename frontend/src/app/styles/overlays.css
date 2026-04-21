@@ -70,10 +70,16 @@
 
 .welcome-subtitle {
   margin: 2px 0 0;
+  width: min(92vw, 860px);
   font-size: 0.9rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: color-mix(in srgb, currentColor 84%, transparent);
+  opacity: 0;
+  transform: translateY(8px);
+  animation: welcomeSublineReveal 420ms cubic-bezier(0.22, 0.89, 0.38, 1) 220ms forwards;
 }
 
 [data-theme="dark"] .welcome-subtitle {
@@ -87,6 +93,9 @@
   font-size: clamp(0.84rem, 1.65vw, 0.96rem);
   line-height: 1.45;
   color: color-mix(in srgb, currentColor 58%, transparent);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: welcomeSublineReveal 520ms cubic-bezier(0.22, 0.89, 0.38, 1) 440ms forwards;
 }
 
 .welcome-skip-btn {

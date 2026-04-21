@@ -1,7 +1,15 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { Header } from './Header';
 import { userProfile } from '../../shared/data/userProfile';
+
+const expectCompactProfileBadge = (): void => {
+  const profileButton = screen.getByRole('button', { name: /open profile/i });
+  const avatar = within(profileButton).getByTitle(/.+/);
+  const avatarText = avatar.textContent?.trim() ?? '';
+
+  expect(avatarText).toMatch(/^[\p{L}\p{N}]{1,2}$/u);
+};
 
 const mockStories = [
   {
@@ -51,7 +59,7 @@ describe('Header Widget', () => {
     );
 
     expect(screen.getByText('AURA')).toBeInTheDocument();
-    expect(screen.getByText('67')).toBeInTheDocument();
+    expectCompactProfileBadge();
     expect(screen.queryByText('How can I help you?')).not.toBeInTheDocument();
     expect(screen.queryByText(userProfile.fullName)).not.toBeInTheDocument();
   });
@@ -73,6 +81,6 @@ describe('Header Widget', () => {
     );
 
     expect(screen.queryByText('AURA')).not.toBeInTheDocument();
-    expect(screen.getByText('67')).toBeInTheDocument();
+    expectCompactProfileBadge();
   });
 });

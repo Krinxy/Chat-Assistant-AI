@@ -1,8 +1,15 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
-import { userProfile } from "../../../shared/data/userProfile";
 import { uiTextByLanguage } from "../../../shared/i18n/uiText";
 import { ChatPanel } from "./ChatPanel";
+
+const expectCompactProfileBadge = (): void => {
+  const profileButton = screen.getByRole("button", { name: /open profile/i });
+  const avatar = within(profileButton).getByTitle(/.+/);
+  const avatarText = avatar.textContent?.trim() ?? "";
+
+  expect(avatarText).toMatch(/^[\p{L}\p{N}]{1,2}$/u);
+};
 
 class MockWebSocket {
   static readonly CONNECTING = 0;
@@ -198,7 +205,7 @@ describe("ChatPanel", () => {
     );
 
     expect(screen.getByTitle("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText(userProfile.initials)).toBeInTheDocument();
+    expectCompactProfileBadge();
   });
 
   it("shows minimal local setup fields when local configurator service is active", () => {

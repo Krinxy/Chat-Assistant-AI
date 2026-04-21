@@ -10,7 +10,6 @@ import {
 } from "react";
 
 import { ChatSkeletonMessage } from "../../../shared/components/feedback/ChatSkeletonMessage";
-import { userProfile } from "../../../shared/data/userProfile";
 import { useOutsideClick } from "../../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../../shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "../../../shared/constants/devProfiles";

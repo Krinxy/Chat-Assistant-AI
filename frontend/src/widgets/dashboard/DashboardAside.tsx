@@ -135,9 +135,10 @@ const buildHourlyForecast = (baseTemperature: number): WeatherHourlyPoint[] => {
     }
 
     // Resolve per-hour wind from bands, falling back to daily base
-    let windHourly: number;
     const windBand = profile.hourlyWind?.find(([fh, th]) => absoluteHour >= fh && absoluteHour <= th);
-    windHourly = windBand ? windBand[2] + (index % 3) * 2 : profile.windBase + ((index % 5) - 2);
+    const windHourly = windBand
+      ? windBand[2] + (index % 3) * 2
+      : profile.windBase + ((index % 5) - 2);
 
     const dayIndex = (startDayOfWeek + dayOffset) % 7;
 
@@ -182,8 +183,12 @@ const resolveHourlyState = (
 ): HourlyWeatherState => {
   const lowerCondition = conditionText.toLowerCase();
 
-  if (lowerCondition.includes("storm") || lowerCondition.includes("thunder") || lowerCondition.includes("lightning")
-      || (humidity >= 90 && windSpeed >= 25)) {
+  if (
+    lowerCondition.includes("storm")
+    || lowerCondition.includes("thunder")
+    || lowerCondition.includes("lightning")
+    || (humidity >= 90 && windSpeed >= 25)
+  ) {
     return "storm";
   }
 
@@ -254,7 +259,9 @@ const renderStateIcon = (state: HourlyWeatherState): JSX.Element => {
 // ─── Weather icon path strings — swap these to customise icons ────────────────
 // viewBox: 0 0 24 24. Paths follow SVG 'd' attribute format.
 const WEATHER_ICON_SVG_PATHS: Record<HourlyWeatherState, string> = {
-  sun:   "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1",
+  sun:
+    "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2v3M12 19v3M2 12h3M19 12h3"
+    + "M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1",
   cloud: "M4 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5 1.2A3.5 3.5 0 0 1 18 18H7a3 3 0 0 1-3-4z",
   rain:  "M4 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5 1.2A3.5 3.5 0 0 1 18 18H7a3 3 0 0 1-3-4zM9 19l-1 3M13 19l-1 3",
   storm: "M4 14a4 4 0 0 1 4-4 5 5 0 0 1 9.5 1.2A3.5 3.5 0 0 1 18 18H8M13 15l-3 5h3l-2 4",
@@ -366,9 +373,9 @@ function WeatherGraph({
     const hasPrev = phantomPrevT !== null;
     const hasNext = phantomNextT !== null;
     const extTemps = [
-      ...(hasPrev ? [phantomPrevT!] : []),
+      ...(hasPrev && phantomPrevT !== null ? [phantomPrevT] : []),
       ...activeTemps,
-      ...(hasNext ? [phantomNextT!] : []),
+      ...(hasNext && phantomNextT !== null ? [phantomNextT] : []),
     ];
     const prevOffset = hasPrev ? 1 : 0;
     const tx = (extIdx: number) => GRAPH_Y_W + (extIdx - prevOffset + 0.5) * GRAPH_COL_W;

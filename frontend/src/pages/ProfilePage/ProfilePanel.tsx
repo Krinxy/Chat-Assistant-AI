@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { userProfile } from "../../shared/data/userProfile";
 import type { Language, LocalLlmConfig } from "../../features/chat/types/chat";
 import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 

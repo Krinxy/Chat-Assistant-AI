@@ -51,7 +51,7 @@ describe('Header Widget', () => {
     );
 
     expect(screen.getByText('AURA')).toBeInTheDocument();
-    expect(screen.getByText('DB')).toBeInTheDocument();
+    expect(screen.getByText('67')).toBeInTheDocument();
     expect(screen.queryByText('How can I help you?')).not.toBeInTheDocument();
     expect(screen.queryByText(userProfile.fullName)).not.toBeInTheDocument();
   });
@@ -73,6 +73,6 @@ describe('Header Widget', () => {
     );
 
     expect(screen.queryByText('AURA')).not.toBeInTheDocument();
-    expect(screen.getByText('DB')).toBeInTheDocument();
+    expect(screen.getByText('67')).toBeInTheDocument();
   });
 });

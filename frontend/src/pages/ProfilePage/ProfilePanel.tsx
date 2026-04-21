@@ -451,7 +451,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
         <aside className="profile-header-identity" aria-label={text.fullName}>
           <strong>{text.fullName}</strong>
           <span>{text.email}</span>
-          <span>{getRoleLabel(language)}</span>
+          <span>{getRoleLabel()}</span>
         </aside>
       </header>
 
@@ -466,7 +466,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
             </div>
             <div className="profile-chip-row">
               <span>{text.roleLabel}</span>
-              <strong>{getRoleLabel(language)}</strong>
+              <strong>{getRoleLabel()}</strong>
             </div>
             <small>{text.planRenewal}</small>
           </article>

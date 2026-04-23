@@ -13,6 +13,18 @@
   margin-left: auto;
 }
 
+.company-workspace-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.company-workspace-title-row h2 {
+  margin: 0;
+}
+
 .company-assigned-role {
   min-width: 0;
   display: inline-flex;
@@ -22,6 +34,16 @@
   border-radius: 15px;
   padding: 8px 12px;
   background: color-mix(in srgb, var(--feature-lilac) 8%, var(--panel-solid));
+}
+
+.company-assigned-role-inline {
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--feature-lilac);
+}
+
+.company-assigned-role-inline strong {
+  font-size: 0.82rem;
 }
 
 .company-assigned-role span {
@@ -75,6 +97,57 @@
 .company-box-card h3 {
   margin: 0;
   font-size: 0.78rem;
+}
+
+.company-collapsible-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  color: inherit;
+  cursor: default;
+  font: inherit;
+  text-align: left;
+}
+
+.company-collapsible-chevron {
+  display: none;
+  color: var(--ink-500);
+  transition: transform 200ms cubic-bezier(0.22, 0.89, 0.38, 1);
+  flex-shrink: 0;
+}
+
+.company-collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .company-collapsible-toggle {
+    cursor: pointer;
+    padding: 6px 2px;
+  }
+
+  .company-collapsible-chevron {
+    display: inline-flex;
+  }
+
+  .company-collapsible:not(.is-expanded) .company-collapsible-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .company-collapsible:not(.is-expanded) .company-collapsible-body {
+    display: none;
+  }
+
+  .company-collapsible-toggle:hover h3 {
+    color: var(--feature-lilac);
+  }
 }
 
 .company-sublist-scroll {
@@ -368,7 +441,7 @@
 .company-overview-scopes-wrap {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(230px, 0.55fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
   gap: 8px;
   align-items: stretch;
 }
@@ -1335,5 +1408,44 @@
 
   .company-tab-row {
     gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .company-overview-kpi-card {
+    padding: 8px 10px;
+  }
+
+  .company-overview-kpi-card strong {
+    font-size: 0.96rem;
+  }
+
+  .company-overview-kpi-card span,
+  .company-overview-kpi-card small {
+    font-size: 0.68rem;
+  }
+
+  .company-overview-progress-block {
+    padding: 10px;
+  }
+
+  .company-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .company-detail-metrics-inline {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .company-tab-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .company-tab-row button {
+    flex-shrink: 0;
   }
 }

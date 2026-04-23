@@ -42,6 +42,8 @@
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel-solid) 92%, transparent);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
   position: relative;
   z-index: 140;
   overflow: visible;
@@ -705,6 +707,8 @@
 .chat-log {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -753,7 +757,7 @@
 }
 
 .chat-message {
-  max-width: min(82%, 720px);
+  max-width: min(88%, 720px);
 }
 
 .bubble {
@@ -893,6 +897,8 @@
 .chat-input-container {
   width: 100%;
   padding: 0 clamp(14px, 2vw, 24px) 16px;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1037,7 +1043,7 @@
 }
 
 .skeleton-bubble {
-  width: min(82%, 720px);
+  width: min(88%, 720px);
   padding: 10px 14px;
   gap: 6px;
   border-color: var(--line);

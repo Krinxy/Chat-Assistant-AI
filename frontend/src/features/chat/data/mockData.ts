@@ -30,7 +30,7 @@ export const headerQuestionsByLanguage: Record<Language, string[]> = {
 
 export const attachmentActionsByLanguage: Record<Language, AttachmentAction[]> = {
   de: [
-    { id: "files", label: "Dateien anhaengen" },
+    { id: "files", label: "Dateien anhängen" },
     { id: "events", label: "Event hinzufügen" },
     { id: "cloud", label: "Aus Cloud hochladen" },
   ],
@@ -171,7 +171,7 @@ export const companyStoriesByLanguage: Record<Language, CompanyStoryItem[]> = {
       company: "Nova Commerce",
       shortLabel: "NC",
       updates: [
-        "Fuenf weitere Stores gehen in den Pilot-Rollout.",
+        "Fünf weitere Stores gehen in den Pilot-Rollout.",
         "Handover-Template für Filialleiter wurde freigegeben.",
         "Support SOP für Peak-Zeiten ist live.",
       ],
@@ -214,6 +214,56 @@ export const companyStoriesByLanguage: Record<Language, CompanyStoryItem[]> = {
         "Neuer KPI-Dashboard Pilot für Enterprise Kunden startet.",
         "Incident-Playbook mit Priority-Mapping abgestimmt.",
         "Team-Enablement Session für SLA-Tracking geplant.",
+      ],
+    },
+    {
+      id: "meridian-capital-story",
+      company: "Meridian Capital",
+      shortLabel: "MC",
+      updates: [
+        "Investor Deck für Series C final überarbeitet.",
+        "Quartals-Review mit Board am Donnerstag.",
+        "Risk-Allocation Modell auf v2 gehoben.",
+      ],
+    },
+    {
+      id: "kaskade-biotech-story",
+      company: "Kaskade Biotech",
+      shortLabel: "KB",
+      updates: [
+        "Phase-II Studie wurde offiziell aufgesetzt.",
+        "Kooperationsvertrag mit Forschungspartner unterschrieben.",
+        "Compliance Review für Patientendaten abgeschlossen.",
+      ],
+    },
+    {
+      id: "hafenblick-shipping-story",
+      company: "Hafenblick Shipping",
+      shortLabel: "HS",
+      updates: [
+        "Neue Route Rotterdam-Hamburg im Rollout.",
+        "Flottenmodernisierung um zwei Einheiten erweitert.",
+        "Ops Dashboard für Zollfreigaben aktualisiert.",
+      ],
+    },
+    {
+      id: "sternenfeld-aero-story",
+      company: "Sternenfeld Aerospace",
+      shortLabel: "SA",
+      updates: [
+        "Drohnenflotte für Inspektionsflüge zertifiziert.",
+        "Pilot-Ausbildungsprogramm auf Q4 erweitert.",
+        "Neue ESA-Partnerschaft für Payload Tests.",
+      ],
+    },
+    {
+      id: "kupferberg-metals-story",
+      company: "Kupferberg Metals",
+      shortLabel: "KM",
+      updates: [
+        "Recyclingquote auf 72% gesteigert.",
+        "Smelting-Pilot in Süddeutschland läuft stabil.",
+        "Supply-Chain-Mapping für Lithium ausgerollt.",
       ],
     },
   ],
@@ -308,6 +358,56 @@ export const companyStoriesByLanguage: Record<Language, CompanyStoryItem[]> = {
         "Team enablement session for SLA tracking is scheduled.",
       ],
     },
+    {
+      id: "meridian-capital-story",
+      company: "Meridian Capital",
+      shortLabel: "MC",
+      updates: [
+        "Series C investor deck finalized.",
+        "Quarterly review with the board on Thursday.",
+        "Risk allocation model moved to v2.",
+      ],
+    },
+    {
+      id: "kaskade-biotech-story",
+      company: "Kaskade Biotech",
+      shortLabel: "KB",
+      updates: [
+        "Phase II trial officially set up.",
+        "Partnership agreement signed with research lab.",
+        "Compliance review for patient data completed.",
+      ],
+    },
+    {
+      id: "hafenblick-shipping-story",
+      company: "Hafenblick Shipping",
+      shortLabel: "HS",
+      updates: [
+        "New Rotterdam–Hamburg route entering rollout.",
+        "Fleet modernization expanded by two vessels.",
+        "Ops dashboard for customs clearance updated.",
+      ],
+    },
+    {
+      id: "sternenfeld-aero-story",
+      company: "Sternenfeld Aerospace",
+      shortLabel: "SA",
+      updates: [
+        "Drone fleet certified for inspection flights.",
+        "Pilot training program extended into Q4.",
+        "New ESA partnership for payload testing.",
+      ],
+    },
+    {
+      id: "kupferberg-metals-story",
+      company: "Kupferberg Metals",
+      shortLabel: "KM",
+      updates: [
+        "Recycling rate increased to 72%.",
+        "Smelting pilot in southern Germany running stably.",
+        "Supply chain mapping for lithium rolled out.",
+      ],
+    },
   ],
 };
 
@@ -343,7 +443,7 @@ export const weatherCitiesByLanguage: Record<Language, WeatherCity[]> = {
     },
     {
       id: "muenchen",
-      city: "Muenchen",
+      city: "München",
       country: "DE",
       condition: "Sonnige Fenster",
       updatedAt: "09:42",
@@ -357,7 +457,7 @@ export const weatherCitiesByLanguage: Record<Language, WeatherCity[]> = {
     },
     {
       id: "koeln",
-      city: "Koeln",
+      city: "Köln",
       country: "DE",
       condition: "Bedeckt",
       updatedAt: "09:41",

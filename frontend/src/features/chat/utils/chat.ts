@@ -84,7 +84,7 @@ export const composeAssistantReply = (
           `Verstanden: "${prompt}". Ich antworte mit ${modelLabel} und streame dabei Wetter- und News-Kontext rein.`,
           `Alles klar, Prompt sitzt: "${prompt}". Ich nutze ${modelLabel} mit Live-Kontext aus Wetter und News.`,
           `Auftrag angekommen: "${prompt}". ${modelLabel} ist aktiv, Kontext wird schrittweise nachgeladen.`,
-          `Gelesen und gespeichert: "${prompt}". Antwort kommt ueber ${modelLabel} inkl. relevanter Zusatzinfos.`,
+          `Gelesen und gespeichert: "${prompt}". Antwort kommt über ${modelLabel} inkl. relevanter Zusatzinfos.`,
         ]);
 
   if (options.brainrotTone) {

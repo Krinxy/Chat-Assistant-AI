@@ -883,19 +883,23 @@ export function ChatPanel({
   }, [messages]);
 
   useLayoutEffect(() => {
-    if (!hasStartedChat) {
-      return;
-    }
-
     const chatLogElement = chatLogRef.current;
 
-    if (chatLogElement === null) {
+    if (chatLogElement === null || messages.length === 0) {
       return;
     }
 
-    chatLogElement.scrollTop = chatLogElement.scrollHeight;
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [hasStartedChat, isTyping, messages]);
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage?.role === "user";
+
+    const { scrollTop, scrollHeight, clientHeight } = chatLogElement;
+    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+    const isNearBottom = distanceFromBottom < 120;
+
+    if (isUserMessage || isNearBottom) {
+      chatLogElement.scrollTop = chatLogElement.scrollHeight;
+    }
+  }, [isTyping, messages]);
 
   useEffect(() => {
     if (activeProvider === null) {
@@ -1407,7 +1411,7 @@ export function ChatPanel({
           <p className="stream-status">{copy.streamStatus}</p>
         ) : null}
 
-        <div ref={messagesEndRef} />
+        <div className="chat-log-end-marker" ref={messagesEndRef} />
       </div>
 
       <div className="chat-input-container">

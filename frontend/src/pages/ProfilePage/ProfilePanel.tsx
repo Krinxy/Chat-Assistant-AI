@@ -324,7 +324,7 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
   const text = language === "de"
     ? {
       title: "Profil",
-      subtitle: "Persoenliche Einstellungen fuer deinen Assistant",
+      subtitle: "Persönliche Einstellungen für deinen Assistant",
       fullName: ACTIVE_DEV_PROFILE.fullName,
       email: ACTIVE_DEV_PROFILE.email,
       roleLabel: "Rolle",
@@ -458,15 +458,9 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
       <div className="profile-layout-grid">
         <div className="profile-layout-column">
           <article className="profile-card">
-            <h3>{text.fullName}</h3>
-            <p>{text.email}</p>
             <div className="profile-chip-row">
               <span>{text.subscriptionLabel}</span>
               <strong>{text.subscriptionValue}</strong>
-            </div>
-            <div className="profile-chip-row">
-              <span>{text.roleLabel}</span>
-              <strong>{getRoleLabel()}</strong>
             </div>
             <small>{text.planRenewal}</small>
           </article>

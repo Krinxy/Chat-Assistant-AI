@@ -19,7 +19,7 @@ export function FeatureGuidePanel({ language }: FeatureGuidePanelProps) {
   const text = language === "de"
     ? {
       title: "Help",
-      subtitle: "Kurze Navigation fuer Features, Workflows und lokale vLLM-Anbindung.",
+      subtitle: "Kurze Navigation für Features, Workflows und lokale vLLM-Anbindung.",
       navTitle: "Inhalte",
       topics: [
         {
@@ -28,8 +28,8 @@ export function FeatureGuidePanel({ language }: FeatureGuidePanelProps) {
           subtitle: "Von Frage bis Kontextwechsel in wenigen Schritten.",
           steps: [
             "1. In der Sidebar auf Chat wechseln oder mit Neuer Chat starten.",
-            "2. Modell im Picker waehlen und optional Services aktivieren.",
-            "3. Antworten pruefen, Follow-ups senden und Verlauf im Kontext behalten.",
+            "2. Modell im Picker wählen und optional Services aktivieren.",
+            "3. Antworten prüfen, Follow-ups senden und Verlauf im Kontext behalten.",
           ],
         },
         {
@@ -38,7 +38,7 @@ export function FeatureGuidePanel({ language }: FeatureGuidePanelProps) {
           subtitle: "Persona, Faktencheck, Prompt Guard und lokale Konfiguration.",
           steps: [
             "1. Plus neben dem Modell klicken.",
-            "2. Gewuenschte Services aktivieren, aktive Chips erscheinen direkt daneben.",
+            "2. Gewünschte Services aktivieren, aktive Chips erscheinen direkt daneben.",
             "3. Klick auf einen Chip entfernt den Service wieder aus der Session.",
           ],
         },

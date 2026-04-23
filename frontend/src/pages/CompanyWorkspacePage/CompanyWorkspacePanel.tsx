@@ -35,6 +35,9 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<CompanyTab>("overview");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [isRecentExpanded, setIsRecentExpanded] = useState<boolean>(true);
+  const [isFavoritesExpanded, setIsFavoritesExpanded] = useState<boolean>(true);
+  const [isCompanyListExpanded, setIsCompanyListExpanded] = useState<boolean>(true);
 
   const [uploadedDocumentsByCompany, setUploadedDocumentsByCompany] = useState<
     Record<string, UploadedCompanyDocument[]>
@@ -1073,16 +1076,28 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
   return (
     <section className="company-workspace-panel" aria-label={text.title}>
       <header className="company-workspace-header">
-        <div>
+        <div className="company-workspace-title-row">
           <h2>{text.title}</h2>
+          <div className="company-assigned-role company-assigned-role-inline" aria-label="Role">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="7" width="18" height="13" rx="2" />
+              <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            <strong>{text.roles[assignedRole]}</strong>
+          </div>
         </div>
 
         <div className="company-workspace-header-right">
-          <div className="company-assigned-role" aria-label="Role">
-            <span>{text.rolePrefix}</span>
-            <strong>{text.roles[assignedRole]}</strong>
-          </div>
-
           <button
             type="button"
             className="profile-chip profile-chip-btn profile-chip-workspace"
@@ -1098,58 +1113,134 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
 
       <div className="company-workspace-grid">
         <aside className="company-list-column">
-          <article className="company-box-card company-box-card-stacked">
-            <h3>{text.recentlyVisited}</h3>
-            <ul className="company-sublist-scroll" aria-label={text.recentlyVisited}>
-              {recentCompanies.map((company) => (
-                <li key={company.id}>
-                  <button
-                    type="button"
-                    className={`company-sublist-item-btn${company.id === selectedCompanyId ? " is-active" : ""}`}
-                    onClick={() => setSelectedCompanyId(company.id)}
-                  >
-                    <span className="company-sublist-main-row">
-                      <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
-                      <span className="company-sublist-main">{company.name}</span>
-                    </span>
-                    <span className="company-sublist-time">{company.lastVisited}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <article
+            className={`company-box-card company-box-card-stacked company-collapsible${isRecentExpanded ? " is-expanded" : ""}`}
+          >
+            <button
+              type="button"
+              className="company-collapsible-toggle"
+              aria-expanded={isRecentExpanded}
+              onClick={() => setIsRecentExpanded((previous) => !previous)}
+            >
+              <h3>{text.recentlyVisited}</h3>
+              <svg
+                className="company-collapsible-chevron"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div className="company-collapsible-body">
+              <ul className="company-sublist-scroll" aria-label={text.recentlyVisited}>
+                {recentCompanies.map((company) => (
+                  <li key={company.id}>
+                    <button
+                      type="button"
+                      className={`company-sublist-item-btn${company.id === selectedCompanyId ? " is-active" : ""}`}
+                      onClick={() => setSelectedCompanyId(company.id)}
+                    >
+                      <span className="company-sublist-main-row">
+                        <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
+                        <span className="company-sublist-main">{company.name}</span>
+                      </span>
+                      <span className="company-sublist-time">{company.lastVisited}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </article>
 
-          <article className="company-box-card company-box-card-stacked">
-            <h3>{text.favorites}</h3>
-            <ul className="company-sublist-scroll" aria-label={text.favorites}>
-              {favoriteCompanies.map((company) => (
-                <li key={company.id}>
-                  <button
-                    type="button"
-                    className={`company-sublist-item-btn${company.id === selectedCompanyId ? " is-active" : ""}`}
-                    onClick={() => setSelectedCompanyId(company.id)}
-                  >
-                    <span className="company-sublist-main-row">
-                      <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
-                      <span className="company-sublist-main">{company.name}</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <article
+            className={`company-box-card company-box-card-stacked company-collapsible${isFavoritesExpanded ? " is-expanded" : ""}`}
+          >
+            <button
+              type="button"
+              className="company-collapsible-toggle"
+              aria-expanded={isFavoritesExpanded}
+              onClick={() => setIsFavoritesExpanded((previous) => !previous)}
+            >
+              <h3>{text.favorites}</h3>
+              <svg
+                className="company-collapsible-chevron"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div className="company-collapsible-body">
+              <ul className="company-sublist-scroll" aria-label={text.favorites}>
+                {favoriteCompanies.map((company) => (
+                  <li key={company.id}>
+                    <button
+                      type="button"
+                      className={`company-sublist-item-btn${company.id === selectedCompanyId ? " is-active" : ""}`}
+                      onClick={() => setSelectedCompanyId(company.id)}
+                    >
+                      <span className="company-sublist-main-row">
+                        <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
+                        <span className="company-sublist-main">{company.name}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </article>
 
-          <label className="company-search-field">
-            <span>{text.searchLabel}</span>
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={text.searchPlaceholder}
-            />
-          </label>
+          <article
+            className={`company-box-card company-box-card-stacked company-collapsible${isCompanyListExpanded ? " is-expanded" : ""}`}
+          >
+            <button
+              type="button"
+              className="company-collapsible-toggle"
+              aria-expanded={isCompanyListExpanded}
+              onClick={() => setIsCompanyListExpanded((previous) => !previous)}
+            >
+              <h3>{text.searchLabel}</h3>
+              <svg
+                className="company-collapsible-chevron"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div className="company-collapsible-body">
+              <label className="company-search-field">
+                <span>{text.searchLabel}</span>
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder={text.searchPlaceholder}
+                />
+              </label>
 
-          <ul className="company-list-scroll" aria-label={text.searchLabel}>
+              <ul className="company-list-scroll" aria-label={text.searchLabel}>
             {filteredCompanies.map((company) => {
               const isActive = company.id === selectedCompanyId;
 
@@ -1178,6 +1269,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
 
             {filteredCompanies.length === 0 ? <li className="company-empty-item">{text.noResult}</li> : null}
           </ul>
+            </div>
+          </article>
         </aside>
 
         <section className="company-detail-column" aria-label="Company dashboard">

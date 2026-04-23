@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type JSX, useEffect, useMemo, useState } from "react";
 
 import type { ActiveView, Language } from "../../features/chat/types/chat";
 import type { UiText } from "../../shared/i18n/uiText";
@@ -29,16 +29,84 @@ interface SidebarProps {
   onOpenRecentChat: (previewText: string, timeLabel: string) => void;
 }
 
+type NavIcon = (props: { className?: string }) => JSX.Element;
+
+const NavIconBase = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <svg
+    className={className}
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+);
+
+const HomeIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />
+  </NavIconBase>
+);
+
+const ChatIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.1A8 8 0 1 1 21 12z" />
+  </NavIconBase>
+);
+
+const CompaniesIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <rect x="3" y="4" width="18" height="17" rx="2" />
+    <line x1="8" y1="4" x2="8" y2="21" />
+    <line x1="16" y1="4" x2="16" y2="21" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="3" y1="15" x2="21" y2="15" />
+  </NavIconBase>
+);
+
+const RecommendationsIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <polygon points="12 2 15 9 22 9 16.5 13.5 18.5 21 12 16.8 5.5 21 7.5 13.5 2 9 9 9 12 2" />
+  </NavIconBase>
+);
+
+const NotificationsIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <path d="M18 16v-5a6 6 0 0 0-12 0v5l-2 3h16z" />
+    <path d="M10 21a2 2 0 0 0 4 0" />
+  </NavIconBase>
+);
+
+const ProfileIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
+  </NavIconBase>
+);
+
 const navigationItems: Array<{
   key: keyof UiText["sidebar"]["nav"];
   view: ActiveView;
+  Icon: NavIcon;
 }> = [
-  { key: "home", view: "dashboard" },
-  { key: "chat", view: "chat" },
-  { key: "companies", view: "companies" },
-  { key: "recommendations", view: "recommendations" },
-  { key: "notifications", view: "notifications" },
-  { key: "profile", view: "profile" },
+  { key: "home", view: "dashboard", Icon: HomeIcon },
+  { key: "chat", view: "chat", Icon: ChatIcon },
+  { key: "companies", view: "companies", Icon: CompaniesIcon },
+  { key: "recommendations", view: "recommendations", Icon: RecommendationsIcon },
+  { key: "notifications", view: "notifications", Icon: NotificationsIcon },
+  { key: "profile", view: "profile", Icon: ProfileIcon },
 ];
 
 const seedRecentChatsByLanguage: Record<Language, RecentChatItem[]> = {
@@ -296,6 +364,7 @@ export function Sidebar({
       <ul className="nav-list" aria-label="Main navigation">
         {navigationItems.map((item) => {
           const isActive = item.view === activeView;
+          const { Icon } = item;
 
           return (
             <li
@@ -306,6 +375,7 @@ export function Sidebar({
               }}
               style={{ cursor: "pointer" }}
             >
+              <Icon className="nav-list-icon" />
               <span>{copy.nav[item.key]}</span>
             </li>
           );

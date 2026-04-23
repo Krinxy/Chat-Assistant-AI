@@ -14,6 +14,7 @@ interface HeaderProps {
   storyCloseLabel: string;
   companyStories: CompanyStoryItem[];
   onOpenProfile: () => void;
+  onOpenSidebar?: () => void;
 }
 
 const storyGradients = [
@@ -44,6 +45,7 @@ export function Header({
   storyCloseLabel,
   companyStories,
   onOpenProfile,
+  onOpenSidebar,
 }: HeaderProps) {
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [isStoryStripDragging, setIsStoryStripDragging] = useState<boolean>(false);
@@ -68,18 +70,7 @@ export function Header({
     return companyStories.find((story) => story.id === activeStoryId) ?? null;
   }, [activeStoryId, companyStories]);
 
-  const finishStoryStripDrag = (event?: PointerEvent<HTMLDivElement>): void => {
-    const storyStrip = storyStripRef.current;
-
-    if (
-      storyStrip !== null &&
-      event !== undefined &&
-      storyDragStateRef.current.pointerId !== null &&
-      storyStrip.hasPointerCapture(event.pointerId)
-    ) {
-      storyStrip.releasePointerCapture(event.pointerId);
-    }
-
+  const finishStoryStripDrag = (): void => {
     setIsStoryStripDragging(false);
     storyDragStateRef.current.pointerId = null;
     globalThis.setTimeout(() => {
@@ -92,13 +83,6 @@ export function Header({
       return;
     }
 
-    if (
-      event.target instanceof Element &&
-      event.target.closest(".home-story-btn") !== null
-    ) {
-      return;
-    }
-
     const storyStrip = storyStripRef.current;
     if (storyStrip === null) {
       return;
@@ -108,12 +92,10 @@ export function Header({
     storyDragStateRef.current.startClientX = event.clientX;
     storyDragStateRef.current.startScrollLeft = storyStrip.scrollLeft;
     storyDragStateRef.current.moved = false;
-    setIsStoryStripDragging(true);
-    storyStrip.setPointerCapture(event.pointerId);
   };
 
   const handleStoryStripPointerMove = (event: PointerEvent<HTMLDivElement>): void => {
-    if (!isStoryStripDragging) {
+    if (storyDragStateRef.current.pointerId !== event.pointerId) {
       return;
     }
 
@@ -125,6 +107,9 @@ export function Header({
     const offset = event.clientX - storyDragStateRef.current.startClientX;
     if (Math.abs(offset) > 6) {
       storyDragStateRef.current.moved = true;
+      if (!isStoryStripDragging) {
+        setIsStoryStripDragging(true);
+      }
     }
 
     storyStrip.scrollLeft = storyDragStateRef.current.startScrollLeft - offset;
@@ -141,8 +126,33 @@ export function Header({
   return (
     <>
       <header className={`top-bar ${hasStartedChat ? "chat-active" : ""}`}>
+        {onOpenSidebar !== undefined ? (
+          <button
+            type="button"
+            className="mobile-menu-trigger mobile-menu-trigger-inline"
+            onClick={onOpenSidebar}
+            aria-label="Open navigation"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        ) : null}
+
         <div className="greeting-block">
-          <div>
+          <div className="greeting-text">
             <h2 className="greeting-heading">
               {hasStartedChat && showChatBrand && (
                 <span className="brand-logo-combined">
@@ -163,9 +173,9 @@ export function Header({
               aria-label={storiesLabel}
               onPointerDown={handleStoryStripPointerDown}
               onPointerMove={handleStoryStripPointerMove}
-              onPointerUp={(event) => finishStoryStripDrag(event)}
-              onPointerCancel={(event) => finishStoryStripDrag(event)}
-              onPointerLeave={(event) => finishStoryStripDrag(event)}
+              onPointerUp={() => finishStoryStripDrag()}
+              onPointerCancel={() => finishStoryStripDrag()}
+              onPointerLeave={() => finishStoryStripDrag()}
             >
               {companyStories.map((story) => {
                 const isActive = story.id === activeStoryId;

@@ -237,6 +237,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof globalThis.matchMedia === "function") {
+      const isMobileViewport = globalThis.matchMedia("(max-width: 900px)").matches;
+
+      if (isMobileViewport) {
+        setIsSidebarOpen(false);
+      }
+    }
+  }, [activeView]);
+
+  useEffect(() => {
     setIsViewSwitching(true);
 
     if (viewTransitionTimeoutRef.current !== null) {
@@ -486,6 +496,43 @@ export default function App() {
         />
       ) : null}
 
+      {!showChatAndDashboardLayout && !isSidebarOpen ? (
+        <button
+          type="button"
+          className="mobile-menu-trigger mobile-menu-trigger-floating"
+          onClick={() => {
+            setIsSidebarOpen(true);
+          }}
+          aria-label="Open navigation"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      ) : null}
+
+      {isSidebarOpen ? (
+        <div
+          className="mobile-sidebar-backdrop"
+          role="presentation"
+          onClick={() => {
+            setIsSidebarOpen(false);
+          }}
+        />
+      ) : null}
+
       <div
         className={`dashboard-shell${isSidebarOpen ? "" : " is-collapsed"} ${
           hasStartedChat ? "chat-mode-shell" : ""
@@ -522,6 +569,9 @@ export default function App() {
               storyCloseLabel={ui.header.storyCloseLabel}
               companyStories={companyStories}
               onOpenProfile={handleOpenProfile}
+              onOpenSidebar={() => {
+                setIsSidebarOpen(true);
+              }}
             />
           ) : null}
 

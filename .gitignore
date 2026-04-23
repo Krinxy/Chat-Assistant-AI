@@ -23,3 +23,4 @@ frontend/coverage/*
 
 *.egg-info/
 .eggs/
+settings.local.json

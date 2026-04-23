@@ -14,6 +14,7 @@ coverage/*
 !coverage/coverage_gate.py
 .coverage
 .coverage.*
+frontend/coverage/*
 
 *.log
 *.xml

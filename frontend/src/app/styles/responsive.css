@@ -43,6 +43,25 @@
   .company-overview-kpi-grid {
     grid-template-columns: 1fr;
   }
+
+  .local-llm-hover-popover {
+    position: fixed;
+    top: 84px;
+    left: 50%;
+    right: auto;
+    width: min(94vw, 560px);
+    max-height: calc(100vh - 104px);
+    transform: translate(-50%, -6px);
+  }
+
+  .local-llm-hover-wrap:hover .local-llm-hover-popover,
+  .local-llm-hover-wrap:focus-within .local-llm-hover-popover {
+    transform: translate(-50%, 0);
+  }
+
+  .local-llm-config-panel {
+    width: 100%;
+  }
 }
 
 @media (max-width: 900px) {
@@ -67,8 +86,46 @@
   }
 
   .top-bar {
-    border-radius: 0;
-    padding: 0 2px 12px;
+    border-radius: 14px;
+    padding: 4px 2px 10px;
+  }
+
+  .greeting-block {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .header-question {
+    max-width: calc(100vw - 52px);
+  }
+
+  .home-story-strip {
+    margin-left: 0;
+    max-width: calc(100vw - 42px);
+  }
+
+  .home-story-btn {
+    font-size: 0;
+  }
+
+  .home-story-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .story-news-modal {
+    width: min(95vw, 520px);
+    padding: 14px;
+  }
+
+  .story-news-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .story-news-close-btn {
+    align-self: flex-end;
   }
 
   .profile-chip {
@@ -79,6 +136,26 @@
     display: none;
   }
 
+  .utility-view-header,
+  .company-workspace-header {
+    align-items: flex-start;
+  }
+
+  .company-workspace-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .profile-panel-header {
+    align-items: stretch;
+  }
+
+  .profile-header-identity {
+    margin-left: 0;
+    width: 100%;
+    min-width: 0;
+  }
+
   .chat-panel {
     border-radius: 14px;
   }
@@ -86,15 +163,6 @@
   .chat-top-bar-container {
     padding: 10px 12px;
     flex-wrap: wrap;
-  }
-
-  .local-llm-hover-popover {
-    right: auto;
-    left: 0;
-  }
-
-  .local-llm-config-panel {
-    width: min(92vw, 420px);
   }
 
   .local-llm-config-form {
@@ -126,9 +194,32 @@
     padding-inline: 10px;
   }
 
-  .brainrot-style-wrap {
+  .brainrot-picker {
+    width: 100%;
+  }
+
+  .brainrot-picker-btn {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .brainrot-style-popover {
+    width: 100%;
+    max-width: min(94vw, 300px);
+  }
+
+  .persona-wizard-panel {
+    width: min(94vw, 460px);
+    padding: 12px;
+  }
+
+  .persona-wizard-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .persona-wizard-right-actions {
+    justify-content: flex-end;
   }
 
   .right-column {

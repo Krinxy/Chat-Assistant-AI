@@ -68,7 +68,7 @@ export function FeatureGuidePanel({ language }: FeatureGuidePanelProps) {
     }
     : {
       title: "Help",
-      subtitle: "Quick navigation for features, workflows, and local vLLM setup.",
+      subtitle: "Kurze Navigation für Features, Workflows und lokale vLLM-Anbindung.",
       navTitle: "Topics",
       topics: [
         {

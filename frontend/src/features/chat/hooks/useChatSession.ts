@@ -1,9 +1,10 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
-import type { BrainrotStyleKey, ChatMessage, Language } from "../types/chat";
+import type { BrainrotStyleKey, ChatAttachment, ChatMessage, Language } from "../types/chat";
 import { composeAssistantReply, timeFormatter } from "../utils/chat";
 
 interface UseChatSessionOptions {
+  selectedModelId: string;
   selectedModelLabel: string;
   language: Language;
   isBrainrotEnabled?: boolean;
@@ -20,10 +21,13 @@ interface UseChatSessionResult {
   isTyping: boolean;
   sendMessage: (event: FormEvent<HTMLFormElement>) => boolean;
   addAttachmentActionMessage: (label: string) => void;
+  addUploadedFilesMessage: (files: File[]) => void;
   resetSession: () => void;
+  openSessionFromPreview: (previewText: string, timeLabel?: string) => void;
 }
 
 export function useChatSession({
+  selectedModelId,
   selectedModelLabel,
   language,
   isBrainrotEnabled = false,
@@ -35,6 +39,7 @@ export function useChatSession({
   const [draft, setDraft] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
   const hasSentFirstMessageRef = useRef<boolean>(false);
   const timeoutIdsRef = useRef<Array<ReturnType<typeof globalThis.setTimeout>>>(
     [],
@@ -55,11 +60,26 @@ export function useChatSession({
     intervalIdsRef.current = [];
   }, []);
 
+  const revokeAttachmentPreviews = useCallback((messagesToRevoke: ChatMessage[]): void => {
+    messagesToRevoke.forEach((message) => {
+      message.attachments?.forEach((attachment) => {
+        if (typeof attachment.previewUrl === "string" && attachment.previewUrl.length > 0) {
+          globalThis.URL.revokeObjectURL(attachment.previewUrl);
+        }
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   useEffect(() => {
     return () => {
       clearScheduledWork();
+      revokeAttachmentPreviews(messagesRef.current);
     };
-  }, [clearScheduledWork]);
+  }, [clearScheduledWork, revokeAttachmentPreviews]);
 
   const scheduleTimeout = (callback: () => void, delayMs: number): void => {
     const timeoutId = globalThis.setTimeout(() => {
@@ -116,10 +136,15 @@ export function useChatSession({
         setMessages((previous) => [...previous, thinkingMessage]);
       }, 80);
 
-      const fullReply = composeAssistantReply(trimmed, selectedModelLabel, language, {
-        brainrotTone: isBrainrotEnabled,
-        brainrotStyle,
-      });
+      const isGeminiModel = selectedModelId.toLowerCase().includes("gemini");
+      const fullReply = isGeminiModel
+        ? composeAssistantReply(trimmed, selectedModelLabel, language, {
+          brainrotTone: isBrainrotEnabled,
+          brainrotStyle,
+        })
+        : language === "de"
+          ? "Dieses LLM ist noch nicht angelegt. Kontaktiere den Admin. Aktuell arbeiten wir nur mit Google Gemini."
+          : "This LLM is not set up yet. Please contact the admin. For now, only Google Gemini is available.";
       const tokens = fullReply.split(" ");
 
       scheduleTimeout(() => {
@@ -178,6 +203,7 @@ export function useChatSession({
       draft,
       isTyping,
       language,
+      selectedModelId,
       isBrainrotEnabled,
       brainrotStyle,
       onFirstUserMessage,
@@ -198,13 +224,87 @@ export function useChatSession({
     ]);
   }, [actionStartedPrefix]);
 
+  const addUploadedFilesMessage = useCallback((files: File[]): void => {
+    if (files.length === 0) {
+      return;
+    }
+
+    const attachments: ChatAttachment[] = files.map((file, index) => {
+      const fileName = file.name.trim().length > 0 ? file.name.trim() : `file-${index + 1}`;
+      const isImage = file.type.toLowerCase().startsWith("image/");
+
+      return {
+        id: `${Date.now()}-${index}`,
+        name: fileName,
+        isImage,
+        previewUrl: isImage ? globalThis.URL.createObjectURL(file) : undefined,
+      };
+    });
+
+    if (attachments.length === 0) {
+      return;
+    }
+
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: Date.now(),
+        role: "user",
+        text: "",
+        time: timeFormatter.format(new Date()),
+        attachments,
+      },
+    ]);
+
+    if (!hasSentFirstMessageRef.current) {
+      hasSentFirstMessageRef.current = true;
+      onFirstUserMessage?.();
+    }
+  }, [onFirstUserMessage]);
+
   const resetSession = useCallback((): void => {
     clearScheduledWork();
     hasSentFirstMessageRef.current = false;
     setDraft("");
-    setMessages([]);
+    setMessages((previous) => {
+      revokeAttachmentPreviews(previous);
+      return [];
+    });
     setIsTyping(false);
-  }, [clearScheduledWork]);
+  }, [clearScheduledWork, revokeAttachmentPreviews]);
+
+  const openSessionFromPreview = useCallback((previewText: string, timeLabel?: string): void => {
+    const normalizedPreview = previewText.trim();
+
+    if (normalizedPreview.length === 0) {
+      resetSession();
+      return;
+    }
+
+    clearScheduledWork();
+    hasSentFirstMessageRef.current = true;
+    setDraft("");
+    setIsTyping(false);
+
+    const normalizedTimeLabel = typeof timeLabel === "string" ? timeLabel.trim() : "";
+    const messageTime =
+      normalizedTimeLabel.length > 0
+        ? normalizedTimeLabel
+        : timeFormatter.format(new Date());
+
+    setMessages((previous) => {
+      revokeAttachmentPreviews(previous);
+
+      return [
+        {
+          id: Date.now(),
+          role: "user",
+          text: normalizedPreview,
+          time: messageTime,
+        },
+      ];
+    });
+  }, [clearScheduledWork, resetSession, revokeAttachmentPreviews]);
 
   return {
     draft,
@@ -213,6 +313,8 @@ export function useChatSession({
     isTyping,
     sendMessage,
     addAttachmentActionMessage,
+    addUploadedFilesMessage,
     resetSession,
+    openSessionFromPreview,
   };
 }

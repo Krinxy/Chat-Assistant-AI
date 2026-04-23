@@ -1,0 +1,10 @@
+{
+  "firstName": "Dominic",
+  "fullName": "Dominic Bechtold",
+  "initials": "DB",
+  "email": "dominic@aura.local",
+  "role": {
+    "de": "Softwarearchitekt",
+    "en": "Software Architect"
+  }
+}

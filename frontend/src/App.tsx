@@ -30,6 +30,7 @@ import { CompanyWorkspacePanel } from "./pages/CompanyWorkspacePage/CompanyWorks
 import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
+import { UserProfilePanel } from "./pages/ProfilePage/UserProfilePanel";
 import { userProfile } from "./shared/data/userProfile";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
@@ -619,6 +620,15 @@ export default function App() {
           ) : null}
 
           {activeView === "profile" ? (
+            <UserProfilePanel
+              language={language}
+              onOpenSettings={() => {
+                setActiveView("settings");
+              }}
+            />
+          ) : null}
+
+          {activeView === "settings" ? (
             <ProfilePanel
               language={language}
               localLlmConfig={localLlmConfig}

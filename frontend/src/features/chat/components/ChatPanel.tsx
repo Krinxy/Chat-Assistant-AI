@@ -1011,7 +1011,11 @@ export function ChatPanel({
             {isModelMenuOpen ? (
               <div
                 className="model-picker-popover popup-menu"
-                onPointerLeave={() => setActiveModelProviderId(null)}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === "mouse") {
+                    setActiveModelProviderId(null);
+                  }
+                }}
               >
                 <div className="popup-menu-header">
                   <input
@@ -1031,7 +1035,12 @@ export function ChatPanel({
                         className={`popup-menu-item has-submenu${
                           activeProvider?.id === provider.id ? " is-active" : ""
                         }`}
-                        onPointerEnter={() => setActiveModelProviderId(provider.id)}
+                        onPointerEnter={(event) => {
+                          if (event.pointerType === "mouse") {
+                            setActiveModelProviderId(provider.id);
+                          }
+                        }}
+                        onClick={() => setActiveModelProviderId(provider.id)}
                       >
                         <div className="popup-menu-item-content">
                           <span>{provider.label}</span>
@@ -1183,7 +1192,10 @@ export function ChatPanel({
                 }}
                 aria-expanded={isBrainrotMenuOpen}
               >
-                <span className="model-name">{copy.brainrotStyleLabel}</span>
+                <span className="model-name">
+                  {brainrotStyles.find((option) => option.key === brainrotStyle)?.label
+                    ?? copy.brainrotStyleLabel}
+                </span>
                 <span className="model-chevron">{isBrainrotMenuOpen ? "▴" : "▾"}</span>
               </button>
 

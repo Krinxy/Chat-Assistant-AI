@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Language, LocalLlmConfig } from "../../features/chat/types/chat";
 import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
+import { useDragScroll } from "../../shared/hooks/useDragScroll";
 
 interface ProfilePanelProps {
   language: Language;
@@ -164,6 +165,8 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
   const [selectedPresetKey, setSelectedPresetKey] = useState<string | null>(getInitialActivePresetKey);
   const [customPresetName, setCustomPresetName] = useState<string>("");
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(getInitialCustomPresets);
+  const customPresetsListRef = useRef<HTMLDivElement | null>(null);
+  const customPresetsDragScroll = useDragScroll(customPresetsListRef, "vertical");
   const [isSaved, setIsSaved] = useState<boolean>(false);
 
   const builtInPresets = useMemo<BuiltInPreset[]>(() => {
@@ -669,13 +672,22 @@ export function ProfilePanel({ language, localLlmConfig, onOpenLocalLlmSetup }: 
             </div>
 
             <p className="profile-presets-title">{text.customPresetsTitle}</p>
-            <div className="profile-presets-list">
+            <div
+              ref={customPresetsListRef}
+              className={`profile-presets-list${customPresetsDragScroll.isDragging ? " is-dragging" : ""}`}
+              {...customPresetsDragScroll.handlers}
+            >
               {customPresets.map((preset) => (
                 <div className="profile-custom-preset-row" key={preset.id}>
                   <button
                     type="button"
                     className={`profile-preset-btn${selectedPresetKey === `custom:${preset.id}` ? " is-active" : ""}`}
-                    onClick={() => applyCustomPreset(preset)}
+                    onClick={() => {
+                      if (customPresetsDragScroll.hasMoved()) {
+                        return;
+                      }
+                      applyCustomPreset(preset);
+                    }}
                   >
                     {preset.name}
                   </button>

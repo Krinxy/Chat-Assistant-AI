@@ -1,5 +1,6 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useDragScroll } from "../../shared/hooks/useDragScroll";
 import { userProfile } from "../../shared/data/userProfile";
 import { CompanyAppointmentsTab } from "./CompanyAppointmentsTab";
 import { CompanyNotesTab } from "./CompanyNotesTab";
@@ -38,6 +39,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
   const [isRecentExpanded, setIsRecentExpanded] = useState<boolean>(true);
   const [isFavoritesExpanded, setIsFavoritesExpanded] = useState<boolean>(true);
   const [isCompanyListExpanded, setIsCompanyListExpanded] = useState<boolean>(true);
+  const tabRowRef = useRef<HTMLDivElement | null>(null);
+  const tabDragScroll = useDragScroll(tabRowRef);
 
   const [uploadedDocumentsByCompany, setUploadedDocumentsByCompany] = useState<
     Record<string, UploadedCompanyDocument[]>
@@ -1296,7 +1299,13 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
                 </ul>
               </header>
 
-              <div className="company-tab-row" role="tablist" aria-label="Company dashboard tabs">
+              <div
+                ref={tabRowRef}
+                className={`company-tab-row${tabDragScroll.isDragging ? " is-dragging" : ""}`}
+                role="tablist"
+                aria-label="Company dashboard tabs"
+                {...tabDragScroll.handlers}
+              >
                 {visibleTabs.map((tabId) => (
                   <button
                     key={tabId}
@@ -1304,7 +1313,12 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
                     role="tab"
                     aria-selected={tabId === activeTab}
                     className={`company-tab-btn${tabId === activeTab ? " is-active" : ""}`}
-                    onClick={() => setActiveTab(tabId)}
+                    onClick={() => {
+                      if (tabDragScroll.hasMoved()) {
+                        return;
+                      }
+                      setActiveTab(tabId);
+                    }}
                   >
                     {text.tabs[tabId]}
                   </button>

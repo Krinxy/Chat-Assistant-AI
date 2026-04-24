@@ -4,7 +4,7 @@ from backend.app.services.utils.transcription.preflight import (
     TranscriptionPreflightReport,
     run_transcription_preflight,
     print_preflight_report,
-    main
+    main,
 )
 
 
@@ -27,7 +27,7 @@ def test_preflight_report_properties():
         preload_attempted=False,
         preload_success=False,
         preload_error=None,
-        runtime_device=None
+        runtime_device=None,
     )
     assert report.has_missing_runtime_dependencies is True
     assert report.is_ready_for_real_transcription is False
@@ -39,7 +39,7 @@ def test_preflight_report_properties():
         preload_attempted=True,
         preload_success=True,
         preload_error=None,
-        runtime_device="cpu"
+        runtime_device="cpu",
     )
     assert report2.has_missing_runtime_dependencies is False
     assert report2.is_ready_for_real_transcription is True
@@ -79,7 +79,7 @@ def test_print_preflight_report(mock_print):
         preload_attempted=True,
         preload_success=False,
         preload_error="Some error",
-        runtime_device=None
+        runtime_device=None,
     )
     print_preflight_report(report)
     output = " ".join([call[0][0] for call in mock_print.call_args_list])
@@ -126,7 +126,7 @@ def test_print_preflight_report_success_no_device(mock_print):
         preload_attempted=True,
         preload_success=True,
         preload_error=None,
-        runtime_device=None
+        runtime_device=None,
     )
     print_preflight_report(report)
     output = " ".join([call[0][0] for call in mock_print.call_args_list])
@@ -142,7 +142,7 @@ def test_print_preflight_report_success_device(mock_print):
         preload_attempted=True,
         preload_success=True,
         preload_error=None,
-        runtime_device="cuda"
+        runtime_device="cuda",
     )
     print_preflight_report(report)
     output = " ".join([call[0][0] for call in mock_print.call_args_list])
@@ -158,7 +158,7 @@ def test_print_preflight_report_not_attempted(mock_print):
         preload_attempted=False,
         preload_success=False,
         preload_error=None,
-        runtime_device=None
+        runtime_device=None,
     )
     print_preflight_report(report)
     output = " ".join([call[0][0] for call in mock_print.call_args_list])
@@ -174,7 +174,7 @@ def test_print_preflight_report_warning(mock_print):
         preload_attempted=False,
         preload_success=False,
         preload_error=None,
-        runtime_device=None
+        runtime_device=None,
     )
     print_preflight_report(report)
     output = " ".join([call[0][0] for call in mock_print.call_args_list])

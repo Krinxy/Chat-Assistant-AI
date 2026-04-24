@@ -392,12 +392,38 @@ input {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 284px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--accent-1) 30%, transparent) transparent;
+}
+
+.sidebar-section-history {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-imprint-link {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink-700) 60%, transparent);
+  text-align: center;
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 160ms ease;
+}
+
+.sidebar-imprint-link:hover {
+  color: var(--ink-900);
 }
 
 .history-list::-webkit-scrollbar {

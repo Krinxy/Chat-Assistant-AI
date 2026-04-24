@@ -106,7 +106,7 @@
 
 .model-picker {
   position: relative;
-  z-index: 180;
+  z-index: 200;
 }
 
 .model-picker-btn {
@@ -134,7 +134,7 @@
   border-radius: 16px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  z-index: 1200;
+  z-index: 1400;
 }
 
 .popup-menu-header {
@@ -245,7 +245,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  z-index: 180;
+  z-index: 210;
 }
 
 .services-plus-btn {
@@ -305,16 +305,18 @@
   top: calc(100% + 8px);
   left: 0;
   right: auto;
-  min-width: 210px;
-  max-width: min(300px, calc(100vw - 24px));
+  min-width: 180px;
+  max-width: min(240px, calc(100vw - 24px));
+  max-height: 240px;
+  overflow-y: auto;
   margin: 0;
-  padding: 6px;
+  padding: 4px;
   list-style: none;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--panel-solid);
   box-shadow: var(--shadow-md);
-  z-index: 1200;
+  z-index: 1300;
 }
 
 [data-theme="light"] .brainrot-style-popover {
@@ -370,7 +372,7 @@
 
 .local-llm-hover-wrap {
   position: relative;
-  z-index: 180;
+  z-index: 150;
 }
 
 .local-llm-hover-btn {
@@ -660,7 +662,7 @@
   border: 1px solid var(--line);
   background: var(--panel-solid);
   box-shadow: var(--shadow-md);
-  z-index: 1200;
+  z-index: 1500;
 }
 
 .services-menu-popover {
@@ -1199,7 +1201,7 @@
 
 .profile-panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
@@ -1219,6 +1221,115 @@
   flex-direction: column;
   gap: 3px;
   min-width: 220px;
+}
+
+.user-profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.user-profile-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--feature-lilac) 18%, transparent), transparent 62%),
+    var(--panel-solid);
+  box-shadow: var(--shadow-sm);
+}
+
+.user-profile-banner-avatar {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, var(--accent-1), #1a1e31);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(122, 44, 255, 0.28);
+}
+
+.user-profile-banner-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-profile-banner-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  font-weight: 700;
+}
+
+.user-profile-banner-text strong {
+  font-size: 1.12rem;
+  color: var(--ink-900);
+}
+
+.user-profile-banner-text small {
+  font-size: 0.82rem;
+  color: var(--feature-lilac);
+  font-weight: 600;
+}
+
+.user-profile-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.user-profile-facts > div {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--panel-solid);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-profile-facts dt {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  font-weight: 700;
+}
+
+.user-profile-facts dd {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--ink-900);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.user-profile-settings-btn {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--feature-lilac) 42%, var(--line));
+  background: color-mix(in srgb, var(--feature-lilac) 14%, var(--panel-solid));
+  color: var(--feature-lilac);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.user-profile-settings-btn:hover {
+  background: color-mix(in srgb, var(--feature-lilac) 22%, var(--panel-solid));
+  transform: translateY(-1px);
 }
 
 .profile-header-identity strong {
@@ -1470,6 +1581,28 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent-1) 30%, transparent) transparent;
+  padding-right: 4px;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+}
+
+.profile-presets-list.is-dragging {
+  cursor: grabbing;
+}
+
+.profile-presets-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-presets-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-1) 30%, transparent);
 }
 
 .profile-custom-preset-row {

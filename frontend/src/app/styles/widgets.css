@@ -297,21 +297,30 @@
 }
 
 .weather-stat-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 14px;
   flex: 1;
-  justify-content: space-between;
-  padding: 0 6px;
+  min-width: 0;
+  padding: 0 12px;
+  position: relative;
+}
+
+.weather-stat-item + .weather-stat-item {
+  border-left: 1px solid color-mix(in srgb, var(--ink-500) 22%, transparent);
+}
+
+.weather-stat-sep {
+  display: none;
 }
 
 .weather-stat-item .weather-stat-label {
-  text-align: left;
+  white-space: nowrap;
 }
 
 .weather-stat-item .weather-stat-value {
-  text-align: right;
-  margin-left: auto;
+  white-space: nowrap;
 }
 
 .weather-stat-sep {

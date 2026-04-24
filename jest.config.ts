@@ -1,5 +1,6 @@
 const config = {
   roots: ['<rootDir>'],
+  testPathIgnorePatterns: ['<rootDir>/frontend/', '<rootDir>/node_modules/'],
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: 'tsconfig.json' }],

@@ -99,7 +99,19 @@ const ProfileIcon: NavIcon = ({ className }) => (
 const SettingsIcon: NavIcon = ({ className }) => (
   <NavIconBase className={className}>
     <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <path
+      d={
+        "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06" +
+        "a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09" +
+        "a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83" +
+        "l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09" +
+        "a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83" +
+        "l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09" +
+        "a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83" +
+        "l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09" +
+        "a1.65 1.65 0 0 0-1.51 1z"
+      }
+    />
   </NavIconBase>
 );
 
@@ -239,7 +251,6 @@ export function Sidebar({
   theme,
   onToggleTheme,
   copy,
-  activeServiceLabels,
   latestMessagePreview,
   onStartNewChat,
   onOpenRecentChat,
@@ -287,51 +298,6 @@ export function Sidebar({
       globalThis.clearTimeout(idleTimeoutId);
     };
   }, [activeRecentChatId]);
-
-
-  const currentSessionPreview = latestMessagePreview;
-
-  const currentScopeLabel = useMemo(() => {
-    if (activeView === "dashboard") {
-      return copy.nav.home;
-    }
-
-    if (activeView === "recommendations") {
-      return copy.nav.recommendations;
-    }
-
-    if (activeView === "companies") {
-      return copy.nav.companies;
-    }
-
-    if (activeView === "notifications") {
-      return copy.nav.notifications;
-    }
-
-    if (activeView === "profile") {
-      return copy.nav.profile;
-    }
-
-    if (activeView === "guide") {
-      return copy.featureGuideButton;
-    }
-
-    return copy.nav.chat;
-  }, [
-    activeView,
-    copy.featureGuideButton,
-    copy.nav.chat,
-    copy.nav.companies,
-    copy.nav.home,
-    copy.nav.notifications,
-    copy.nav.profile,
-    copy.nav.recommendations,
-  ]);
-
-  const currentServicesLabel =
-    activeServiceLabels.length > 0
-      ? activeServiceLabels.join(", ")
-      : copy.noActiveServices;
 
   return (
     <aside className="left-sidebar" aria-label="Sidebar controls">
@@ -389,7 +355,10 @@ export function Sidebar({
       </ul>
 
       {isSidebarOpen ? (
-        <section className="sidebar-section sidebar-section-history" aria-label={copy.lastChatsTitle}>
+        <section
+          className="sidebar-section sidebar-section-history"
+          aria-label={copy.lastChatsTitle}
+        >
           <div className="sidebar-section-header">
             <p className="sidebar-section-title">{copy.lastChatsTitle}</p>
             <button

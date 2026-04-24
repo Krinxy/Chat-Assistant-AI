@@ -63,13 +63,24 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
     responsibleValue: "Dominic Bechtold, Anschrift wie oben",
     disclaimerTitle: "Haftung für Inhalte",
     disclaimerBody:
-      "Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.",
+      "Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf " +
+      "diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 " +
+      "TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder " +
+      "gespeicherte fremde Informationen zu überwachen oder nach Umständen zu " +
+      "forschen, die auf eine rechtswidrige Tätigkeit hinweisen.",
     linksTitle: "Haftung für Links",
     linksBody:
-      "Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.",
+      "Unser Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte " +
+      "wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch " +
+      "keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der " +
+      "jeweilige Anbieter oder Betreiber der Seiten verantwortlich.",
     copyrightTitle: "Urheberrecht",
     copyrightBody:
-      "Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.",
+      "Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten " +
+      "unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, " +
+      "Verbreitung und jede Art der Verwertung außerhalb der Grenzen des " +
+      "Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors " +
+      "bzw. Erstellers.",
     disputeTitle: "Streitbeilegung",
     disputeBody:
       "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: https://ec.europa.eu/consumers/odr. Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.",
@@ -100,13 +111,23 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
     responsibleValue: "Dominic Bechtold, address as above",
     disclaimerTitle: "Liability for content",
     disclaimerBody:
-      "As a service provider we are responsible for our own content on these pages in accordance with § 7 (1) TMG under general law. According to §§ 8 to 10 TMG we are, however, not obligated to monitor transmitted or stored third-party information, or to investigate circumstances that indicate unlawful activity.",
+      "As a service provider we are responsible for our own content on these pages " +
+      "in accordance with § 7 (1) TMG under general law. According to §§ 8 to 10 " +
+      "TMG we are, however, not obligated to monitor transmitted or stored " +
+      "third-party information, or to investigate circumstances that indicate " +
+      "unlawful activity.",
     linksTitle: "Liability for links",
     linksBody:
-      "Our offer contains links to external third-party websites, on whose contents we have no influence. Therefore, we cannot assume any liability for these external contents. The respective provider or operator of the pages is always responsible for the contents of the linked pages.",
+      "Our offer contains links to external third-party websites, on whose contents " +
+      "we have no influence. Therefore, we cannot assume any liability for these " +
+      "external contents. The respective provider or operator of the pages is always " +
+      "responsible for the contents of the linked pages.",
     copyrightTitle: "Copyright",
     copyrightBody:
-      "The content and works created by the site operators on these pages are subject to German copyright law. Duplication, processing, distribution, and any kind of exploitation outside the limits of copyright require the written consent of the respective author or creator.",
+      "The content and works created by the site operators on these pages are " +
+      "subject to German copyright law. Duplication, processing, distribution, and " +
+      "any kind of exploitation outside the limits of copyright require the written " +
+      "consent of the respective author or creator.",
     disputeTitle: "Dispute resolution",
     disputeBody:
       "The European Commission provides a platform for online dispute resolution (ODR): https://ec.europa.eu/consumers/odr. We are not willing or obligated to participate in dispute resolution proceedings before a consumer arbitration board.",

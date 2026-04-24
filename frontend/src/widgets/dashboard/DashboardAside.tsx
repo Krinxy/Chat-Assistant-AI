@@ -37,6 +37,7 @@ const quickCitySuggestions: string[] = [
   "Düsseldorf",
   "Dortmund",
   "Bremen",
+  "Nürnberg",
   "Leipzig",
   "Paris",
   "London",
@@ -62,6 +63,79 @@ const quickCitySuggestions: string[] = [
 
 const DAY_LABELS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const DAY_LABELS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const CITY_COUNTRY_CODES: Record<string, string> = {
+  berlin: "DE",
+  hamburg: "DE",
+  munchen: "DE",
+  muenchen: "DE",
+  koln: "DE",
+  koeln: "DE",
+  frankfurt: "DE",
+  stuttgart: "DE",
+  dusseldorf: "DE",
+  duesseldorf: "DE",
+  dortmund: "DE",
+  bremen: "DE",
+  nurnberg: "DE",
+  nuernberg: "DE",
+  leipzig: "DE",
+  dresden: "DE",
+  hannover: "DE",
+  paris: "FR",
+  marseille: "FR",
+  lyon: "FR",
+  london: "GB",
+  manchester: "GB",
+  barcelona: "ES",
+  madrid: "ES",
+  lisbon: "PT",
+  lissabon: "PT",
+  rome: "IT",
+  rom: "IT",
+  milan: "IT",
+  mailand: "IT",
+  vienna: "AT",
+  wien: "AT",
+  prague: "CZ",
+  prag: "CZ",
+  amsterdam: "NL",
+  zurich: "CH",
+  zuerich: "CH",
+  copenhagen: "DK",
+  kopenhagen: "DK",
+  stockholm: "SE",
+  oslo: "NO",
+  warsaw: "PL",
+  warschau: "PL",
+  istanbul: "TR",
+  "new york": "US",
+  newyork: "US",
+  "los angeles": "US",
+  losangeles: "US",
+  chicago: "US",
+  toronto: "CA",
+  tokyo: "JP",
+  tokio: "JP",
+  osaka: "JP",
+  seoul: "KR",
+  singapore: "SG",
+  singapur: "SG",
+  sydney: "AU",
+  melbourne: "AU",
+};
+
+const resolveCityCountryCode = (cityName: string): string => {
+  const key = cityName
+    .trim()
+    .toLowerCase()
+    .replace(/[äöüß]/g, (character) => {
+      const replacements: Record<string, string> = { ä: "a", ö: "o", ü: "u", ß: "ss" };
+      return replacements[character] ?? character;
+    });
+
+  return CITY_COUNTRY_CODES[key] ?? "—";
+};
 
 // Daily weather profiles — one entry per day, drives temperature, humidity and wind character
 // humidityBase + windBase control which hourly state is resolved:
@@ -797,7 +871,7 @@ const buildGeneratedCity = (
   return {
     id: `city-${normalizeCityName(cleanName).replace(/\s+/g, "-")}`,
     city: cleanName,
-    country: "--",
+    country: resolveCityCountryCode(cleanName),
     condition: conditions[seed % conditions.length] ?? conditions[0] ?? "Cloudy",
     updatedAt,
     imageUrl: createCityImageUrl(cleanName),

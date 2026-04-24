@@ -104,4 +104,6 @@ export type ActiveView =
   | "recommendations"
   | "notifications"
   | "profile"
-  | "guide";
+  | "settings"
+  | "guide"
+  | "imprint";

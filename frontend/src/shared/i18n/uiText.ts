@@ -6,7 +6,8 @@ type NavKey =
   | "companies"
   | "recommendations"
   | "notifications"
-  | "profile";
+  | "profile"
+  | "settings";
 
 type ServiceKey =
   | "persona"
@@ -35,6 +36,7 @@ export interface UiText {
     featureGuideButton: string;
     themeLight: string;
     themeDark: string;
+    imprint: string;
   };
   header: {
     profileRole: string;
@@ -124,6 +126,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         recommendations: "Empfehlungen",
         notifications: "Benachrichtigungen",
         profile: "Profil",
+        settings: "Einstellungen",
       },
       lastChatsTitle: "Letzte Chats",
       newChatTitle: "Neuer Chat",
@@ -142,6 +145,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       featureGuideButton: "Help",
       themeLight: "Light Mode",
       themeDark: "Dark Mode",
+      imprint: "Impressum",
     },
     header: {
       profileRole: "Softwarearchitekt",
@@ -258,6 +262,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         recommendations: "Recommendations",
         notifications: "Notifications",
         profile: "Profile",
+        settings: "Settings",
       },
       lastChatsTitle: "Recent Chats",
       newChatTitle: "New Chat",
@@ -276,6 +281,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       featureGuideButton: "Help",
       themeLight: "Light Mode",
       themeDark: "Dark Mode",
+      imprint: "Imprint",
     },
     header: {
       profileRole: "Software Architect",

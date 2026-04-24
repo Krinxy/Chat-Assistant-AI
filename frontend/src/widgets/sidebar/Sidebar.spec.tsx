@@ -26,7 +26,7 @@ describe('Sidebar Widget', () => {
     expect(screen.getByText('AURA')).toBeInTheDocument();
     expect(screen.getAllByText('Home').length).toBeGreaterThan(0);
     expect(screen.getByText('Letzte Chats')).toBeInTheDocument();
-    expect(screen.getByText('Noch keine Nachrichten')).toBeInTheDocument();
+    expect(screen.getByText('Impressum')).toBeInTheDocument();
     expect(screen.getByText('DE')).toBeInTheDocument();
     expect(screen.getByText('EN')).toBeInTheDocument();
   });

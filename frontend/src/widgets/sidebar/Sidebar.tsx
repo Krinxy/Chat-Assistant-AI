@@ -96,17 +96,25 @@ const ProfileIcon: NavIcon = ({ className }) => (
   </NavIconBase>
 );
 
+const SettingsIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </NavIconBase>
+);
+
 const navigationItems: Array<{
   key: keyof UiText["sidebar"]["nav"];
   view: ActiveView;
   Icon: NavIcon;
 }> = [
   { key: "home", view: "dashboard", Icon: HomeIcon },
+  { key: "profile", view: "profile", Icon: ProfileIcon },
   { key: "chat", view: "chat", Icon: ChatIcon },
   { key: "companies", view: "companies", Icon: CompaniesIcon },
   { key: "recommendations", view: "recommendations", Icon: RecommendationsIcon },
   { key: "notifications", view: "notifications", Icon: NotificationsIcon },
-  { key: "profile", view: "profile", Icon: ProfileIcon },
+  { key: "settings", view: "settings", Icon: SettingsIcon },
 ];
 
 const seedRecentChatsByLanguage: Record<Language, RecentChatItem[]> = {
@@ -236,7 +244,6 @@ export function Sidebar({
   onStartNewChat,
   onOpenRecentChat,
 }: SidebarProps) {
-  const [showAllChats, setShowAllChats] = useState<boolean>(false);
   const [recentChatsByLanguageState, setRecentChatsByLanguageState] = useState<
     Record<Language, RecentChatItem[]>
   >(() => ({
@@ -281,7 +288,6 @@ export function Sidebar({
     };
   }, [activeRecentChatId]);
 
-  const visibleRecentChats = showAllChats ? recentChats : recentChats.slice(0, 8);
 
   const currentSessionPreview = latestMessagePreview;
 
@@ -383,9 +389,9 @@ export function Sidebar({
       </ul>
 
       {isSidebarOpen ? (
-        <section className="sidebar-section sidebar-section-current" aria-label={copy.currentSessionTitle}>
+        <section className="sidebar-section sidebar-section-history" aria-label={copy.lastChatsTitle}>
           <div className="sidebar-section-header">
-            <p className="sidebar-section-title">{copy.currentSessionTitle}</p>
+            <p className="sidebar-section-title">{copy.lastChatsTitle}</p>
             <button
               className="new-chat-small-btn"
               title={copy.newChatTitle}
@@ -422,7 +428,6 @@ export function Sidebar({
                   ].slice(0, 40),
                 }));
 
-                setShowAllChats(true);
                 setActiveRecentChatId(nextChatId);
                 onStartNewChat();
               }}
@@ -443,36 +448,8 @@ export function Sidebar({
             </button>
           </div>
 
-          <ul className="sidebar-session-context">
-            <li>
-              <span>{copy.scopeLabel}</span>
-              <strong>{currentScopeLabel}</strong>
-            </li>
-            <li>
-              <span>{copy.servicesLabel}</span>
-              <strong title={currentServicesLabel}>{currentServicesLabel}</strong>
-            </li>
-          </ul>
-
-          {currentSessionPreview === null ? (
-            <p className="sidebar-session-empty">{copy.noMessagesYet}</p>
-          ) : (
-            <article className="sidebar-session-preview" title={currentSessionPreview.text}>
-              <p>{currentSessionPreview.text}</p>
-              <small>{currentSessionPreview.time}</small>
-            </article>
-          )}
-        </section>
-      ) : null}
-
-      {isSidebarOpen ? (
-        <section className="sidebar-section sidebar-section-history" aria-label={copy.lastChatsTitle}>
-          <div className="sidebar-section-header">
-            <p className="sidebar-section-title">{copy.lastChatsTitle}</p>
-          </div>
-
-          <ul className="history-list">
-            {visibleRecentChats.map((chat) => {
+          <ul className="history-list history-list-scrollable">
+            {recentChats.map((chat) => {
               const isActiveChat = activeView === "chat" && chat.id === activeRecentChatId;
 
               return (
@@ -498,16 +475,6 @@ export function Sidebar({
               );
             })}
           </ul>
-
-          {recentChats.length > 8 ? (
-            <button
-              type="button"
-              className="more-chats-btn"
-              onClick={() => setShowAllChats((previous) => !previous)}
-            >
-              {showAllChats ? copy.lessChats : copy.moreChats}
-            </button>
-          ) : null}
         </section>
       ) : null}
 
@@ -602,6 +569,18 @@ export function Sidebar({
             EN
           </button>
         </div>
+
+        {isSidebarOpen ? (
+          <a
+            href="/impressum"
+            className="sidebar-imprint-link"
+            onClick={(event) => {
+              event.preventDefault();
+            }}
+          >
+            {copy.imprint}
+          </a>
+        ) : null}
 
       </div>
     </aside>

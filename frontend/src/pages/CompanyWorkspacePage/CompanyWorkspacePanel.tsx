@@ -3,9 +3,10 @@ import { type ChangeEvent, type FormEvent, useCallback, useEffect, useMemo, useR
 import { useDragScroll } from "../../shared/hooks/useDragScroll";
 import { userProfile } from "../../shared/data/userProfile";
 import { CompanyAppointmentsTab } from "./CompanyAppointmentsTab";
+import { CompanyHypothesesTab } from "./CompanyHypothesesTab";
 import { CompanyNotesTab } from "./CompanyNotesTab";
 import { CompanyTeamTab } from "./CompanyTeamTab";
-import { OverviewPie } from "./OverviewPie";
+import { OverviewMetrics } from "./OverviewMetrics";
 import {
   companyRecords,
   tabVisibilityByRole,
@@ -29,7 +30,7 @@ import {
   readDbAssignedRole,
 } from "./companyWorkspace.utils";
 
-export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorkspacePanelProps) {
+export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, onOpenSidebar }: CompanyWorkspacePanelProps) {
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
 
   const [assignedRole] = useState(readDbAssignedRole);
@@ -47,7 +48,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
   >({});
   const [dismissedDocumentsByCompany, setDismissedDocumentsByCompany] = useState<Record<string, string[]>>({});
   const [openedDocumentByCompany, setOpenedDocumentByCompany] = useState<Record<string, string>>({});
-  const [focusedDocumentByCompany, setFocusedDocumentByCompany] = useState<Record<string, string>>({});
   const [documentSearch, setDocumentSearch] = useState<string>("");
 
   const [uploadedNotesByCompany, setUploadedNotesByCompany] = useState<Record<string, CompanyNoteEntry[]>>({});
@@ -412,15 +412,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
       return next;
     });
 
-    setFocusedDocumentByCompany((previous) => {
-      if (previous[companyId] !== docItem.id) {
-        return previous;
-      }
-
-      const next = { ...previous };
-      delete next[companyId];
-      return next;
-    });
   }, []);
 
   const toggleCreateNoteLabel = (labelId: string): void => {
@@ -667,22 +658,64 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
         scopeProgress.reduce((sum, item) => sum + item.value, 0) / Math.max(1, scopeProgress.length),
       );
 
+      const nextAppointment = appointmentItems
+        .slice()
+        .sort((a, b) => a.dayIndex - b.dayIndex || a.timeLabel.localeCompare(b.timeLabel))[0];
+      const weekDayLabels = weekdayLabelsByLanguage[language];
+
       return (
         <div className="company-overview-layout">
           <div className="company-overview-block">
-            <OverviewPie
+            <OverviewMetrics
               openQuestions={selectedCompany.openQuestions}
+              completedQuestions={selectedCompany.completedQuestions}
               pendingMeetings={selectedCompany.pendingMeetings}
+              completedMeetings={selectedCompany.completedMeetings}
+              hypothesesCount={selectedCompany.hypotheses.length}
+              confirmedHypotheses={selectedCompany.hypotheses.filter((h) => h.status === "confirmed").length}
+              unconfirmedHypotheses={selectedCompany.hypotheses.filter((h) => h.status === "unconfirmed").length}
               language={language}
             />
           </div>
 
-          <div className="company-overview-block">
+          <div className="company-overview-block company-overview-block--events">
             <h4>{text.recentEventsTitle}</h4>
+            {nextAppointment !== undefined && (
+              <div className="ov-next-appointment">
+                <span className="ov-next-apt-badge">
+                  {language === "de" ? "Nächster Termin" : "Next meeting"}
+                </span>
+                <div className="ov-next-apt-body">
+                  <time>{weekDayLabels[nextAppointment.dayIndex]} · {nextAppointment.timeLabel}</time>
+                  <strong>{nextAppointment.title}</strong>
+                  {nextAppointment.attendees.length > 0 && (
+                    <div className="ov-next-apt-attendees">
+                      {nextAppointment.attendees.map((a) => (
+                        <span key={a} className="ov-apt-chip">{a}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <ul className="company-detail-list company-detail-list-lined">
-              {selectedCompany.recentEvents.map((eventText) => (
-                <li key={eventText}>{eventText}</li>
-              ))}
+              {selectedCompany.recentEvents.map((eventText) => {
+                const colonIdx = eventText.indexOf(":");
+                const hasLabel = colonIdx > 0 && colonIdx < 20;
+                return (
+                  <li key={eventText} className="recent-event-item">
+                    <span className="recent-event-dot" aria-hidden="true" />
+                    {hasLabel ? (
+                      <>
+                        <span className="recent-event-time">{eventText.slice(0, colonIdx)}</span>
+                        <span className="recent-event-text">{eventText.slice(colonIdx + 1).trimStart()}</span>
+                      </>
+                    ) : (
+                      <span className="recent-event-text">{eventText}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -749,57 +782,232 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
     }
 
     if (activeTab === "portfolio") {
-      return <p>{selectedCompany.portfolioSummary}</p>;
+      const auraScore = Math.min(98, 72 + selectedCompany.documents.length * 4 + selectedCompany.hypotheses.length * 3);
+      const comparisonTools = [
+        {
+          name: "AURA",
+          isAura: true,
+          personaDepth: Math.min(100, 80 + selectedCompany.hypotheses.length * 5),
+          responseSpeed: Math.max(0.8, 3.2 - selectedCompany.pendingMeetings * 0.3),
+          knowledgeScope: auraScore,
+          meetingContext: language === "de" ? "Vollständig" : "Full",
+          contextRich: true,
+        },
+        {
+          name: "Salesforce",
+          isAura: false,
+          personaDepth: 61,
+          responseSpeed: 4.1,
+          knowledgeScope: 68,
+          meetingContext: language === "de" ? "Basis" : "Basic",
+          contextRich: false,
+        },
+        {
+          name: "HubSpot",
+          isAura: false,
+          personaDepth: 54,
+          responseSpeed: 3.4,
+          knowledgeScope: 71,
+          meetingContext: language === "de" ? "Keins" : "None",
+          contextRich: false,
+        },
+      ];
+
+      const featureLabel = language === "de"
+        ? { persona: "Persona-Tiefe", speed: "Antwortzeit", scope: "Wissensabdeckung", ctx: "Meeting-Kontext" }
+        : { persona: "Persona depth", speed: "Response time", scope: "Knowledge scope", ctx: "Meeting context" };
+      const speedUnit = "s";
+      const scopeUnit = "%";
+
+      return (
+        <div className="port-layout">
+          <div className="port-summary">{selectedCompany.portfolioSummary}</div>
+          <div className="port-comparison">
+            {comparisonTools.map((tool) => (
+              <div key={tool.name} className={`port-tool-card${tool.isAura ? " port-tool-card--aura" : ""}`}>
+                <div className="port-tool-header">
+                  <span className="port-tool-name">{tool.name}</span>
+                  {tool.isAura && <span className="port-tool-badge">{language === "de" ? "Aktiv" : "Active"}</span>}
+                </div>
+                <div className="port-tool-metrics">
+                  <div className="port-tool-metric">
+                    <span>{featureLabel.persona}</span>
+                    <div className="port-bar-track">
+                      <div className="port-bar-fill" style={{ width: `${tool.personaDepth}%`, opacity: tool.isAura ? 1 : 0.55 }} />
+                    </div>
+                    <strong>{tool.personaDepth}%</strong>
+                  </div>
+                  <div className="port-tool-metric">
+                    <span>{featureLabel.speed}</span>
+                    <div className="port-bar-track">
+                      <div
+                        className="port-bar-fill port-bar-fill--speed"
+                        style={{ width: `${Math.min(100, ((5 - tool.responseSpeed) / 4.2) * 100)}%`, opacity: tool.isAura ? 1 : 0.55 }}
+                      />
+                    </div>
+                    <strong>{tool.responseSpeed.toFixed(1)}{speedUnit}</strong>
+                  </div>
+                  <div className="port-tool-metric">
+                    <span>{featureLabel.scope}</span>
+                    <div className="port-bar-track">
+                      <div
+                        className="port-bar-fill"
+                        style={{ width: `${tool.knowledgeScope}${scopeUnit}`, opacity: tool.isAura ? 1 : 0.55 }}
+                      />
+                    </div>
+                    <strong>{tool.knowledgeScope}{scopeUnit}</strong>
+                  </div>
+                  <div className="port-tool-metric port-tool-metric--ctx">
+                    <span>{featureLabel.ctx}</span>
+                    <span className={`port-ctx-badge${tool.contextRich ? " port-ctx-badge--rich" : ""}`}>
+                      {tool.contextRich ? "✓ " : "○ "}{tool.meetingContext}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
     }
 
     if (activeTab === "performance") {
       const totalOpen = selectedCompany.openQuestions + selectedCompany.pendingMeetings;
+      const totalCompleted = selectedCompany.completedQuestions + selectedCompany.completedMeetings;
+      const confirmedHypo = selectedCompany.hypotheses.filter((h) => h.status === "confirmed").length;
+
+      const churnRisk    = Math.min(82, Math.max(5,  totalOpen * 4 + selectedCompany.pendingMeetings * 5));
+      const nrr = Math.round(
+        Math.min(138, Math.max(80, 108 + selectedCompany.completedMeetings * 2 - selectedCompany.pendingMeetings * 3))
+      );
+      const arrGrowth    = Math.round(Math.min(44,  Math.max(3,  13 + confirmedHypo * 5 - totalOpen * 0.6)));
+      const upsellRate   = Math.round(Math.min(86,  Math.max(12, 36 + selectedCompany.hypotheses.length * 8)));
+      const dealVelocity = Math.round(Math.min(58,  Math.max(9,  40 - totalCompleted * 0.5 + totalOpen * 1.1)));
+      const healthScore  = Math.round(Math.min(97,  Math.max(38, 84 - totalOpen * 2.4 + totalCompleted * 0.4)));
+
+      const genSpark = (end: number, trend: "up" | "down" | "neutral", seed: number): number[] => {
+        const pts: number[] = [];
+        let v = trend === "up" ? end * 0.55 : trend === "down" ? end * 1.45 : end * 0.85;
+        for (let i = 0; i < 8; i++) {
+          const noise = ((((seed * (i + 1) * 7919) % 100) / 100) - 0.5) * end * 0.22;
+          v += (end - v) * 0.28 + noise;
+          pts.push(Math.max(0, Math.min(end * 1.6, v)));
+        }
+        pts.push(end);
+        return pts;
+      }
+
       const performanceRows = [
         {
-          id: "response",
-          label: text.perfResponseLabel,
-          value: Math.max(58, Math.round(96 - selectedCompany.pendingMeetings * 7 - selectedCompany.openQuestions * 2)),
+          id: "churn",
+          label: language === "de" ? "Churn-Risiko" : "Churn Risk",
+          value: churnRisk,
+          unit: "%",
+          note: language === "de" ? "↓ Ziel <20%" : "↓ Target <20%",
+          trend: churnRisk < 20 ? "up" : churnRisk > 45 ? "down" : "neutral",
+          barPct: churnRisk,
+          spark: genSpark(churnRisk, churnRisk < 20 ? "up" : churnRisk > 45 ? "down" : "neutral", 3),
         },
         {
-          id: "resolution",
-          label: text.perfResolutionLabel,
-          value: Math.max(48, Math.round(100 - totalOpen * 4)),
+          id: "nrr",
+          label: "NRR",
+          value: nrr,
+          unit: "%",
+          note: language === "de" ? "Ziel >100%" : "Target >100%",
+          trend: nrr >= 105 ? "up" : nrr < 95 ? "down" : "neutral",
+          barPct: Math.min(100, nrr - 50),
+          spark: genSpark(nrr, nrr >= 105 ? "up" : nrr < 95 ? "down" : "neutral", 7),
         },
         {
-          id: "sla",
-          label: text.perfSlaLabel,
-          value: Math.max(50, Math.round(95 - selectedCompany.pendingMeetings * 9)),
+          id: "arr",
+          label: language === "de" ? "ARR-Wachstum" : "ARR Growth",
+          value: arrGrowth,
+          unit: "%",
+          note: language === "de" ? "YoY" : "YoY",
+          trend: arrGrowth >= 15 ? "up" : arrGrowth < 7 ? "down" : "neutral",
+          barPct: arrGrowth,
+          spark: genSpark(arrGrowth, arrGrowth >= 15 ? "up" : arrGrowth < 7 ? "down" : "neutral", 11),
         },
         {
-          id: "knowledge",
-          label: text.perfKnowledgeLabel,
-          value: Math.min(100, 52 + selectedCompany.documents.length * 11),
+          id: "upsell",
+          label: language === "de" ? "Upsell-Rate" : "Upsell Rate",
+          value: upsellRate,
+          unit: "%",
+          note: language === "de" ? "Potenzial identifiziert" : "Potential identified",
+          trend: upsellRate >= 50 ? "up" : upsellRate < 28 ? "down" : "neutral",
+          barPct: upsellRate,
+          spark: genSpark(upsellRate, upsellRate >= 50 ? "up" : upsellRate < 28 ? "down" : "neutral", 13),
         },
         {
-          id: "meeting-load",
-          label: text.perfMeetingLoadLabel,
-          value: Math.min(100, 16 + selectedCompany.pendingMeetings * 17),
+          id: "velocity",
+          label: language === "de" ? "Deal-Velocity" : "Deal Velocity",
+          value: dealVelocity,
+          unit: language === "de" ? " Tage" : " days",
+          note: language === "de" ? "↓ Ziel <25 Tage" : "↓ Target <25 days",
+          trend: dealVelocity < 25 ? "up" : dealVelocity > 42 ? "down" : "neutral",
+          barPct: Math.max(0, 100 - dealVelocity * 2),
+          spark: genSpark(dealVelocity, dealVelocity < 25 ? "up" : dealVelocity > 42 ? "down" : "neutral", 17),
         },
         {
-          id: "hypothesis",
-          label: text.perfHypothesisLabel,
-          value: Math.min(100, 30 + selectedCompany.hypotheses.length * 18),
+          id: "health",
+          label: "Health Score",
+          value: healthScore,
+          unit: "/100",
+          note: language === "de" ? "Account-Gesundheit" : "Account health",
+          trend: healthScore >= 72 ? "up" : healthScore < 52 ? "down" : "neutral",
+          barPct: healthScore,
+          spark: genSpark(healthScore, healthScore >= 72 ? "up" : healthScore < 52 ? "down" : "neutral", 19),
         },
       ];
 
+      const sparkPolyline = (pts: number[]): string => {
+        const W = 80, H = 32;
+        const max = Math.max(...pts) || 1;
+        const min = Math.min(...pts);
+        const range = max - min || 1;
+        return pts
+          .map((v, i) => {
+            const x = (i / (pts.length - 1)) * W;
+            const y = H - ((v - min) / range) * (H - 4);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(" ");
+      }
+
       return (
-        <div className="company-performance-layout">
-          <h4>{text.performanceTitle}</h4>
-          <div className="company-performance-grid">
+        <div className="perf-layout">
+          <div className="perf-headline">
+            <h4>{text.performanceTitle}</h4>
+            <span className="perf-period">{language === "de" ? "Laufende Periode" : "Current period"}</span>
+          </div>
+          <div className="perf-grid">
             {performanceRows.map((metric) => (
-              <article className="company-performance-card" key={metric.id}>
-                <div className="company-performance-head">
-                  <span>{metric.label}</span>
-                  <strong>{metric.value}%</strong>
+              <article className={`perf-card perf-card--${metric.trend}`} key={metric.id}>
+                <div className="perf-card-top">
+                  <span className="perf-card-label">{metric.label}</span>
+                  <span className={`perf-trend-badge perf-trend-badge--${metric.trend}`}>
+                    {metric.trend === "up" ? "↑" : metric.trend === "down" ? "↓" : "→"}
+                  </span>
                 </div>
-                <div className="company-scope-progress-track" aria-label={`${metric.label} ${metric.value}%`}>
-                  <span className="company-scope-progress-fill" style={{ width: `${metric.value}%` }} />
+                <div className="perf-card-value">
+                  <strong>{metric.value}</strong>
+                  <small>{metric.unit}</small>
                 </div>
+                <svg className="perf-spark" viewBox="0 0 80 32" aria-hidden="true" preserveAspectRatio="none">
+                  <polyline
+                    points={sparkPolyline(metric.spark)}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`perf-spark-line perf-spark-line--${metric.trend}`}
+                  />
+                </svg>
+                <div className="perf-track">
+                  <div className={`perf-fill perf-fill--${metric.trend}`} style={{ width: `${metric.barPct}%` }} />
+                </div>
+                {metric.note && <span className="perf-card-note">{metric.note}</span>}
               </article>
             ))}
           </div>
@@ -843,7 +1051,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
       const visibleDocuments = docQuery.length === 0
         ? allDocuments
         : allDocuments.filter((item) => item.name.toLowerCase().includes(docQuery));
-      const focusedDocumentId = focusedDocumentByCompany[selectedCompany.id] ?? "";
       const openedDocumentId = openedDocumentByCompany[selectedCompany.id] ?? "";
       const openedDocument =
         allDocuments.find((item) => item.id === openedDocumentId) ?? null;
@@ -879,119 +1086,134 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
 
           <p className="company-documents-hint">{text.documentsHint}</p>
 
-          <div className="company-documents-layout">
-            <ul className="company-detail-list company-detail-list-lined company-documents-list">
-              {visibleDocuments.map((item) => {
-                const isFocused = focusedDocumentId === item.id;
-                const isOpened = openedDocumentId === item.id;
-                const documentButtonClassName = `company-document-btn${
-                  isFocused ? " is-focused" : ""
-                }${isOpened ? " is-opened" : ""}`;
+          {/* Thumbnail grid */}
+          <div className="doc-grid">
+            {visibleDocuments.map((item) => {
+              const ext = item.name.split(".").pop()?.toUpperCase() ?? "FILE";
+              const isImg = item.objectUrl !== null && item.mimeType.startsWith("image/");
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`doc-thumb${openedDocumentId === item.id ? " is-active" : ""}`}
+                  onClick={() => {
+                    setOpenedDocumentByCompany((prev) => ({ ...prev, [selectedCompany.id]: item.id }));
+                  }}
+                >
+                  <div className="doc-thumb-icon">
+                    {isImg ? (
+                      <img src={item.objectUrl!} alt={item.name} className="doc-thumb-img" />
+                    ) : (
+                      <span className="doc-thumb-ext">{ext}</span>
+                    )}
+                  </div>
+                  <span className="doc-thumb-name">{item.name}</span>
+                </button>
+              );
+            })}
+            {visibleDocuments.length === 0 && (
+              <p className="company-documents-hint" style={{ gridColumn: "1/-1" }}>{text.noDocumentResult}</p>
+            )}
+          </div>
 
-                return (
-                  <li key={item.id}>
+          {/* Apple-Photos-style lightbox overlay */}
+          {openedDocument !== null && (
+            <div
+              className="doc-lightbox"
+              role="dialog"
+              aria-modal="true"
+              aria-label={openedDocument.name}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setOpenedDocumentByCompany((prev) => ({ ...prev, [selectedCompany.id]: "" }));
+                }
+              }}
+            >
+              <div className="doc-lightbox-panel">
+                <div className="doc-lightbox-bar">
+                  <div className="doc-lightbox-meta">
+                    <span className="doc-lightbox-name">{openedDocument.name}</span>
+                    {openedDocument.sizeLabel !== "-" && (
+                      <span className="doc-lightbox-size">{openedDocument.sizeLabel}</span>
+                    )}
+                  </div>
+                  <div className="doc-lightbox-actions">
                     <button
                       type="button"
-                      className={documentButtonClassName}
-                      onClick={() => {
-                        setFocusedDocumentByCompany((previous) => ({
-                          ...previous,
-                          [selectedCompany.id]: item.id,
-                        }));
-                        setOpenedDocumentByCompany((previous) => ({
-                          ...previous,
-                          [selectedCompany.id]: item.id,
-                        }));
-                      }}
-                    >
-                      <span>{item.name}</span>
-                      <small>
-                        {item.source === "upload"
-                          ? `${text.uploadedLabel}: ${item.uploadedAt} Ã‚Â· ${item.sizeLabel}`
-                          : text.openPreviewHint}
-                      </small>
-                    </button>
-                  </li>
-                );
-              })}
-              {visibleDocuments.length === 0 ? <li>{text.noDocumentResult}</li> : null}
-            </ul>
-
-            <aside className="company-document-preview-panel" aria-label={text.previewTitle}>
-              <h4>{text.previewTitle}</h4>
-
-              {openedDocument === null ? (
-                <p className="company-document-preview-empty">{text.previewEmpty}</p>
-              ) : (
-                <div className="company-document-preview-body">
-                  <p className="company-document-preview-name">{openedDocument.name}</p>
-                  <p className="company-document-preview-meta">
-                    {openedDocument.mimeType || text.unknownFileType}
-                    {openedDocument.sizeLabel.length > 0 && openedDocument.sizeLabel !== "-"
-                      ? ` Ã‚Â· ${openedDocument.sizeLabel}`
-                      : ""}
-                  </p>
-
-                  {openedDocument.objectUrl !== null && openedDocument.mimeType.startsWith("image/") ? (
-                    <img
-                      src={openedDocument.objectUrl}
-                      alt={openedDocument.name}
-                      className="company-document-preview-image"
-                    />
-                  ) : null}
-
-                  {openedDocument.objectUrl !== null && openedDocument.mimeType === "application/pdf" ? (
-                    <iframe
-                      src={openedDocument.objectUrl}
-                      title={openedDocument.name}
-                      className="company-document-preview-frame"
-                    />
-                  ) : null}
-
-                  {openedDocument.objectUrl === null ? (
-                    <div className="company-document-preview-placeholder">
-                      <p>{openedDocument.name}</p>
-                      <small>{text.openPreviewHint}</small>
-                    </div>
-                  ) : null}
-
-                  <div className="company-document-actions">
-                    <button
-                      type="button"
+                      className="doc-lb-btn"
                       onClick={() => triggerDocumentDownload(selectedCompany.name, openedDocument)}
                     >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
                       {text.downloadFile}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => triggerDocumentPrint(selectedCompany.name, openedDocument)}
-                    >
+                    <button type="button" className="doc-lb-btn" onClick={() => triggerDocumentPrint(selectedCompany.name, openedDocument)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                      </svg>
                       {text.printFile}
                     </button>
                     <button
                       type="button"
-                      className="is-danger"
+                      className="doc-lb-btn doc-lb-btn--danger"
                       onClick={() => handleDeleteDocument(selectedCompany.id, openedDocument)}
                     >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                      </svg>
                       {text.deleteFile}
+                    </button>
+                    <button
+                      type="button"
+                      className="doc-lb-close"
+                      aria-label="Close"
+                      onClick={() => setOpenedDocumentByCompany((prev) => ({ ...prev, [selectedCompany.id]: "" }))}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
                     </button>
                   </div>
                 </div>
-              )}
-            </aside>
-          </div>
 
+                <div className="doc-lightbox-body">
+                  {openedDocument.objectUrl !== null && openedDocument.mimeType.startsWith("image/") && (
+                    <img src={openedDocument.objectUrl} alt={openedDocument.name} className="doc-lightbox-img" />
+                  )}
+                  {openedDocument.objectUrl !== null && openedDocument.mimeType === "application/pdf" && (
+                    <iframe src={openedDocument.objectUrl} title={openedDocument.name} className="doc-lightbox-frame" />
+                  )}
+                  {openedDocument.objectUrl === null && (
+                    <div className="doc-lightbox-placeholder">
+                      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      <p>{openedDocument.name}</p>
+                      <small>{text.openPreviewHint}</small>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
 
     if (activeTab === "hypotheses") {
       return (
-        <ul className="company-detail-list company-detail-list-lined">
-          {selectedCompany.hypotheses.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+        <CompanyHypothesesTab
+          hypotheses={selectedCompany.hypotheses}
+          language={language}
+        />
       );
     }
 
@@ -1079,6 +1301,30 @@ export function CompanyWorkspacePanel({ language, onOpenProfile }: CompanyWorksp
   return (
     <section className="company-workspace-panel" aria-label={text.title}>
       <header className="company-workspace-header">
+        {!isSidebarOpen && (
+          <button
+            type="button"
+            className="workspace-sidebar-trigger"
+            onClick={onOpenSidebar}
+            aria-label="Open navigation"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
         <div className="company-workspace-title-row">
           <h2>{text.title}</h2>
           <div className="company-assigned-role company-assigned-role-inline" aria-label="Role">

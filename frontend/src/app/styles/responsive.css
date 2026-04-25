@@ -410,13 +410,16 @@
     padding: clamp(12px, 3vw, 16px);
   }
 
-  .company-workspace-header,
   .profile-panel-header,
   .utility-view-header,
   .feature-guide-panel > header {
     padding-left: 48px;
     min-height: 42px;
     align-items: center;
+  }
+
+  .company-workspace-header {
+    min-height: 42px;
   }
 
   .weather-add-popover {

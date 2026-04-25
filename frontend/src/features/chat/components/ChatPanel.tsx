@@ -167,6 +167,7 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState<boolean>(false);
   const [isServicesMenuOpen, setIsServicesMenuOpen] = useState<boolean>(false);
+  const [servicesMenuAlign, setServicesMenuAlign] = useState<"left" | "right">("left");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState<boolean>(false);
   const [isBrainrotMenuOpen, setIsBrainrotMenuOpen] = useState<boolean>(false);
   const [activeModelProviderId, setActiveModelProviderId] = useState<string | null>(
@@ -1134,6 +1135,12 @@ export function ChatPanel({
                   return;
                 }
 
+                if (servicesTriggerRef.current) {
+                  const rect = servicesTriggerRef.current.getBoundingClientRect();
+                  setServicesMenuAlign(
+                    rect.left > window.innerWidth * 0.5 ? "right" : "left",
+                  );
+                }
                 setIsServicesMenuOpen((previous) => !previous);
                 setIsModelMenuOpen(false);
                 setIsAttachMenuOpen(false);
@@ -1157,7 +1164,7 @@ export function ChatPanel({
             </button>
 
             {isServicesMenuOpen ? (
-              <ul className="attach-menu-popover services-menu-popover">
+              <ul className={`attach-menu-popover services-menu-popover services-menu-popover--${servicesMenuAlign}`}>
                 {remainingServices.map((serviceKey) => {
                   const serviceTooltip = getServiceTooltip(serviceKey);
 

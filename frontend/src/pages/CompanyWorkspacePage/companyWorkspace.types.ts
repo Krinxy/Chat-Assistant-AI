@@ -23,9 +23,11 @@ export interface CompanyRecord {
   assignedRoles: AccessRole[];
   owner: string;
   openQuestions: number;
+  completedQuestions: number;
   pendingMeetings: number;
+  completedMeetings: number;
   documents: string[];
-  hypotheses: string[];
+  hypotheses: HypothesisEntry[];
   appointments: string[];
   notes: string[];
   teamMembers: string[];
@@ -80,6 +82,14 @@ export interface ParsedAppointmentItem {
   dayIndex: number;
   timeLabel: string;
   title: string;
+  attendees: string[];
+}
+
+export type HypothesisStatus = "pending" | "confirmed" | "unconfirmed";
+
+export interface HypothesisEntry {
+  text: string;
+  status: HypothesisStatus;
 }
 
 export interface WeekdayTokenEntry {
@@ -90,4 +100,6 @@ export interface WeekdayTokenEntry {
 export interface CompanyWorkspacePanelProps {
   language: Language;
   onOpenProfile: () => void;
+  isSidebarOpen: boolean;
+  onOpenSidebar: () => void;
 }

@@ -431,45 +431,48 @@
 }
 
 .weather-graph-scroll {
-  overflow-x: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--feature-lilac) 5%, var(--panel));
   cursor: grab;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
+  user-select: none;
 }
 
 .weather-graph-scroll:active {
   cursor: grabbing;
 }
 
-.weather-graph-scroll::-webkit-scrollbar {
-  height: 4px;
+/* ── Y-axis sticky column ─────────────────────────────────────────────────── */
+.wg-yaxis-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  width: 40px;
+  border-right: 1px solid rgba(128, 128, 128, 0.28);
 }
 
-.weather-graph-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--feature-lilac) 30%, transparent);
+.wg-yaxis-svg {
+  display: block;
+}
+
+/* ── Chart content viewport ───────────────────────────────────────────────── */
+.weather-graph-viewport {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .weather-graph-inner {
   display: flex;
   flex-direction: column;
-  min-width: 100%;
   padding-top: 8px;
   position: relative;
-}
-
-.weather-graph-inner::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 40px;
-  width: 1px;
-  background: rgba(128, 128, 128, 0.28);
-  pointer-events: none;
+  flex-shrink: 0;
 }
 
 .weather-graph-svg {
@@ -516,6 +519,22 @@
   font-weight: 500;
 }
 
+/* ── Y-axis vertical scrollbar ────────────────────────────────────────────── */
+.wg-yscroll-track {
+  fill: var(--line);
+  opacity: 0.3;
+}
+
+.wg-yscroll-thumb {
+  fill: var(--ink-500);
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.wg-yscroll-thumb:hover {
+  opacity: 0.8;
+}
+
 .wg-rain-fill {
   fill: color-mix(in srgb, #5f83ff 10%, transparent);
 }
@@ -530,15 +549,15 @@
 
 /* ── Rain drop animation ──────────────────────────────────────────────────── */
 .wg-rain-drop {
-  animation: wg-rain-fall 0.65s linear infinite;
+  animation: wg-rain-fall 1.1s linear infinite;
   transform-box: fill-box;
 }
 
 @keyframes wg-rain-fall {
   0%   { transform: translateY(-14px); opacity: 0;   }
-  15%  { opacity: 0.75; }
-  80%  { opacity: 0.5;  }
-  100% { transform: translateY(14px);  opacity: 0;   }
+  8%   { opacity: 0.75; }
+  88%  { opacity: 0.5;  }
+  100% { transform: translateY(154px); opacity: 0;   }
 }
 
 /* ── Lightning bolt animation ─────────────────────────────────────────────── */
@@ -600,6 +619,10 @@
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.10));
 }
 
+.wg-tooltip-bg--feels {
+  stroke: color-mix(in srgb, #5f83ff 50%, var(--line));
+}
+
 .wg-tooltip-time {
   font-size: 10px;
   fill: var(--ink-500);
@@ -611,6 +634,10 @@
   font-weight: 700;
   fill: var(--ink-900);
   font-family: inherit;
+}
+
+.wg-tooltip-temp.is-feels {
+  fill: #5f83ff;
 }
 
 .wg-tooltip-hum {

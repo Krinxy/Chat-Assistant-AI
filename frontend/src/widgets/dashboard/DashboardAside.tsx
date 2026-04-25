@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   Language,
@@ -392,9 +392,16 @@ function WeatherGraph({
 }: WeatherGraphProps): JSX.Element {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [dayIdx, setDayIdx] = useState(0);
-  const graphScrollRef = useRef<HTMLDivElement | null>(null);
-
-  useHorizontalWheelScroll(graphScrollRef);
+  const [yViewBot, setYViewBot] = useState(-30);
+  const [panX, setPanX] = useState(0);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    startPanX: number;
+    startYViewBot: number;
+    maxPanX: number;
+  } | null>(null);
 
   const totalDays = Math.ceil(points.length / 24);
   const dayPoints = useMemo(
@@ -404,11 +411,12 @@ function WeatherGraph({
 
   useEffect(() => {
     setHoveredIdx(null);
-    if (graphScrollRef.current) graphScrollRef.current.scrollLeft = 0;
+    setYViewBot(-30);
+    setPanX(0);
   }, [dayIdx]);
 
   const n = dayPoints.length;
-  const svgW = GRAPH_Y_W + n * GRAPH_COL_W;
+  const contentSvgW = n * GRAPH_COL_W;         // chart area width (no Y-axis column)
   const bottomY = GRAPH_CHART_TOP + GRAPH_PLOT_H;
 
   const temps = useMemo(
@@ -421,51 +429,96 @@ function WeatherGraph({
     [dayPoints],
   );
 
-  const activeTemps = showFeelsLike ? feelsTemps : temps;
+  // Extended Y range: consider both curves so the scrollbar doesn't flicker on toggle
+  const allDisplayTemps = useMemo(
+    () => [...temps, ...feelsTemps],
+    [temps, feelsTemps],
+  );
 
-  // Phantom boundary points: last hour of prev day / first hour of next day
+  const extTop = useMemo(() => {
+    const dataMax = allDisplayTemps.length ? Math.max(...allDisplayTemps) : 30;
+    if (dataMax <= 30) return 30;
+    return 30 + Math.ceil((dataMax - 30) / 15) * 15;
+  }, [allDisplayTemps]);
+
+  const extBot = useMemo(() => {
+    const dataMin = allDisplayTemps.length ? Math.min(...allDisplayTemps) : -30;
+    if (dataMin >= -30) return -30;
+    return -30 - Math.ceil((-30 - dataMin) / 15) * 15;
+  }, [allDisplayTemps]);
+
+  const needsYScroll = extTop > 30 || extBot < -30;
+  const totalYRange = extTop - extBot; // always a multiple of 15, ≥ 60
+
+  // Phantom boundary points — temp curve
   const phantomPrevT = useMemo(() => {
     if (dayIdx === 0) return null;
     const pt = points[dayIdx * 24 - 1];
     if (!pt) return null;
-    const raw = showFeelsLike ? (pt.feelsLike ?? pt.temperature) : pt.temperature;
-    return parseInt(raw, 10) || 0;
-  }, [dayIdx, points, showFeelsLike]);
+    return parseInt(pt.temperature, 10) || 0;
+  }, [dayIdx, points]);
 
   const phantomNextT = useMemo(() => {
     const pt = points[(dayIdx + 1) * 24];
     if (!pt) return null;
-    const raw = showFeelsLike ? (pt.feelsLike ?? pt.temperature) : pt.temperature;
-    return parseInt(raw, 10) || 0;
-  }, [dayIdx, points, showFeelsLike]);
+    return parseInt(pt.temperature, 10) || 0;
+  }, [dayIdx, points]);
 
-  // Fixed Y-axis: -30 → 30 (30 not shown as tick)
-  const minT = -30;
-  const rangeT = 60; // 30 - (-30)
+  // Phantom boundary points — feels-like curve
+  const phantomPrevF = useMemo(() => {
+    if (dayIdx === 0) return null;
+    const pt = points[dayIdx * 24 - 1];
+    if (!pt) return null;
+    return parseInt(pt.feelsLike ?? pt.temperature, 10) || 0;
+  }, [dayIdx, points]);
 
-  const { linePathStr, areaPathStr } = useMemo(() => {
-    const hasPrev = phantomPrevT !== null;
-    const hasNext = phantomNextT !== null;
+  const phantomNextF = useMemo(() => {
+    const pt = points[(dayIdx + 1) * 24];
+    if (!pt) return null;
+    return parseInt(pt.feelsLike ?? pt.temperature, 10) || 0;
+  }, [dayIdx, points]);
+
+  // Dynamic Y-axis: clamp current view position to valid range
+  const clampedYViewBot = Math.min(Math.max(yViewBot, extBot), extTop - 60);
+  const minT = clampedYViewBot;
+  const rangeT = 60;
+
+  const buildCurvePaths = useCallback((curveTemps: number[], prevPhantom: number | null, nextPhantom: number | null) => {
+    const hasPrev = prevPhantom !== null;
+    const hasNext = nextPhantom !== null;
     const extTemps = [
-      ...(hasPrev && phantomPrevT !== null ? [phantomPrevT] : []),
-      ...activeTemps,
-      ...(hasNext && phantomNextT !== null ? [phantomNextT] : []),
+      ...(hasPrev && prevPhantom !== null ? [prevPhantom] : []),
+      ...curveTemps,
+      ...(hasNext && nextPhantom !== null ? [nextPhantom] : []),
     ];
     const prevOffset = hasPrev ? 1 : 0;
-    const tx = (extIdx: number) => GRAPH_Y_W + (extIdx - prevOffset + 0.5) * GRAPH_COL_W;
+    const tx = (extIdx: number) => (extIdx - prevOffset + 0.5) * GRAPH_COL_W;
     const ty = (t: number) =>
       GRAPH_CHART_TOP + GRAPH_PLOT_H - ((t - minT) / rangeT) * GRAPH_PLOT_H;
     const pts: Array<[number, number]> = extTemps.map((t, i) => [tx(i), ty(t)]);
     const pathStr = buildSmoothPath(pts);
-    const rightEdge = GRAPH_Y_W + activeTemps.length * GRAPH_COL_W;
+    const rightEdge = curveTemps.length * GRAPH_COL_W;
     const area =
       pts.length > 0
-        ? `${pathStr} L ${rightEdge} ${GRAPH_CHART_TOP + GRAPH_PLOT_H} L ${GRAPH_Y_W} ${GRAPH_CHART_TOP + GRAPH_PLOT_H} Z`
+        ? `${pathStr} L ${rightEdge} ${GRAPH_CHART_TOP + GRAPH_PLOT_H} L 0 ${GRAPH_CHART_TOP + GRAPH_PLOT_H} Z`
         : "";
     return { linePathStr: pathStr, areaPathStr: area };
-  }, [activeTemps, minT, rangeT, phantomPrevT, phantomNextT]);
+  }, [minT, rangeT]);
 
-  const yTicks = [30, 15, 0, -15];
+  const { linePathStr, areaPathStr } = useMemo(
+    () => buildCurvePaths(temps, phantomPrevT, phantomNextT),
+    [buildCurvePaths, temps, phantomPrevT, phantomNextT],
+  );
+
+  const { linePathStr: feelsLinePathStr, areaPathStr: feelsAreaPathStr } = useMemo(
+    () => buildCurvePaths(feelsTemps, phantomPrevF, phantomNextF),
+    [buildCurvePaths, feelsTemps, phantomPrevF, phantomNextF],
+  );
+
+  const yTicks = useMemo(() => {
+    const top = clampedYViewBot + 60;
+    return [top, top - 15, top - 30, top - 45];
+  }, [clampedYViewBot]);
 
   const rainGroups = useMemo(() => {
     const groups: Array<{ start: number; end: number; groupType: "rain" | "storm" | "wind" }> = [];
@@ -495,22 +548,59 @@ function WeatherGraph({
     return groups;
   }, [dayPoints]);
 
-  const toX = (i: number) => GRAPH_Y_W + (i + 0.5) * GRAPH_COL_W;
+  const toX = (i: number) => (i + 0.5) * GRAPH_COL_W;
   const toY = (t: number) =>
     GRAPH_CHART_TOP + GRAPH_PLOT_H - ((t - minT) / rangeT) * GRAPH_PLOT_H;
 
+  // ── Drag-to-pan handlers ────────────────────────────────────────────────────
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    const maxPanX = Math.max(0, contentSvgW - viewportWidth);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPanX: panX,
+      startYViewBot: clampedYViewBot,
+      maxPanX,
+    };
+    e.preventDefault();
+  }, [panX, clampedYViewBot, contentSvgW]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    setPanX(Math.max(0, Math.min(d.maxPanX, d.startPanX - dx)));
+    setYViewBot(d.startYViewBot + dy / (GRAPH_PLOT_H / rangeT));
+  }, [rangeT]);
+
+  const handleDragEnd = useCallback(() => {
+    dragRef.current = null;
+  }, []);
+
   const hovered = hoveredIdx !== null ? (dayPoints[hoveredIdx] ?? null) : null;
-  const hoveredT = hoveredIdx !== null ? (activeTemps[hoveredIdx] ?? 0) : 0;
+  const hoveredT = hoveredIdx !== null ? (temps[hoveredIdx] ?? 0) : 0;
+  const hoveredF = hoveredIdx !== null ? (feelsTemps[hoveredIdx] ?? 0) : 0;
 
   const tipW = 82;
   const tipH = 68;
+  // When both curves shown, place temp-tip above curve, feels-tip also above its curve
   const tipX =
     hoveredIdx !== null
-      ? Math.min(Math.max(toX(hoveredIdx) - tipW / 2, GRAPH_Y_W), svgW - tipW)
+      ? Math.min(Math.max(toX(hoveredIdx) - tipW / 2, 0), contentSvgW - tipW)
       : 0;
   const tipY =
     hoveredIdx !== null
       ? Math.max(toY(hoveredT) - tipH - 12, 4)
+      : 0;
+  const feelsTipY =
+    hoveredIdx !== null
+      ? Math.max(toY(hoveredF) - tipH - 12, 4)
+      : 0;
+  const feelsTipX =
+    hoveredIdx !== null
+      ? Math.min(Math.max(toX(hoveredIdx) - tipW / 2, 0), contentSvgW - tipW)
       : 0;
 
   return (
@@ -553,92 +643,126 @@ function WeatherGraph({
         </button>
       </div>
 
-      <div className="weather-graph-scroll" ref={graphScrollRef}>
-        <div className="weather-graph-inner" style={{ width: `${svgW}px` }}>
-          {/* Icon area */}
-          <div className="wg-icon-area">
-
-          {/* Time labels row — topmost */}
-          <div className="wg-labels-row" style={{ paddingLeft: `${GRAPH_Y_W}px` }}>
-            {dayPoints.map((point, i) => (
-              <div
-                key={i}
-                className={`wg-label-cell${point.hour === "00:00" && i > 0 ? " is-day-start" : ""}`}
-                style={{ width: `${GRAPH_COL_W}px` }}
-              >
-                {point.hour}
-              </div>
-            ))}
-          </div>
-
-          {/* Weather icon row */}
-          <div className="wg-icons-row" style={{ paddingLeft: `${GRAPH_Y_W}px` }}>
-            {dayPoints.map((point, i) => (
-              <div
-                key={i}
-                className="wg-icon-cell"
-                style={{ width: `${GRAPH_COL_W}px` }}
-              >
-                <span className={`weather-hourly-state is-${point.state}`}>
-                  {renderStateIcon(point.state)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Temperature row — below icons, above graph */}
-          <div className="wg-temp-row" style={{ paddingLeft: `${GRAPH_Y_W}px` }}>
-            {dayPoints.map((point, i) => (
-              <div
-                key={i}
-                className="wg-temp-cell"
-                style={{ width: `${GRAPH_COL_W}px` }}
-              >
-                {parseInt(showFeelsLike ? point.feelsLike ?? point.temperature : point.temperature, 10)}°
-              </div>
-            ))}
-          </div>
-          </div>
-
-          <svg
-            width={svgW}
-            height={GRAPH_SVG_H}
-            className="weather-graph-svg"
-            onMouseLeave={() => setHoveredIdx(null)}
-          >
-            <defs>
-              <linearGradient id="wg-temp-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--feature-lilac)" stopOpacity="0.38" />
-                <stop offset="100%" stopColor="var(--feature-lilac)" stopOpacity="0.03" />
-              </linearGradient>
-              <linearGradient id="wg-feels-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#5f83ff" stopOpacity="0.32" />
-                <stop offset="100%" stopColor="#5f83ff" stopOpacity="0.03" />
-              </linearGradient>
-              <clipPath id="wg-plot-clip">
-                <rect x={GRAPH_Y_W} y={0} width={svgW - GRAPH_Y_W} height={GRAPH_SVG_H + 4} />
-              </clipPath>
-            </defs>
-
-            {/* Y-axis gridlines and labels */}
+      <div
+        className="weather-graph-scroll"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={handleDragEnd}
+      >
+        {/* Y-axis column — fixed, never pans */}
+        <div className="wg-yaxis-col">
+          <svg width={GRAPH_Y_W} height={GRAPH_SVG_H} className="wg-yaxis-svg">
             {yTicks.map((tick) => (
-              <g key={tick}>
-                <line
-                  x1={GRAPH_Y_W}
-                  y1={toY(tick)}
-                  x2={svgW}
-                  y2={toY(tick)}
-                  className={tick === 30 ? "wg-grid-line is-solid" : "wg-grid-line"}
-                />
-                <text x={GRAPH_Y_W / 2} y={toY(tick) + 4} className="wg-y-label">
-                  {tick}°
-                </text>
-              </g>
+              <text key={tick} x={GRAPH_Y_W / 2} y={toY(tick) + 4} className="wg-y-label">
+                {Math.round(tick)}°
+              </text>
             ))}
+            {needsYScroll && (() => {
+              const trackX = 2;
+              const trackW = 4;
+              const trackY = GRAPH_CHART_TOP;
+              const trackH = GRAPH_PLOT_H;
+              const scrollRange = totalYRange - 60;
+              const thumbH = Math.max(20, Math.round(trackH * 60 / totalYRange));
+              const thumbTravel = trackH - thumbH;
+              const normalizedPos = scrollRange > 0
+                ? (clampedYViewBot - extBot) / scrollRange
+                : 0;
+              const thumbY = trackY + (1 - normalizedPos) * thumbTravel;
+              return (
+                <>
+                  <rect x={trackX} y={trackY} width={trackW} height={trackH} rx={2} className="wg-yscroll-track" />
+                  <rect x={trackX} y={thumbY} width={trackW} height={thumbH} rx={2} className="wg-yscroll-thumb" />
+                </>
+              );
+            })()}
+          </svg>
+        </div>
 
-            {/* Rain / storm / wind column highlights with animation */}
+        {/* Chart viewport — clips overflow, receives horizontal pan */}
+        <div className="weather-graph-viewport" ref={viewportRef}>
+          <div className="weather-graph-inner" style={{ width: `${contentSvgW}px`, transform: `translateX(-${panX}px)` }}>
+            {/* Icon area */}
+            <div className="wg-icon-area">
+
+            {/* Time labels row — topmost */}
+            <div className="wg-labels-row">
+              {dayPoints.map((point, i) => (
+                <div
+                  key={i}
+                  className={`wg-label-cell${point.hour === "00:00" && i > 0 ? " is-day-start" : ""}`}
+                  style={{ width: `${GRAPH_COL_W}px` }}
+                >
+                  {point.hour}
+                </div>
+              ))}
+            </div>
+
+            {/* Weather icon row */}
+            <div className="wg-icons-row">
+              {dayPoints.map((point, i) => (
+                <div
+                  key={i}
+                  className="wg-icon-cell"
+                  style={{ width: `${GRAPH_COL_W}px` }}
+                >
+                  <span className={`weather-hourly-state is-${point.state}`}>
+                    {renderStateIcon(point.state)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Temperature row — below icons, above graph */}
+            <div className="wg-temp-row">
+              {dayPoints.map((point, i) => (
+                <div
+                  key={i}
+                  className="wg-temp-cell"
+                  style={{ width: `${GRAPH_COL_W}px` }}
+                >
+                  {parseInt(showFeelsLike ? point.feelsLike ?? point.temperature : point.temperature, 10)}°
+                </div>
+              ))}
+            </div>
+            </div>
+
+            <svg
+              width={contentSvgW}
+              height={GRAPH_SVG_H}
+              className="weather-graph-svg"
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              <defs>
+                <linearGradient id="wg-temp-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--feature-lilac)" stopOpacity="0.38" />
+                  <stop offset="100%" stopColor="var(--feature-lilac)" stopOpacity="0.03" />
+                </linearGradient>
+                <linearGradient id="wg-feels-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#5f83ff" stopOpacity="0.32" />
+                  <stop offset="100%" stopColor="#5f83ff" stopOpacity="0.03" />
+                </linearGradient>
+                <clipPath id="wg-plot-clip">
+                  <rect x={0} y={0} width={contentSvgW} height={GRAPH_SVG_H + 4} />
+              </clipPath>
+              </defs>
+
+              {/* Y-axis gridlines (labels are in wg-yaxis-col, not here) */}
+              {yTicks.map((tick) => (
+                <line
+                  key={tick}
+                  x1={0}
+                  y1={toY(tick)}
+                  x2={contentSvgW}
+                  y2={toY(tick)}
+                  className="wg-grid-line"
+                />
+              ))}
+
+              {/* Rain / storm / wind column highlights with animation */}
             {rainGroups.map(({ start, end, groupType }) => {
-              const gx = GRAPH_Y_W + start * GRAPH_COL_W;
+              const gx = start * GRAPH_COL_W;
               const gy = GRAPH_CHART_TOP;
               const gw = (end - start + 1) * GRAPH_COL_W;
               const gh = GRAPH_PLOT_H;
@@ -726,11 +850,11 @@ function WeatherGraph({
               );
             })}
 
-            {/* Midnight marker — only relevant for day 0 where the slice may cross midnight */}
+            {/* Midnight marker */}
             {dayPoints.map((point, i) => {
               const isMidnight = point.hour === "00:00" && i > 0;
               if (!isMidnight) return null;
-              const x = GRAPH_Y_W + i * GRAPH_COL_W;
+              const x = i * GRAPH_COL_W;
               return (
                 <line
                   key={`midnight-${i}`}
@@ -743,20 +867,35 @@ function WeatherGraph({
               );
             })}
 
-            {/* Gradient area fill under the curve */}
+            {/* Gradient area fill + curve — main temperature */}
             <path
               d={areaPathStr}
-              fill={`url(#${showFeelsLike ? "wg-feels-fill" : "wg-temp-fill"})`}
+              fill="url(#wg-temp-fill)"
               clipPath="url(#wg-plot-clip)"
             />
-
-            {/* Temperature / feels-like curve */}
             <path
               d={linePathStr}
               fill="none"
-              className={`wg-line${showFeelsLike ? " is-feels" : ""}`}
+              className="wg-line"
               clipPath="url(#wg-plot-clip)"
             />
+
+            {/* Feels-like curve — only when toggled on */}
+            {showFeelsLike && (
+              <>
+                <path
+                  d={feelsAreaPathStr}
+                  fill="url(#wg-feels-fill)"
+                  clipPath="url(#wg-plot-clip)"
+                />
+                <path
+                  d={feelsLinePathStr}
+                  fill="none"
+                  className="wg-line is-feels"
+                  clipPath="url(#wg-plot-clip)"
+                />
+              </>
+            )}
 
             {/* Hover vertical indicator */}
             {hoveredIdx !== null && (
@@ -769,33 +908,31 @@ function WeatherGraph({
               />
             )}
 
-            {/* Hover dot on the curve */}
+            {/* Hover dot — main temp curve */}
             {hoveredIdx !== null && (
               <circle
                 cx={toX(hoveredIdx)}
                 cy={toY(hoveredT)}
                 r={4}
-                className={`wg-hover-dot${showFeelsLike ? " is-feels" : ""}`}
+                className="wg-hover-dot"
               />
             )}
 
-            {/* SVG-native tooltip — never clipped by overflow */}
-            {hovered !== null && hoveredIdx !== null && (
+            {/* Hover dot — feels-like curve */}
+            {showFeelsLike && hoveredIdx !== null && (
+              <circle
+                cx={toX(hoveredIdx)}
+                cy={toY(hoveredF)}
+                r={4}
+                className="wg-hover-dot is-feels"
+              />
+            )}
+
+            {/* Tooltip — main temperature (only when feels-like is OFF) */}
+            {!showFeelsLike && hovered !== null && hoveredIdx !== null && (
               <g className="wg-tooltip" style={{ pointerEvents: "none" }}>
-                <rect
-                  x={tipX}
-                  y={tipY}
-                  width={tipW}
-                  height={tipH}
-                  rx={8}
-                  className="wg-tooltip-bg"
-                />
-                <text
-                  x={tipX + tipW / 2}
-                  y={tipY + 15}
-                  className="wg-tooltip-time"
-                  textAnchor="middle"
-                >
+                <rect x={tipX} y={tipY} width={tipW} height={tipH} rx={8} className="wg-tooltip-bg" />
+                <text x={tipX + tipW / 2} y={tipY + 15} className="wg-tooltip-time" textAnchor="middle">
                   {hovered.hour}
                 </text>
                 <g transform={`translate(${tipX + tipW / 2 - 8}, ${tipY + 19}) scale(0.67)`}>
@@ -808,20 +945,36 @@ function WeatherGraph({
                     strokeLinejoin="round"
                   />
                 </g>
-                <text
-                  x={tipX + tipW / 2}
-                  y={tipY + 46}
-                  className="wg-tooltip-temp"
-                  textAnchor="middle"
-                >
+                <text x={tipX + tipW / 2} y={tipY + 46} className="wg-tooltip-temp" textAnchor="middle">
                   {hoveredT}°
                 </text>
-                <text
-                  x={tipX + tipW / 2}
-                  y={tipY + 61}
-                  className="wg-tooltip-hum"
-                  textAnchor="middle"
-                >
+                <text x={tipX + tipW / 2} y={tipY + 61} className="wg-tooltip-hum" textAnchor="middle">
+                  {hovered.humidity}
+                </text>
+              </g>
+            )}
+
+            {/* Tooltip — feels-like (only when feels-like is ON) */}
+            {showFeelsLike && hovered !== null && hoveredIdx !== null && (
+              <g className="wg-tooltip" style={{ pointerEvents: "none" }}>
+                <rect x={feelsTipX} y={feelsTipY} width={tipW} height={tipH} rx={8} className="wg-tooltip-bg wg-tooltip-bg--feels" />
+                <text x={feelsTipX + tipW / 2} y={feelsTipY + 15} className="wg-tooltip-time" textAnchor="middle">
+                  {hovered.hour}
+                </text>
+                <g transform={`translate(${feelsTipX + tipW / 2 - 8}, ${feelsTipY + 19}) scale(0.67)`}>
+                  <path
+                    d={WEATHER_ICON_SVG_PATHS[hovered.state]}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </g>
+                <text x={feelsTipX + tipW / 2} y={feelsTipY + 46} className="wg-tooltip-temp is-feels" textAnchor="middle">
+                  {hoveredF}°
+                </text>
+                <text x={feelsTipX + tipW / 2} y={feelsTipY + 61} className="wg-tooltip-hum" textAnchor="middle">
                   {hovered.humidity}
                 </text>
               </g>
@@ -831,7 +984,7 @@ function WeatherGraph({
             {dayPoints.map((_, i) => (
               <rect
                 key={i}
-                x={GRAPH_Y_W + i * GRAPH_COL_W}
+                x={i * GRAPH_COL_W}
                 y={0}
                 width={GRAPH_COL_W}
                 height={GRAPH_SVG_H}
@@ -839,8 +992,8 @@ function WeatherGraph({
                 onMouseEnter={() => setHoveredIdx(i)}
               />
             ))}
-          {/* (placeholder comment removed) */}
-          </svg>
+            </svg>
+          </div>
         </div>
       </div>
     </div>

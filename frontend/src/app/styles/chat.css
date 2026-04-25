@@ -45,7 +45,7 @@
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
   position: relative;
-  z-index: 140;
+  z-index: 400;
   overflow: visible;
   isolation: isolate;
 }
@@ -375,6 +375,11 @@
   z-index: 150;
 }
 
+.local-llm-hover-wrap:hover,
+.local-llm-hover-wrap:focus-within {
+  z-index: 250;
+}
+
 .local-llm-hover-btn {
   min-height: 34px;
   padding: 0 10px;
@@ -666,11 +671,20 @@
 }
 
 .services-menu-popover {
-  left: 0;
-  right: auto;
   bottom: auto;
   top: calc(100% + 8px);
   transform: none;
+  max-width: min(280px, calc(100vw - 16px));
+}
+
+.services-menu-popover--left {
+  left: 0;
+  right: auto;
+}
+
+.services-menu-popover--right {
+  right: 0;
+  left: auto;
 }
 
 .services-menu-popover li button {
@@ -972,8 +986,18 @@
 
 .audio-btn.is-recording {
   background: color-mix(in srgb, var(--accent-1) 28%, transparent);
-  color: var(--ink-900);
-  border-color: color-mix(in srgb, var(--accent-1) 52%, transparent);
+  color: var(--accent-1);
+  border-color: var(--accent-1);
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-1) 45%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent-1) 0%, transparent);
+  }
 }
 
 .chat-disclaimer {

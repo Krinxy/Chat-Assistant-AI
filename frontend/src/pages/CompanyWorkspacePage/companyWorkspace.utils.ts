@@ -75,7 +75,12 @@ export const parseAppointmentItem = (
   companyId: string,
   index: number,
 ): ParsedAppointmentItem => {
-  const normalized = rawValue.trim();
+  const [mainPart, attendeesPart] = rawValue.split("|").map((s) => s.trim());
+  const normalized = mainPart ?? rawValue.trim();
+  const attendees = attendeesPart
+    ? attendeesPart.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
   const matched = normalized.match(/^([A-Za-z]{2,3})\s+(\d{1,2}:\d{2})\s*(.*)$/);
 
   if (matched === null) {
@@ -84,6 +89,7 @@ export const parseAppointmentItem = (
       dayIndex: fallbackDayIndex,
       timeLabel: "--:--",
       title: normalized,
+      attendees,
     };
   }
 
@@ -98,6 +104,7 @@ export const parseAppointmentItem = (
     dayIndex: resolvedDayIndex,
     timeLabel,
     title: title.length > 0 ? title : normalized,
+    attendees,
   };
 };
 

@@ -637,7 +637,12 @@ export default function App() {
           ) : null}
 
           {activeView === "companies" ? (
-            <CompanyWorkspacePanel language={language} onOpenProfile={handleOpenProfile} />
+            <CompanyWorkspacePanel
+              language={language}
+              onOpenProfile={handleOpenProfile}
+              isSidebarOpen={isSidebarOpen}
+              onOpenSidebar={() => setIsSidebarOpen(true)}
+            />
           ) : null}
 
           {activeView === "guide" ? <FeatureGuidePanel language={language} /> : null}

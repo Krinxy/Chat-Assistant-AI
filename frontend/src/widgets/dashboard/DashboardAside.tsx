@@ -417,7 +417,6 @@ function WeatherGraph({
 
   const n = dayPoints.length;
   const contentSvgW = n * GRAPH_COL_W;         // chart area width (no Y-axis column)
-  const svgW = GRAPH_Y_W + contentSvgW;        // full SVG width (kept for backward-compat)
   const bottomY = GRAPH_CHART_TOP + GRAPH_PLOT_H;
 
   const temps = useMemo(
@@ -429,9 +428,6 @@ function WeatherGraph({
     () => dayPoints.map((p) => parseInt(p.feelsLike, 10) || 0),
     [dayPoints],
   );
-
-  // activeTemps is always the main temp curve; used for hover dot on main curve
-  const activeTemps = temps;
 
   // Extended Y range: consider both curves so the scrollbar doesn't flicker on toggle
   const allDisplayTemps = useMemo(

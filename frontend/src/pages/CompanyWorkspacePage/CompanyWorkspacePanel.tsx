@@ -48,7 +48,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
   >({});
   const [dismissedDocumentsByCompany, setDismissedDocumentsByCompany] = useState<Record<string, string[]>>({});
   const [openedDocumentByCompany, setOpenedDocumentByCompany] = useState<Record<string, string>>({});
-  const [focusedDocumentByCompany, setFocusedDocumentByCompany] = useState<Record<string, string>>({});
   const [documentSearch, setDocumentSearch] = useState<string>("");
 
   const [uploadedNotesByCompany, setUploadedNotesByCompany] = useState<Record<string, CompanyNoteEntry[]>>({});
@@ -413,15 +412,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       return next;
     });
 
-    setFocusedDocumentByCompany((previous) => {
-      if (previous[companyId] !== docItem.id) {
-        return previous;
-      }
-
-      const next = { ...previous };
-      delete next[companyId];
-      return next;
-    });
   }, []);
 
   const toggleCreateNoteLabel = (labelId: string): void => {
@@ -850,14 +840,20 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
                   <div className="port-tool-metric">
                     <span>{featureLabel.speed}</span>
                     <div className="port-bar-track">
-                      <div className="port-bar-fill port-bar-fill--speed" style={{ width: `${Math.min(100, (5 - tool.responseSpeed) / 4.2 * 100)}%`, opacity: tool.isAura ? 1 : 0.55 }} />
+                      <div
+                        className="port-bar-fill port-bar-fill--speed"
+                        style={{ width: `${Math.min(100, ((5 - tool.responseSpeed) / 4.2) * 100)}%`, opacity: tool.isAura ? 1 : 0.55 }}
+                      />
                     </div>
                     <strong>{tool.responseSpeed.toFixed(1)}{speedUnit}</strong>
                   </div>
                   <div className="port-tool-metric">
                     <span>{featureLabel.scope}</span>
                     <div className="port-bar-track">
-                      <div className="port-bar-fill" style={{ width: `${tool.knowledgeScope}${scopeUnit}`, opacity: tool.isAura ? 1 : 0.55 }} />
+                      <div
+                        className="port-bar-fill"
+                        style={{ width: `${tool.knowledgeScope}${scopeUnit}`, opacity: tool.isAura ? 1 : 0.55 }}
+                      />
                     </div>
                     <strong>{tool.knowledgeScope}{scopeUnit}</strong>
                   </div>
@@ -881,13 +877,15 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       const confirmedHypo = selectedCompany.hypotheses.filter((h) => h.status === "confirmed").length;
 
       const churnRisk    = Math.min(82, Math.max(5,  totalOpen * 4 + selectedCompany.pendingMeetings * 5));
-      const nrr          = Math.round(Math.min(138, Math.max(80, 108 + selectedCompany.completedMeetings * 2 - selectedCompany.pendingMeetings * 3)));
+      const nrr = Math.round(
+        Math.min(138, Math.max(80, 108 + selectedCompany.completedMeetings * 2 - selectedCompany.pendingMeetings * 3))
+      );
       const arrGrowth    = Math.round(Math.min(44,  Math.max(3,  13 + confirmedHypo * 5 - totalOpen * 0.6)));
       const upsellRate   = Math.round(Math.min(86,  Math.max(12, 36 + selectedCompany.hypotheses.length * 8)));
       const dealVelocity = Math.round(Math.min(58,  Math.max(9,  40 - totalCompleted * 0.5 + totalOpen * 1.1)));
       const healthScore  = Math.round(Math.min(97,  Math.max(38, 84 - totalOpen * 2.4 + totalCompleted * 0.4)));
 
-      function genSpark(end: number, trend: "up" | "down" | "neutral", seed: number): number[] {
+      const genSpark = (end: number, trend: "up" | "down" | "neutral", seed: number): number[] => {
         const pts: number[] = [];
         let v = trend === "up" ? end * 0.55 : trend === "down" ? end * 1.45 : end * 0.85;
         for (let i = 0; i < 8; i++) {
@@ -962,7 +960,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         },
       ];
 
-      function sparkPolyline(pts: number[]): string {
+      const sparkPolyline = (pts: number[]): string => {
         const W = 80, H = 32;
         const max = Math.max(...pts) || 1;
         const min = Math.min(...pts);
@@ -1053,7 +1051,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       const visibleDocuments = docQuery.length === 0
         ? allDocuments
         : allDocuments.filter((item) => item.name.toLowerCase().includes(docQuery));
-      const focusedDocumentId = focusedDocumentByCompany[selectedCompany.id] ?? "";
       const openedDocumentId = openedDocumentByCompany[selectedCompany.id] ?? "";
       const openedDocument =
         allDocuments.find((item) => item.id === openedDocumentId) ?? null;
@@ -1100,7 +1097,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
                   type="button"
                   className={`doc-thumb${openedDocumentId === item.id ? " is-active" : ""}`}
                   onClick={() => {
-                    setFocusedDocumentByCompany((prev) => ({ ...prev, [selectedCompany.id]: item.id }));
                     setOpenedDocumentByCompany((prev) => ({ ...prev, [selectedCompany.id]: item.id }));
                   }}
                 >
@@ -1142,16 +1138,35 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
                     )}
                   </div>
                   <div className="doc-lightbox-actions">
-                    <button type="button" className="doc-lb-btn" onClick={() => triggerDocumentDownload(selectedCompany.name, openedDocument)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <button
+                      type="button"
+                      className="doc-lb-btn"
+                      onClick={() => triggerDocumentDownload(selectedCompany.name, openedDocument)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
                       {text.downloadFile}
                     </button>
                     <button type="button" className="doc-lb-btn" onClick={() => triggerDocumentPrint(selectedCompany.name, openedDocument)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                      </svg>
                       {text.printFile}
                     </button>
-                    <button type="button" className="doc-lb-btn doc-lb-btn--danger" onClick={() => handleDeleteDocument(selectedCompany.id, openedDocument)}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    <button
+                      type="button"
+                      className="doc-lb-btn doc-lb-btn--danger"
+                      onClick={() => handleDeleteDocument(selectedCompany.id, openedDocument)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                      </svg>
                       {text.deleteFile}
                     </button>
                     <button
@@ -1160,7 +1175,10 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
                       aria-label="Close"
                       onClick={() => setOpenedDocumentByCompany((prev) => ({ ...prev, [selectedCompany.id]: "" }))}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -1174,7 +1192,10 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
                   )}
                   {openedDocument.objectUrl === null && (
                     <div className="doc-lightbox-placeholder">
-                      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
                       <p>{openedDocument.name}</p>
                       <small>{text.openPreviewHint}</small>
                     </div>
@@ -1287,7 +1308,17 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
             onClick={onOpenSidebar}
             aria-label="Open navigation"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />

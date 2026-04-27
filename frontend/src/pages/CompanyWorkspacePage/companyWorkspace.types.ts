@@ -83,6 +83,7 @@ export interface ParsedAppointmentItem {
   timeLabel: string;
   title: string;
   attendees: string[];
+  description?: string;
 }
 
 export type HypothesisStatus = "pending" | "confirmed" | "unconfirmed";

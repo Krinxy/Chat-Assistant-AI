@@ -106,4 +106,5 @@ export type ActiveView =
   | "profile"
   | "settings"
   | "guide"
-  | "imprint";
+  | "imprint"
+  | "mydesk";

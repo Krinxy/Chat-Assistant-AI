@@ -7,7 +7,8 @@ type NavKey =
   | "recommendations"
   | "notifications"
   | "profile"
-  | "settings";
+  | "settings"
+  | "mydesk";
 
 type ServiceKey =
   | "persona"
@@ -127,6 +128,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         notifications: "Benachrichtigungen",
         profile: "Profil",
         settings: "Einstellungen",
+        mydesk: "Mein Schreibtisch",
       },
       lastChatsTitle: "Letzte Chats",
       newChatTitle: "Neuer Chat",
@@ -263,6 +265,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         notifications: "Notifications",
         profile: "Profile",
         settings: "Settings",
+        mydesk: "My Desk",
       },
       lastChatsTitle: "Recent Chats",
       newChatTitle: "New Chat",

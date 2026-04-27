@@ -91,6 +91,15 @@ export interface CompanyWorkspaceText {
   appointmentEmpty: string;
   appointmentAssignee: string;
   appointmentUnassigned: string;
+  addAppointment: string;
+  appointmentFormTitle: string;
+  appointmentFormName: string;
+  appointmentFormDesc: string;
+  appointmentFormDay: string;
+  appointmentFormTime: string;
+  appointmentFormPeople: string;
+  appointmentFormSave: string;
+  appointmentFormCancel: string;
   teamFunctionCol: string;
   teamNameCol: string;
   teamLatestEventCol: string;
@@ -189,6 +198,15 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
       appointmentEmpty: "Keine Termine",
       appointmentAssignee: "Teammitglied",
       appointmentUnassigned: "Nicht zugewiesen",
+      addAppointment: "+ Termin hinzufügen",
+      appointmentFormTitle: "Termin planen",
+      appointmentFormName: "Terminname",
+      appointmentFormDesc: "Beschreibung",
+      appointmentFormDay: "Tag",
+      appointmentFormTime: "Uhrzeit",
+      appointmentFormPeople: "Teilnehmer",
+      appointmentFormSave: "Termin speichern",
+      appointmentFormCancel: "Abbrechen",
       teamFunctionCol: "Funktion",
       teamNameCol: "Name",
       teamLatestEventCol: "Latest event",
@@ -291,6 +309,15 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
     appointmentEmpty: "No meetings",
     appointmentAssignee: "Team member",
     appointmentUnassigned: "Unassigned",
+    addAppointment: "+ Add appointment",
+    appointmentFormTitle: "Plan appointment",
+    appointmentFormName: "Appointment name",
+    appointmentFormDesc: "Description",
+    appointmentFormDay: "Day",
+    appointmentFormTime: "Time",
+    appointmentFormPeople: "Attendees",
+    appointmentFormSave: "Save appointment",
+    appointmentFormCancel: "Cancel",
     teamFunctionCol: "Function",
     teamNameCol: "Name",
     teamLatestEventCol: "Latest event",

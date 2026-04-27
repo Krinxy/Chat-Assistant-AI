@@ -96,6 +96,15 @@ const ProfileIcon: NavIcon = ({ className }) => (
   </NavIconBase>
 );
 
+const DeskIcon: NavIcon = ({ className }) => (
+  <NavIconBase className={className}>
+    <rect x="2" y="13" width="20" height="8" rx="1" />
+    <line x1="6" y1="13" x2="6" y2="21" />
+    <line x1="12" y1="3" x2="12" y2="13" />
+    <path d="M9 3h6" />
+  </NavIconBase>
+);
+
 const SettingsIcon: NavIcon = ({ className }) => (
   <NavIconBase className={className}>
     <circle cx="12" cy="12" r="3" />
@@ -121,7 +130,7 @@ const navigationItems: Array<{
   Icon: NavIcon;
 }> = [
   { key: "home", view: "dashboard", Icon: HomeIcon },
-  { key: "profile", view: "profile", Icon: ProfileIcon },
+  { key: "mydesk", view: "mydesk", Icon: DeskIcon },
   { key: "chat", view: "chat", Icon: ChatIcon },
   { key: "companies", view: "companies", Icon: CompaniesIcon },
   { key: "recommendations", view: "recommendations", Icon: RecommendationsIcon },

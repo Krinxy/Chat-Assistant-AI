@@ -2814,19 +2814,418 @@
   border-color: rgba(124,106,247,0.14);
 }
 
+/* ── Add-appointment button bar ──────────────────────────────────────────── */
+
+.appt-add-bar {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
+}
+
+.appt-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--feature-lilac, #a78bfa);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #a78bfa) 40%, transparent);
+}
+
+.appt-add-btn:hover {
+  opacity: 0.88;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--feature-lilac, #a78bfa) 55%, transparent);
+}
+
+.appt-add-btn:active {
+  opacity: 0.75;
+}
+
+/* ── Add-appointment modal ───────────────────────────────────────────────── */
+
+.appt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appt-modal {
+  background: var(--bg-1, #12121f);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  width: min(480px, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  animation: apptModalIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes apptModalIn {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.appt-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--bg-1, #12121f);
+  z-index: 1;
+}
+
+.appt-modal-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--feature-lilac, #a78bfa);
+}
+
+.appt-modal-close {
+  background: none;
+  border: none;
+  color: var(--ink-500, #9ca3af);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.appt-modal-close:hover {
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.appt-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.appt-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-500, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.appt-form-input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-solid) 60%, transparent);
+  color: var(--ink-900, #f9fafb);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.appt-form-input:focus {
+  border-color: var(--feature-lilac, #a78bfa);
+}
+
+.appt-form-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.appt-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.appt-form-label--half {
+  flex: 1;
+  min-width: 0;
+}
+
+.appt-form-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.appt-people-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-700, #d1d5db);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.appt-people-chip:hover {
+  background: color-mix(in srgb, var(--feature-lilac, #a78bfa) 12%, transparent);
+  border-color: var(--feature-lilac, #a78bfa);
+}
+
+.appt-people-chip--selected {
+  background: color-mix(in srgb, var(--feature-lilac, #a78bfa) 22%, transparent);
+  border-color: var(--feature-lilac, #a78bfa);
+  color: var(--feature-lilac, #a78bfa);
+  font-weight: 600;
+}
+
+.appt-people-chip-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appt-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 4px;
+  margin-top: 2px;
+  border-top: 1px solid var(--line);
+}
+
+.appt-form-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+
+.appt-form-btn--ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink-700, #d1d5db);
+}
+
+.appt-form-btn--ghost:hover {
+  background: color-mix(in srgb, var(--line) 50%, transparent);
+}
+
+.appt-form-btn--primary {
+  background: var(--feature-lilac, #a78bfa);
+  color: #fff;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #a78bfa) 40%, transparent);
+}
+
+.appt-form-btn--primary:hover {
+  opacity: 0.88;
+}
+
+/* ── Card description line ───────────────────────────────────────────────── */
+
+.planner-card-desc {
+  margin: 0;
+  padding: 0;
+  font-size: 10px;
+  color: var(--ink-500, #9ca3af);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 /* ── Teams Planner appointment grid ─────────────────────────────────────── */
 
 .planner-root {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  padding-bottom: 8px;
+  overflow: hidden;
+  padding-top: 8px; /* gap above the day-header row */
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-solid) 50%, transparent);
+}
+
+.planner-root::-webkit-scrollbar {
+  display: none;
 }
 
 .planner-timeline-wrap {
   display: flex;
   gap: 0;
   min-width: 560px;
+  align-items: flex-start;
+}
+
+/* Drum column: spacer above + drum wheel below */
+.planner-drum-col {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.planner-drum-spacer {
+  flex-shrink: 0;
+}
+
+/* Right side: fixed header row + scrollable viewport */
+.planner-right {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Fixed day-name header row — NOT inside the scroll area */
+.planner-header-row {
+  display: flex;
+  flex-shrink: 0;
+  align-items: stretch;
+  gap: 0;
+  padding-bottom: 4px;
+}
+
+/* Spacer to align header columns with the time-axis column below */
+.planner-header-timespacer {
+  width: 38px;
+  flex-shrink: 0;
+}
+
+/* ── Drum wheel ───────────────────────────────────────────────────────────── */
+
+.drum-wheel {
+  position: relative;
+  width: 42px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  /* static mode: transparent, no effects */
+  background: transparent;
+  cursor: default;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.18s, box-shadow 0.18s;
+}
+
+/* Hover/active mode: styled drum */
+.drum-wheel--active {
+  background: color-mix(in srgb, var(--panel-solid) 96%, transparent);
+  cursor: ns-resize;
+  border-radius: 6px 0 0 6px;
+  box-shadow: inset -2px 0 6px color-mix(in srgb, var(--line) 30%, transparent);
+}
+
+/* Gradient fades — hidden in static, fade in on hover */
+.drum-wheel::before,
+.drum-wheel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 38%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.drum-wheel--active::before {
+  opacity: 1;
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--panel-solid),
+    color-mix(in srgb, var(--panel-solid) 60%, transparent)
+  );
+}
+.drum-wheel--active::after {
+  opacity: 1;
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--panel-solid),
+    color-mix(in srgb, var(--panel-solid) 60%, transparent)
+  );
+}
+
+/* Horizontal highlight bar at the centre = the "reading line" */
+.drum-centre-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 22px;
+  transform: translateY(-50%);
+  background: color-mix(in srgb, var(--feature-lilac) 10%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--feature-lilac) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--feature-lilac) 35%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.drum-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--ink-400);
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: center center;
+  z-index: 3;
+  line-height: 1;
+}
+
+.drum-label--centre {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--feature-lilac);
+}
+
+.drum-handle {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--ink-300);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ── Viewport + inner scroll ─────────────────────────────────────────────── */
+
+.planner-viewport {
+  overflow: hidden;
+  flex: 1;
+  position: relative;
+}
+
+.planner-inner {
+  display: flex;
+  position: relative;
+  will-change: transform;
 }
 
 /* Time axis column */
@@ -2834,7 +3233,7 @@
   position: relative;
   width: 38px;
   flex-shrink: 0;
-  padding-top: 44px;
+  /* no padding-top — headers are now outside the scroll area */
 }
 
 .planner-time-label {
@@ -2849,6 +3248,13 @@
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+  transition: color 0.15s;
+}
+
+/* Highlighted hour label in the static drum */
+.planner-time-label--active {
+  color: var(--feature-lilac);
+  font-weight: 700;
 }
 
 /* Grid */
@@ -2857,6 +3263,9 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(100px, 1fr));
   gap: 8px;
+  height: 100%; /* fill planner-inner height */
+  /* align-content: stretch (default) — keeps the one implicit row totalGridHeight tall
+     so height:100% on .planner-col resolves correctly */
 }
 
 .planner-grid--7col {
@@ -2864,23 +3273,33 @@
 }
 
 .planner-col {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  /* body-only column */
+  display: block;
+  height: 100%; /* fill grid row height */
 }
 
+/* Header cells live in .planner-header-row, not inside the scroll area */
 .planner-col-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 7px 10px;
+  padding: 4px 10px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel-solid) 95%, transparent);
   border: 1px solid var(--line);
   flex-shrink: 0;
+  height: 38px;
+  box-sizing: border-box;
 }
 
+/* is-today applied directly to .planner-col-head now */
+.planner-col-head.is-today {
+  border-color: color-mix(in srgb, var(--feature-lilac) 40%, var(--line));
+  background: color-mix(in srgb, var(--feature-lilac) 8%, var(--panel-solid));
+}
+
+/* Keep legacy selector working too */
 .planner-col.is-today .planner-col-head {
   border-color: color-mix(in srgb, var(--feature-lilac) 40%, var(--line));
   background: color-mix(in srgb, var(--feature-lilac) 8%, var(--panel-solid));
@@ -2894,7 +3313,8 @@
   color: var(--ink-500);
 }
 
-.planner-col.is-today .planner-col-name {
+.planner-col.is-today .planner-col-name,
+.planner-col-head.is-today .planner-col-name {
   color: var(--feature-lilac);
 }
 
@@ -2912,9 +3332,10 @@
   color: var(--feature-lilac);
 }
 
-/* Timeline body — fixed height, absolute children */
+/* Timeline body — fills the full 24h grid height */
 .planner-col-body {
   position: relative;
+  height: 100%; /* filled by parent .planner-col */
   border-left: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
   overflow: visible;
 }
@@ -2971,6 +3392,7 @@
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
@@ -3144,6 +3566,105 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ── My Desk Dashboard ───────────────────────────────────────────────────── */
+
+.mydesk-kpi-row {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.mydesk-kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-solid);
+  text-align: center;
+}
+
+.mydesk-kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--feature-lilac);
+  line-height: 1;
+}
+
+.mydesk-kpi-label {
+  font-size: 0.72rem;
+  color: var(--ink-500);
+  line-height: 1.3;
+  text-align: center;
+}
+
+.mydesk-section-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-500);
+  margin: 0 0 8px;
+}
+
+.mydesk-next-appointment {
+  margin-top: 4px;
+}
+
+.mydesk-next-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--feature-lilac) 6%, var(--panel-solid));
+}
+
+.mydesk-next-attendees {
+  font-size: 0.78rem;
+  color: var(--ink-500);
+  margin-left: auto;
+}
+
+.mydesk-company-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mydesk-company-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-solid);
+  flex-wrap: wrap;
+}
+
+.mydesk-company-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-900);
+  min-width: 160px;
+}
+
+@media (max-width: 700px) {
+  .mydesk-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .company-document-btn small {

@@ -28,6 +28,7 @@ import type {
 } from "./features/chat/types/chat";
 import { CompanyWorkspacePanel } from "./pages/CompanyWorkspacePage/CompanyWorkspacePanel";
 import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
+import { MyDeskPanel } from "./pages/MyDeskPage/MyDeskPanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
 import { UserProfilePanel } from "./pages/ProfilePage/UserProfilePanel";
@@ -626,6 +627,10 @@ export default function App() {
                 setActiveView("settings");
               }}
             />
+          ) : null}
+
+          {activeView === "mydesk" ? (
+            <MyDeskPanel language={language} />
           ) : null}
 
           {activeView === "settings" ? (

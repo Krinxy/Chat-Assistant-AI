@@ -89,8 +89,7 @@
 .company-detail-column {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .company-box-card {
@@ -333,6 +332,7 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .company-detail-title-row {
@@ -380,6 +380,7 @@
   padding: 7px 0 2px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .company-tab-btn {
@@ -405,6 +406,10 @@
 .company-detail-section {
   border-top: 1px solid var(--line);
   padding-top: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .company-detail-section p {
@@ -2818,7 +2823,9 @@
 
 .appt-add-bar {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
   margin-bottom: 10px;
 }
 
@@ -2848,7 +2855,51 @@
   opacity: 0.75;
 }
 
-/* ── Add-appointment modal ───────────────────────────────────────────────── */
+/* ── Week navigation (inside .appt-add-bar) ─────────────────────────────── */
+
+.appt-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.appt-week-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-1, #e2e2ef);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.appt-week-nav-btn:hover {
+  background: var(--bg-2, #1c1c2e);
+  border-color: var(--feature-lilac, #a78bfa);
+}
+
+.appt-week-nav-btn:active {
+  opacity: 0.7;
+}
+
+.appt-week-label {
+  min-width: 134px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2, rgba(226, 226, 239, 0.6));
+  white-space: nowrap;
+  user-select: none;
+}
+
+
 
 .appt-modal-overlay {
   position: fixed;
@@ -2963,6 +3014,11 @@
   min-width: 0;
 }
 
+.appt-form-label--third {
+  flex: 1;
+  min-width: 0;
+}
+
 .appt-form-people {
   display: flex;
   flex-wrap: wrap;
@@ -3005,11 +3061,52 @@
 
 .appt-form-actions {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  justify-content: flex-end;
   padding-top: 4px;
   margin-top: 2px;
   border-top: 1px solid var(--line);
+}
+
+.appt-form-actions-right {
+  display: flex;
+  gap: 10px;
+}
+
+/* Recurring toggle button */
+.appt-recurring-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  color: var(--ink-500);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.appt-recurring-toggle:hover {
+  border-color: var(--feature-lilac);
+  color: var(--feature-lilac);
+}
+
+.appt-recurring-toggle--on {
+  border-color: var(--feature-lilac);
+  background: color-mix(in srgb, var(--feature-lilac) 12%, transparent);
+  color: var(--feature-lilac);
+}
+
+/* Recurring indicator on the planner card */
+.planner-card-recurring {
+  margin-right: 3px;
+  opacity: 0.75;
+  font-style: normal;
 }
 
 .appt-form-btn {
@@ -3369,10 +3466,127 @@
   z-index: 1;
 }
 
+/* Side-by-side overlap variant: slightly reduced padding + faint right border
+   so adjacent lanes visually separate without a heavy divider */
+.planner-card--overlap {
+  padding-left: 5px;
+  padding-right: 5px;
+  border-right: 1px solid color-mix(in srgb, var(--feature-lilac) 25%, var(--line));
+}
+
 .planner-card:hover {
   background: color-mix(in srgb, var(--feature-lilac) 5%, var(--panel-solid));
   border-left-color: color-mix(in srgb, var(--feature-lilac) 80%, transparent);
   z-index: 2;
+}
+
+/* Compact card: too small to show full content — shows only time + title (1 line) */
+.planner-card--compact {
+  gap: 1px;
+}
+
+/* Expanded card: floats above neighbours to reveal full content on click */
+.planner-card--expanded {
+  z-index: 10;
+  border-radius: 0 8px 8px 8px;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--feature-lilac) 22%, transparent),
+              0 1px 6px rgba(0,0,0,0.10);
+  background: var(--panel-solid);
+}
+
+/* Invite card: dashed lilac border + warm tint */
+.planner-card--invite {
+  border-left-color: var(--feature-lilac);
+  border-style: dashed;
+  border-left-style: solid;
+  background: color-mix(in srgb, var(--feature-lilac) 6%, var(--panel-solid));
+}
+
+/* Declined invite: greyed out */
+.planner-card--declined {
+  opacity: 0.42;
+  filter: grayscale(0.6);
+}
+
+/* ── RSVP inline UI ──────────────────────────────────────────────────────────── */
+
+.planner-card-rsvp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed color-mix(in srgb, var(--feature-lilac) 40%, transparent);
+}
+
+.planner-card-rsvp-from {
+  font-size: 9px;
+  color: var(--ink-500);
+  font-style: italic;
+  line-height: 1.2;
+}
+
+/* Collapsed invite badge: shown instead of full RSVP panel before the card is expanded */
+.planner-card-time-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.planner-card-invite-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--feature-lilac) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--feature-lilac) 35%, transparent);
+  color: var(--feature-lilac);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.planner-card-rsvp-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.planner-rsvp-btn {
+  flex: 1;
+  padding: 4px 6px;
+  border-radius: 5px;
+  border: 1.5px solid transparent;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.planner-rsvp-btn--accept {
+  background: color-mix(in srgb, var(--feature-lilac) 15%, transparent);
+  border-color: var(--feature-lilac);
+  color: var(--feature-lilac);
+}
+
+.planner-rsvp-btn--accept:hover {
+  background: color-mix(in srgb, var(--feature-lilac) 28%, transparent);
+}
+
+.planner-rsvp-btn--decline {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-500);
+}
+
+.planner-rsvp-btn--decline:hover {
+  border-color: var(--ink-500);
+  color: var(--ink-700);
 }
 
 .planner-card-time {

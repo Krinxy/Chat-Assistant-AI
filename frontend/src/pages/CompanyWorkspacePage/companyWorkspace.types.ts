@@ -80,10 +80,23 @@ export interface CompanyTeamMemberEntry {
 export interface ParsedAppointmentItem {
   id: string;
   dayIndex: number;
+  /** Relative week offset: 0 = current week, 1 = next, -1 = last, etc. */
+  weekIndex: number;
   timeLabel: string;
+  /** Optional end time, e.g. "10:30". If absent the card uses a minimum height. */
+  endTimeLabel?: string;
   title: string;
   attendees: string[];
   description?: string;
+  /** When true the appointment appears in every week, not just the week it was created in. */
+  recurring?: boolean;
+  /**
+   * When set, the appointment was sent as an invite by this person (display name).
+   * The current user has not yet confirmed it.
+   */
+  invitedBy?: string;
+  /** RSVP status for invite appointments. Defaults to "pending" when invitedBy is set. */
+  rsvp?: "pending" | "accepted" | "declined";
 }
 
 export type HypothesisStatus = "pending" | "confirmed" | "unconfirmed";

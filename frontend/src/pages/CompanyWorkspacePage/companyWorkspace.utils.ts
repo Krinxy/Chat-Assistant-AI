@@ -81,14 +81,21 @@ export const parseAppointmentItem = (
     ? attendeesPart.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 
-  const matched = normalized.match(/^([A-Za-z]{2,3})\s+(\d{1,2}:\d{2})\s*(.*)$/);
+  // Extract optional week prefix: "W+1 ", "W-2 ", "W0 " etc.
+  const weekPrefixMatch = normalized.match(/^W([+-]?\d+)\s+/);
+  const weekIndex = weekPrefixMatch !== null ? parseInt(weekPrefixMatch[1], 10) : 0;
+  const restOfString = weekPrefixMatch !== null ? normalized.slice(weekPrefixMatch[0].length) : normalized;
+
+  // Pattern: DayToken HH:MM[-HH:MM] Title
+  const matched = restOfString.match(/^([A-Za-z]{2,3})\s+(\d{1,2}:\d{2})(?:-(\d{1,2}:\d{2}))?\s*(.*)$/);
 
   if (matched === null) {
     return {
       id: `${companyId}-appointment-${index}`,
       dayIndex: fallbackDayIndex,
+      weekIndex,
       timeLabel: "--:--",
-      title: normalized,
+      title: restOfString,
       attendees,
     };
   }
@@ -97,13 +104,16 @@ export const parseAppointmentItem = (
   const resolvedDayIndex =
     weekdayTokenMap.find((entry) => entry.tokens.includes(dayToken))?.index ?? fallbackDayIndex;
   const timeLabel = matched[2].trim();
-  const title = matched[3].trim();
+  const endTimeLabel = matched[3]?.trim() || undefined;
+  const title = matched[4].trim();
 
   return {
     id: `${companyId}-appointment-${index}`,
     dayIndex: resolvedDayIndex,
+    weekIndex,
     timeLabel,
-    title: title.length > 0 ? title : normalized,
+    endTimeLabel,
+    title: title.length > 0 ? title : restOfString,
     attendees,
   };
 };

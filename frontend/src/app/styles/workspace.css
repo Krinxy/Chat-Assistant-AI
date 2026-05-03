@@ -478,11 +478,11 @@
 
 .company-overview-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-rows: auto auto auto;
   align-items: start;
   align-content: stretch;
-  gap: 10px;
+  gap: 12px;
   min-height: 100%;
 }
 
@@ -515,8 +515,8 @@
 .company-overview-kpi-card {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--feature-lilac) 6%, var(--panel));
-  padding: 10px;
+  background: color-mix(in srgb, var(--feature-lilac) 8%, var(--panel));
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -545,6 +545,38 @@
   padding: 0;
 }
 
+.company-overview-focus-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.company-overview-focus-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--feature-lilac) 7%, var(--panel));
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.company-overview-focus-card span {
+  font-size: 0.72rem;
+  color: var(--ink-500);
+}
+
+.company-overview-focus-card strong {
+  font-size: 1.02rem;
+  color: var(--feature-lilac);
+}
+
+.company-overview-focus-card small {
+  font-size: 0.7rem;
+  color: var(--ink-500);
+}
+
 .company-overview-progress-block {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -555,7 +587,7 @@
 .company-overview-block--events {
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 14px;
   background: color-mix(in srgb, var(--feature-lilac) 4%, var(--panel));
 }
 
@@ -1042,12 +1074,12 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 8px;
-  background: color-mix(in srgb, var(--panel-solid) 96%, transparent);
+  background: color-mix(in srgb, var(--panel-solid) 98%, transparent);
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .company-document-preview-panel h4 {
@@ -1066,6 +1098,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .company-document-preview-name {
@@ -1082,20 +1118,20 @@
 
 .company-document-preview-frame {
   width: 100%;
-  flex: 1;
-  min-height: 30%;
+  min-height: 52vh;
+  max-height: 64vh;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #ffffff;
+  border: 0;
+  background: transparent;
 }
 
 .company-document-preview-image {
   width: 100%;
-  max-height: 200px;
+  max-height: none;
   object-fit: contain;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #ffffff;
+  border: 0;
+  background: transparent;
 }
 
 .company-document-preview-placeholder {
@@ -1222,6 +1258,52 @@
   min-height: 0;
 }
 
+.company-notes-kanban {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+}
+
+.company-notes-column {
+  min-height: 0;
+}
+
+.company-notes-column h5 {
+  margin: 0 0 6px;
+  font-size: 0.74rem;
+  color: var(--ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.company-note-move-btn {
+  width: 100%;
+  min-height: 24px;
+  border-radius: 8px;
+  border: 1px dashed color-mix(in srgb, var(--feature-lilac) 36%, var(--line));
+  background: transparent;
+  color: var(--ink-600);
+  font-size: 0.68rem;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.company-note-move-btn:hover {
+  border-color: color-mix(in srgb, var(--feature-lilac) 54%, var(--line));
+  color: var(--feature-lilac);
+}
+
+.company-notes-dropzone {
+  border: 1px dashed transparent;
+  border-radius: 10px;
+  padding: 2px;
+}
+
+.company-notes-dropzone:hover {
+  border-color: color-mix(in srgb, var(--feature-lilac) 28%, var(--line));
+}
+
 .company-note-nav-btn {
   width: 100%;
   border: 1px solid transparent;
@@ -1269,12 +1351,37 @@
 
 .company-note-detail-card {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px;
-  background: color-mix(in srgb, var(--feature-lilac) 7%, var(--panel));
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--feature-lilac) 9%, var(--panel));
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.company-note-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.company-note-detail-status {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.company-note-detail-status--open {
+  color: var(--feature-lilac);
+  border-color: color-mix(in srgb, var(--feature-lilac) 44%, var(--line));
+}
+
+.company-note-detail-status--closed {
+  color: var(--ink-500);
 }
 
 .company-note-detail-card h5 {
@@ -2416,6 +2523,14 @@
 .perf-fill--down    { background: linear-gradient(90deg, #c4b5fd, #ddd6fe); }
 .perf-fill--neutral { background: rgba(124,106,247,0.25); }
 
+.portfolio-performance-wrap {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 
 
 .hyp-list {
@@ -2635,6 +2750,15 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  .company-overview-focus-grid,
+  .company-notes-kanban {
+    grid-template-columns: 1fr;
+  }
+
+  .hyp-add-form {
+    grid-template-columns: 1fr;
+  }
+
   .cal-day-sheet {
     max-height: 90vh;
     border-radius: 14px 14px 0 0;
@@ -2787,6 +2911,48 @@
   color: var(--ink-400, rgba(255,255,255,0.3));
   font-style: italic;
   margin-top: 4px;
+}
+
+.hyp-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.hyp-add-form input,
+.hyp-add-form select,
+.hyp-card-actions select,
+.hyp-card-input {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-900);
+  font-size: 0.78rem;
+  padding: 8px 10px;
+}
+
+.hyp-card-input {
+  resize: vertical;
+  min-height: 58px;
+}
+
+.hyp-add-form button,
+.hyp-action-btn {
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--feature-lilac) 12%, var(--panel));
+  color: var(--ink-900);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.hyp-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* status pill (replaces old hyp-status) */

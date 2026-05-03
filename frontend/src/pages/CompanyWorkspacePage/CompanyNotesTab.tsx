@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ChangeEvent, FormEvent, RefObject } from "react";
 
 import type { CompanyWorkspaceText } from "./companyWorkspace.text";
@@ -62,6 +63,7 @@ export function CompanyNotesTab({
   onNoteDraftLinkedEventChange,
   onAddNote,
 }: CompanyNotesTabProps) {
+  const [dragOverColumn, setDragOverColumn] = useState<"open" | "closed" | null>(null);
   const isActiveNoteEditable = activeNote !== null && activeNote.source !== "base";
   const openNotes = notesForSelectedCompany.filter((note) => (note.status ?? "open") === "open");
   const closedNotes = notesForSelectedCompany.filter((note) => (note.status ?? "open") === "closed");
@@ -94,19 +96,25 @@ export function CompanyNotesTab({
           </div>
 
           <div className="company-notes-kanban">
-            <section className="company-notes-column">
+            <section
+              className={`company-notes-column company-notes-dropzone${dragOverColumn === "open" ? " is-drag-over" : ""}`}
+              onDragOver={(event) => { event.preventDefault(); setDragOverColumn("open"); }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                  setDragOverColumn(null);
+                }
+              }}
+              onDrop={(event) => {
+                setDragOverColumn(null);
+                const payload = event.dataTransfer.getData(dragPayloadType);
+                if (payload.length === 0) return;
+                const [noteId] = payload.split("|");
+                if (noteId.length === 0) return;
+                onMoveNoteStatus(noteId, "open");
+              }}
+            >
               <h5>{text.openLabel}</h5>
-              <ul
-                className="company-notes-list company-notes-dropzone"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  const payload = event.dataTransfer.getData(dragPayloadType);
-                  if (payload.length === 0) return;
-                  const [noteId] = payload.split("|");
-                  if (noteId.length === 0) return;
-                  onMoveNoteStatus(noteId, "open");
-                }}
-              >
+              <ul className="company-notes-list">
                 {openNotes.map((item) => (
                   <li key={item.id} draggable onDragStart={(event) => event.dataTransfer.setData(dragPayloadType, `${item.id}|open`)}>
                     <button
@@ -132,19 +140,25 @@ export function CompanyNotesTab({
               </ul>
             </section>
 
-            <section className="company-notes-column">
+            <section
+              className={`company-notes-column company-notes-dropzone${dragOverColumn === "closed" ? " is-drag-over" : ""}`}
+              onDragOver={(event) => { event.preventDefault(); setDragOverColumn("closed"); }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                  setDragOverColumn(null);
+                }
+              }}
+              onDrop={(event) => {
+                setDragOverColumn(null);
+                const payload = event.dataTransfer.getData(dragPayloadType);
+                if (payload.length === 0) return;
+                const [noteId] = payload.split("|");
+                if (noteId.length === 0) return;
+                onMoveNoteStatus(noteId, "closed");
+              }}
+            >
               <h5>{closedLabel}</h5>
-              <ul
-                className="company-notes-list company-notes-dropzone"
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  const payload = event.dataTransfer.getData(dragPayloadType);
-                  if (payload.length === 0) return;
-                  const [noteId] = payload.split("|");
-                  if (noteId.length === 0) return;
-                  onMoveNoteStatus(noteId, "closed");
-                }}
-              >
+              <ul className="company-notes-list">
                 {closedNotes.map((item) => (
                   <li key={item.id} draggable onDragStart={(event) => event.dataTransfer.setData(dragPayloadType, `${item.id}|closed`)}>
                     <button

@@ -33,6 +33,9 @@ import {
 
 const ENABLE_WORKSPACE_NEWSFEED = false;
 
+const OV_WIDGET_DEFAULT_ORDER = ["metrics", "events", "scopes", "kpis"] as const;
+type OverviewWidgetId = typeof OV_WIDGET_DEFAULT_ORDER[number];
+
 export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, onOpenSidebar }: CompanyWorkspacePanelProps) {
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
 
@@ -43,6 +46,9 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
   const [isRecentExpanded, setIsRecentExpanded] = useState<boolean>(true);
   const [isFavoritesExpanded, setIsFavoritesExpanded] = useState<boolean>(true);
   const [isCompanyListExpanded, setIsCompanyListExpanded] = useState<boolean>(true);
+  const [isListPaneCollapsed, setIsListPaneCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("aura_list_pane_collapsed") === "1"; } catch { return false; }
+  });
   const tabRowRef = useRef<HTMLDivElement | null>(null);
   const tabDragScroll = useDragScroll(tabRowRef);
 
@@ -71,6 +77,82 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
   const [teamEditName, setTeamEditName] = useState<string>("");
 
   const [meetingAssigneesByCompany, setMeetingAssigneesByCompany] = useState<Record<string, Record<string, string>>>({});
+
+  const [overviewWidgetOrder, setOverviewWidgetOrder] = useState<OverviewWidgetId[]>(() => {
+    try {
+      const stored = localStorage.getItem("aura_ov_widget_order");
+      if (stored) {
+        const parsed = JSON.parse(stored) as OverviewWidgetId[];
+        if (Array.isArray(parsed) && parsed.length === OV_WIDGET_DEFAULT_ORDER.length) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return [...OV_WIDGET_DEFAULT_ORDER];
+  });
+  const ovDragWidget = useRef<OverviewWidgetId | null>(null);
+  const ovDragOverWidget = useRef<OverviewWidgetId | null>(null);
+  const [ovDragActive, setOvDragActive] = useState<OverviewWidgetId | null>(null);
+  const [ovDragOver, setOvDragOver] = useState<OverviewWidgetId | null>(null);
+
+  const handleOvDragStart = useCallback((id: OverviewWidgetId) => {
+    ovDragWidget.current = id;
+    setOvDragActive(id);
+  }, []);
+
+  const handleOvDragOver = useCallback((id: OverviewWidgetId) => {
+    ovDragOverWidget.current = id;
+    setOvDragOver(id);
+  }, []);
+
+  const handleOvDrop = useCallback(() => {
+    const from = ovDragWidget.current;
+    const to = ovDragOverWidget.current;
+    if (from && to && from !== to) {
+      setOverviewWidgetOrder((prev) => {
+        const next = [...prev];
+        const fromIdx = next.indexOf(from);
+        const toIdx = next.indexOf(to);
+        next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, from);
+        try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }
+    ovDragWidget.current = null;
+    ovDragOverWidget.current = null;
+    setOvDragActive(null);
+    setOvDragOver(null);
+  }, []);
+
+  const handleOvDragEnd = useCallback(() => {
+    ovDragWidget.current = null;
+    ovDragOverWidget.current = null;
+    setOvDragActive(null);
+    setOvDragOver(null);
+  }, []);
+
+  const handleOvMoveUp = useCallback((id: OverviewWidgetId) => {
+    setOverviewWidgetOrder((prev) => {
+      const next = [...prev];
+      const idx = next.indexOf(id);
+      if (idx <= 0) return prev;
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const handleOvMoveDown = useCallback((id: OverviewWidgetId) => {
+    setOverviewWidgetOrder((prev) => {
+      const next = [...prev];
+      const idx = next.indexOf(id);
+      if (idx >= next.length - 1) return prev;
+      [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+      try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
   const documentFileInputRef = useRef<HTMLInputElement | null>(null);
   const noteFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -720,7 +802,10 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       return null;
     }
     const activeHypotheses = hypothesesByCompany[selectedCompany.id] ?? selectedCompany.hypotheses;
-    const workspaceDocumentCount = selectedCompany.documents.length + (uploadedDocumentsByCompany[selectedCompany.id] ?? []).length;
+    const hypothesisDocumentOptions = [
+      ...(uploadedDocumentsByCompany[selectedCompany.id] ?? []).map((entry) => entry.name),
+      ...selectedCompany.documents,
+    ].filter((value, index, array) => array.indexOf(value) === index);
 
     if (activeTab === "overview") {
       const totalOpen = selectedCompany.openQuestions + selectedCompany.pendingMeetings;
@@ -760,8 +845,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         .sort((a, b) => a.dayIndex - b.dayIndex || a.timeLabel.localeCompare(b.timeLabel))[0];
       const weekDayLabels = weekdayLabelsByLanguage[language];
 
-      return (
-        <div className="company-overview-layout">
+      const ovWidgets: Record<string, JSX.Element> = {
+        metrics: (
           <div className="company-overview-block">
             <OverviewMetrics
               openQuestions={selectedCompany.openQuestions}
@@ -786,7 +871,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
               </article>
             </div>
           </div>
-
+        ),
+        events: (
           <div className="company-overview-block company-overview-block--events">
             <h4>{text.recentEventsTitle}</h4>
             {nextAppointment !== undefined && (
@@ -827,7 +913,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
               })}
             </ul>
           </div>
-
+        ),
+        scopes: (
           <div className="company-overview-scopes-wrap">
             <div className="company-overview-block company-overview-progress-block">
               <h4>{text.overviewScopeTitle}</h4>
@@ -845,14 +932,12 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
                 ))}
               </ul>
             </div>
-
             <div className="company-overview-priority-stack">
               <article className="company-overview-kpi-card company-overview-kpi-card-spotlight">
                 <span>{text.kpiThreeLabel}</span>
                 <strong>{priorityLabel}</strong>
                 <small>{text.kpiThreeHint}</small>
               </article>
-
               <article className="company-overview-kpi-card company-overview-kpi-card-spotlight">
                 <span>{text.kpiFourLabel}</span>
                 <strong>{scopeCoverage}%</strong>
@@ -860,32 +945,67 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
               </article>
             </div>
           </div>
-
+        ),
+        kpis: (
           <div className="company-overview-kpi-grid">
             <article className="company-overview-kpi-card">
               <span>{text.kpiOneLabel}</span>
               <strong>{avgResponseHours.toFixed(1)}h</strong>
               <small>{text.kpiOneHint}</small>
             </article>
-
             <article className="company-overview-kpi-card">
               <span>{text.kpiTwoLabel}</span>
               <strong>{completionRate}%</strong>
               <small>{text.kpiTwoHint}</small>
             </article>
-
             <article className="company-overview-kpi-card">
               <span>{text.openLabel}</span>
               <strong>{selectedCompany.openQuestions}</strong>
               <small>{text.openKpiHint}</small>
             </article>
-
             <article className="company-overview-kpi-card">
               <span>{text.meetingsLabel}</span>
               <strong>{selectedCompany.pendingMeetings}</strong>
               <small>{text.meetingsKpiHint}</small>
             </article>
           </div>
+        ),
+      };
+
+      return (
+        <div className="company-overview-widget-stack">
+          {overviewWidgetOrder.map((id, idx) => (
+            <div
+              key={id}
+              className={`ov-widget${ovDragActive === id ? " ov-widget--dragging" : ""}${ovDragOver === id && ovDragActive !== id ? " ov-widget--drag-over" : ""}`}
+              draggable
+              onDragStart={() => handleOvDragStart(id)}
+              onDragOver={(e) => { e.preventDefault(); handleOvDragOver(id); }}
+              onDrop={handleOvDrop}
+              onDragEnd={handleOvDragEnd}
+            >
+              <div className="ov-widget-controls">
+                <span className="ov-drag-handle" aria-hidden="true">⠿</span>
+                <div className="ov-move-btns">
+                  <button
+                    type="button"
+                    className="ov-move-btn"
+                    disabled={idx === 0}
+                    onClick={() => handleOvMoveUp(id)}
+                    aria-label="Move up"
+                  >▲</button>
+                  <button
+                    type="button"
+                    className="ov-move-btn"
+                    disabled={idx === overviewWidgetOrder.length - 1}
+                    onClick={() => handleOvMoveDown(id)}
+                    aria-label="Move down"
+                  >▼</button>
+                </div>
+              </div>
+              {ovWidgets[id]}
+            </div>
+          ))}
         </div>
       );
     }
@@ -1408,7 +1528,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         <CompanyHypothesesTab
           hypotheses={activeHypotheses}
           language={language}
-          documentCount={workspaceDocumentCount}
+          documents={hypothesisDocumentOptions}
+          meetings={appointmentItems}
           onAddHypothesis={handleAddHypothesis}
           onUpdateHypothesis={handleUpdateHypothesis}
           onDeleteHypothesis={handleDeleteHypothesis}
@@ -1549,6 +1670,25 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         <div className="company-workspace-header-right">
           <button
             type="button"
+            className="list-pane-toggle"
+            aria-label={isListPaneCollapsed ? "Show company list" : "Hide company list"}
+            title={isListPaneCollapsed ? "Show company list" : "Hide company list"}
+            onClick={() => {
+              setIsListPaneCollapsed((prev) => {
+                const next = !prev;
+                try { localStorage.setItem("aura_list_pane_collapsed", next ? "1" : "0"); } catch {}
+                return next;
+              });
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {isListPaneCollapsed
+                ? <><rect x="3" y="3" width="7" height="18" rx="1" /><path d="M14 3h7M14 12h7M14 21h7" /></>
+                : <><rect x="3" y="3" width="7" height="18" rx="1" /><path d="M14 3h7M14 12h7M14 21h7" /></>}
+            </svg>
+          </button>
+          <button
+            type="button"
             className="profile-chip profile-chip-btn profile-chip-workspace"
             aria-label="Open profile"
             onClick={onOpenProfile}
@@ -1560,7 +1700,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         </div>
       </header>
 
-      <div className="company-workspace-grid">
+      <div className={`company-workspace-grid${isListPaneCollapsed ? " is-list-pane-collapsed" : ""}`}>
         <aside className="company-list-column">
           <article
             className={`company-box-card company-box-card-stacked company-collapsible${isRecentExpanded ? " is-expanded" : ""}`}

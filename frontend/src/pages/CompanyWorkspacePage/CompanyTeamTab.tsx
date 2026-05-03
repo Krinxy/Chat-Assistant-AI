@@ -57,10 +57,15 @@ export function CompanyTeamTab({
                 <tr key={member.id}>
                   <td>
                     {isEditing ? (
-                      <input
+                      <select
                         value={teamEditFunction}
                         onChange={(event) => onTeamEditFunctionChange(event.target.value)}
-                      />
+                      >
+                        <option value="">—</option>
+                        {text.teamFunctionOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     ) : (
                       member.functionName
                     )}

@@ -744,7 +744,7 @@ function WeatherGraph({
                   <stop offset="100%" stopColor="#5f83ff" stopOpacity="0.03" />
                 </linearGradient>
                 <clipPath id="wg-plot-clip">
-                  <rect x={0} y={0} width={contentSvgW} height={GRAPH_SVG_H + 4} />
+                  <rect x={0} y={GRAPH_CHART_TOP} width={contentSvgW} height={GRAPH_PLOT_H} />
               </clipPath>
               </defs>
 
@@ -1358,13 +1358,17 @@ export function DashboardAside({
         </div>
 
         <div key={activeCity.id} className="weather-stats-bar weather-stats-animated">
-          {activeCity.stats.map((item, index) => (
-            <span key={item.label} className="weather-stat-item">
-              {index > 0 && <span className="weather-stat-sep" aria-hidden="true">|</span>}
-              <span className="weather-stat-label">{item.label}</span>
-              <strong className="weather-stat-value">{item.value}</strong>
-            </span>
-          ))}
+          {activeCity.stats.map((item, index) => {
+            const statLabels = [copy.statTemperature, copy.statFeelsLike, copy.statHumidity, copy.statWind];
+            const label = statLabels[index] ?? item.label;
+            return (
+              <span key={index} className="weather-stat-item">
+                {index > 0 && <span className="weather-stat-sep" aria-hidden="true">|</span>}
+                <span className="weather-stat-label">{label}</span>
+                <strong className="weather-stat-value">{item.value}</strong>
+              </span>
+            );
+          })}
         </div>
 
         <WeatherGraph

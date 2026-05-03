@@ -89,13 +89,6 @@ const NotificationsIcon: NavIcon = ({ className }) => (
   </NavIconBase>
 );
 
-const ProfileIcon: NavIcon = ({ className }) => (
-  <NavIconBase className={className}>
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21a8 8 0 0 1 16 0" />
-  </NavIconBase>
-);
-
 const DeskIcon: NavIcon = ({ className }) => (
   <NavIconBase className={className}>
     <rect x="2" y="13" width="20" height="8" rx="1" />

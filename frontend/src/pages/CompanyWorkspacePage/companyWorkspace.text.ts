@@ -135,7 +135,7 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
       recentEventsTitle: "Letzte Aktivitaeten",
       tabs: {
         overview: "Uebersicht",
-        portfolio: "Portfolio",
+        portfolio: "Portfolio & Performance",
         performance: "Performance",
         documents: "Dokumente",
         hypotheses: "Hypothesen",
@@ -248,7 +248,7 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
     recentEventsTitle: "Recent events",
     tabs: {
       overview: "Overview",
-      portfolio: "Portfolio",
+      portfolio: "Portfolio & Performance",
       performance: "Performance",
       documents: "Documents",
       hypotheses: "Hypotheses",

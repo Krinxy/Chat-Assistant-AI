@@ -66,6 +66,8 @@ export interface CompanyNoteEntry {
   title: string;
   content: string;
   createdAt: string;
+  author?: string;
+  status?: "open" | "closed";
   source: CompanyNoteSource;
   labels: string[];
   linkedEvent: string | null;

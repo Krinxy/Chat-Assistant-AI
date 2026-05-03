@@ -20,23 +20,23 @@ type DeskTab = "overview" | "appointments" | "companies";
 
 interface MyDeskPanelProps {
   language: Language;
+  rsvpDecisions: Record<string, "accepted" | "declined">;
+  onRsvpDecision: (appointmentId: string, decision: "accepted" | "declined") => void;
 }
 
-export function MyDeskPanel({ language }: MyDeskPanelProps) {
+export function MyDeskPanel({ language, rsvpDecisions, onRsvpDecision }: MyDeskPanelProps) {
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
   const [assignedRole] = useState(readDbAssignedRole);
   const [activeTab, setActiveTab] = useState<DeskTab>("overview");
-  // RSVP decisions made this session — maps appointment id → "accepted" | "declined"
-  const [rsvpDecisions, setRsvpDecisions] = useState<Record<string, "accepted" | "declined">>({});
 
   const handleRsvp = (id: string, decision: "accepted" | "declined") => {
-    setRsvpDecisions((prev) => ({ ...prev, [id]: decision }));
+    onRsvpDecision(id, decision);
   };
 
   const copy =
     language === "de"
       ? {
-          title: "Mein Schreibtisch",
+          title: "Desk",
           subtitle: "Dein persönlicher Überblick.",
           tabs: {
             overview: "Überblick",
@@ -63,7 +63,7 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
           rsvpFrom: "Eingeladen von",
         }
       : {
-          title: "My Desk",
+          title: "Desk",
           subtitle: "Your personal overview.",
           tabs: {
             overview: "Overview",

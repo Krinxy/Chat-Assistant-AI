@@ -14,6 +14,7 @@ interface CompanyNotesTabProps {
   noteFileInputRef: RefObject<HTMLInputElement>;
   onAttachNoteFile: (event: ChangeEvent<HTMLInputElement>) => void;
   onSelectNote: (noteId: string) => void;
+  onMoveNoteStatus: (noteId: string, status: "open" | "closed") => void;
   editNoteTitle: string;
   editNoteContent: string;
   editNoteLabels: string[];
@@ -43,6 +44,7 @@ export function CompanyNotesTab({
   noteFileInputRef,
   onAttachNoteFile,
   onSelectNote,
+  onMoveNoteStatus,
   editNoteTitle,
   editNoteContent,
   editNoteLabels,
@@ -61,6 +63,10 @@ export function CompanyNotesTab({
   onAddNote,
 }: CompanyNotesTabProps) {
   const isActiveNoteEditable = activeNote !== null && activeNote.source !== "base";
+  const openNotes = notesForSelectedCompany.filter((note) => (note.status ?? "open") === "open");
+  const closedNotes = notesForSelectedCompany.filter((note) => (note.status ?? "open") === "closed");
+  const closedLabel = text.openLabel === "Open" ? "Closed" : "Geschlossen";
+  const dragPayloadType = "application/x-aura-note";
 
   return (
     <div className="company-notes-panel">
@@ -87,23 +93,83 @@ export function CompanyNotesTab({
             />
           </div>
 
-          <ul className="company-notes-list">
-            {notesForSelectedCompany.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className={`company-note-nav-btn${activeNoteId === item.id ? " is-active" : ""}`}
-                  onClick={() => {
-                    onSelectNote(item.id);
-                  }}
-                >
-                  <span>{item.title}</span>
-                  <small>{item.createdAt}</small>
-                </button>
-              </li>
-            ))}
-            {notesForSelectedCompany.length === 0 ? <li className="company-notes-empty">{text.noNotes}</li> : null}
-          </ul>
+          <div className="company-notes-kanban">
+            <section className="company-notes-column">
+              <h5>{text.openLabel}</h5>
+              <ul
+                className="company-notes-list company-notes-dropzone"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  const payload = event.dataTransfer.getData(dragPayloadType);
+                  if (payload.length === 0) return;
+                  const [noteId] = payload.split("|");
+                  if (noteId.length === 0) return;
+                  onMoveNoteStatus(noteId, "open");
+                }}
+              >
+                {openNotes.map((item) => (
+                  <li key={item.id} draggable onDragStart={(event) => event.dataTransfer.setData(dragPayloadType, `${item.id}|open`)}>
+                    <button
+                      type="button"
+                      className={`company-note-nav-btn${activeNoteId === item.id ? " is-active" : ""}`}
+                      onClick={() => {
+                        onSelectNote(item.id);
+                      }}
+                    >
+                      <span>{item.title}</span>
+                      <small>{item.author ?? "Team"} · {item.createdAt}</small>
+                    </button>
+                    <button
+                      type="button"
+                      className="company-note-move-btn"
+                      onClick={() => onMoveNoteStatus(item.id, "closed")}
+                    >
+                      {closedLabel}
+                    </button>
+                  </li>
+                ))}
+                {openNotes.length === 0 ? <li className="company-notes-empty">{text.noNotes}</li> : null}
+              </ul>
+            </section>
+
+            <section className="company-notes-column">
+              <h5>{closedLabel}</h5>
+              <ul
+                className="company-notes-list company-notes-dropzone"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  const payload = event.dataTransfer.getData(dragPayloadType);
+                  if (payload.length === 0) return;
+                  const [noteId] = payload.split("|");
+                  if (noteId.length === 0) return;
+                  onMoveNoteStatus(noteId, "closed");
+                }}
+              >
+                {closedNotes.map((item) => (
+                  <li key={item.id} draggable onDragStart={(event) => event.dataTransfer.setData(dragPayloadType, `${item.id}|closed`)}>
+                    <button
+                      type="button"
+                      className={`company-note-nav-btn${activeNoteId === item.id ? " is-active" : ""}`}
+                      onClick={() => {
+                        onSelectNote(item.id);
+                      }}
+                    >
+                      <span>{item.title}</span>
+                      <small>{item.author ?? "Team"} · {item.createdAt}</small>
+                    </button>
+                    <button
+                      type="button"
+                      className="company-note-move-btn"
+                      onClick={() => onMoveNoteStatus(item.id, "open")}
+                    >
+                      {text.openLabel}
+                    </button>
+                  </li>
+                ))}
+                {closedNotes.length === 0 ? <li className="company-notes-empty">{text.noNotes}</li> : null}
+              </ul>
+            </section>
+          </div>
         </aside>
 
         <section className="company-notes-detail-pane">
@@ -112,8 +178,13 @@ export function CompanyNotesTab({
             <p>{text.noNotes}</p>
           ) : (
             <article className="company-note-detail-card">
-              <h5>{activeNote.title}</h5>
-              <small>{activeNote.createdAt}</small>
+              <div className="company-note-detail-head">
+                <h5>{activeNote.title}</h5>
+                <span className={`company-note-detail-status company-note-detail-status--${activeNote.status ?? "open"}`}>
+                  {(activeNote.status ?? "open") === "open" ? text.openLabel : closedLabel}
+                </span>
+              </div>
+              <small>{activeNote.createdAt} · {activeNote.author ?? "Team"}</small>
               {activeNote.labels.length > 0 ? (
                 <div className="company-note-label-row">
                   {activeNote.labels.map((labelId) => (

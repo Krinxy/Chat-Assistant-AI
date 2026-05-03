@@ -15,6 +15,7 @@ interface HeaderProps {
   companyStories: CompanyStoryItem[];
   onOpenProfile: () => void;
   onOpenSidebar?: () => void;
+  showStories?: boolean;
 }
 
 const storyGradients = [
@@ -24,6 +25,7 @@ const storyGradients = [
   "linear-gradient(145deg, #9d79ff 0%, #7340ff 100%)",
   "linear-gradient(145deg, #c3a9ff 0%, #8861ff 100%)",
 ];
+const ENABLE_HEADER_STORY_STRIP = false;
 
 const resolveStoryGradient = (storyId: string): string => {
   let seed = 0;
@@ -46,6 +48,7 @@ export function Header({
   companyStories,
   onOpenProfile,
   onOpenSidebar,
+  showStories = true,
 }: HeaderProps) {
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [isStoryStripDragging, setIsStoryStripDragging] = useState<boolean>(false);
@@ -166,7 +169,7 @@ export function Header({
             )}
           </div>
 
-          {!hasStartedChat ? (
+          {!hasStartedChat && showStories && ENABLE_HEADER_STORY_STRIP ? (
             <div
               ref={storyStripRef}
               className={`home-story-strip${isStoryStripDragging ? " is-dragging" : ""}`}
@@ -227,7 +230,7 @@ export function Header({
         </button>
       </header>
 
-      {!hasStartedChat && activeStory !== null ? (
+      {!hasStartedChat && showStories && ENABLE_HEADER_STORY_STRIP && activeStory !== null ? (
         <div
           className="story-news-overlay"
           role="presentation"

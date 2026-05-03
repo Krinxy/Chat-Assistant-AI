@@ -1,9 +1,14 @@
+import { useState } from "react";
 import type { Language } from "../../features/chat/types/chat";
 import type { HypothesisEntry, HypothesisStatus } from "./companyWorkspace.types";
 
 interface CompanyHypothesesTabProps {
   hypotheses: HypothesisEntry[];
   language: Language;
+  documentCount: number;
+  onAddHypothesis: (entry: HypothesisEntry) => void;
+  onUpdateHypothesis: (index: number, entry: HypothesisEntry) => void;
+  onDeleteHypothesis: (index: number) => void;
 }
 
 const STATUS_LABEL: Record<HypothesisStatus, { de: string; en: string }> = {
@@ -32,7 +37,16 @@ function DonutSegment({ dash, offset, color }: DonutSegmentProps) {
   );
 }
 
-export function CompanyHypothesesTab({ hypotheses, language }: CompanyHypothesesTabProps) {
+export function CompanyHypothesesTab({
+  hypotheses,
+  language,
+  documentCount,
+  onAddHypothesis,
+  onUpdateHypothesis,
+  onDeleteHypothesis,
+}: CompanyHypothesesTabProps) {
+  const [draftText, setDraftText] = useState("");
+  const [draftStatus, setDraftStatus] = useState<HypothesisStatus>("pending");
   const confirmed   = hypotheses.filter((h) => h.status === "confirmed").length;
   const unconfirmed = hypotheses.filter((h) => h.status === "unconfirmed").length;
   const pending     = hypotheses.filter((h) => h.status === "pending").length;
@@ -43,8 +57,24 @@ export function CompanyHypothesesTab({ hypotheses, language }: CompanyHypotheses
   const pendingDash     = total > 0 ? (pending     / total) * HYPO_C : 0;
 
   const t = language === "de"
-    ? { title: "Hypothesen", rag: "RAG-Validierung ausstehend", empty: "Keine Hypothesen hinterlegt." }
-    : { title: "Hypotheses", rag: "RAG validation pending",     empty: "No hypotheses on record."    };
+    ? {
+      title: "Hypothesen",
+      rag: "RAG-Validierung ausstehend",
+      empty: "Keine Hypothesen hinterlegt.",
+      inputPlaceholder: "Hypothese eingeben...",
+      add: "Hypothese hinzufügen",
+      docsHint: "Dokumente im Workspace für Auswertung",
+      remove: "Entfernen",
+    }
+    : {
+      title: "Hypotheses",
+      rag: "RAG validation pending",
+      empty: "No hypotheses on record.",
+      inputPlaceholder: "Add hypothesis...",
+      add: "Add hypothesis",
+      docsHint: "Documents available for evaluation",
+      remove: "Remove",
+    };
 
   return (
     <div className="hyp-panel">
@@ -83,8 +113,33 @@ export function CompanyHypothesesTab({ hypotheses, language }: CompanyHypotheses
             <strong className="hyp-legend-val">{pending}</strong>
           </div>
           <span className="hyp-rag-label">{t.rag}</span>
+          <span className="hyp-rag-label">{documentCount} · {t.docsHint}</span>
         </div>
       </div>
+
+      <form
+        className="hyp-add-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const normalized = draftText.trim();
+          if (normalized.length === 0) return;
+          onAddHypothesis({ text: normalized, status: draftStatus });
+          setDraftText("");
+          setDraftStatus("pending");
+        }}
+      >
+        <input
+          value={draftText}
+          onChange={(event) => setDraftText(event.target.value)}
+          placeholder={t.inputPlaceholder}
+        />
+        <select value={draftStatus} onChange={(event) => setDraftStatus(event.target.value as HypothesisStatus)}>
+          <option value="pending">{STATUS_LABEL.pending[language]}</option>
+          <option value="confirmed">{STATUS_LABEL.confirmed[language]}</option>
+          <option value="unconfirmed">{STATUS_LABEL.unconfirmed[language]}</option>
+        </select>
+        <button type="submit">{t.add}</button>
+      </form>
 
       {hypotheses.length === 0 ? (
         <p className="hyp-empty">{t.empty}</p>
@@ -96,8 +151,27 @@ export function CompanyHypothesesTab({ hypotheses, language }: CompanyHypotheses
               <div key={i} className={`hyp-card hyp-card--${h.status}`}>
                 <div className="hyp-card-stripe" />
                 <div className="hyp-card-body">
-                  <p className="hyp-card-text">{h.text}</p>
-                  <span className={`hyp-status-pill hyp-status-pill--${h.status}`}>{label}</span>
+                  <textarea
+                    className="hyp-card-input"
+                    value={h.text}
+                    onChange={(event) => {
+                      onUpdateHypothesis(i, { ...h, text: event.target.value });
+                    }}
+                  />
+                  <div className="hyp-card-actions">
+                    <select
+                      value={h.status}
+                      onChange={(event) => onUpdateHypothesis(i, { ...h, status: event.target.value as HypothesisStatus })}
+                    >
+                      <option value="pending">{STATUS_LABEL.pending[language]}</option>
+                      <option value="confirmed">{STATUS_LABEL.confirmed[language]}</option>
+                      <option value="unconfirmed">{STATUS_LABEL.unconfirmed[language]}</option>
+                    </select>
+                    <span className={`hyp-status-pill hyp-status-pill--${h.status}`}>{label}</span>
+                    <button type="button" className="hyp-action-btn" onClick={() => onDeleteHypothesis(i)}>
+                      {t.remove}
+                    </button>
+                  </div>
                 </div>
               </div>
             );

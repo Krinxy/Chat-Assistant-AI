@@ -155,6 +155,15 @@ export function ImprintPanel({ language, onClose }: ImprintPanelProps) {
       </header>
 
       <div className="imprint-content">
+        <section className="imprint-block imprint-study-notice">
+          <h3>{language === "de" ? "Hinweis: Studienprojekt" : "Notice: Study Project"}</h3>
+          <p>
+            {language === "de"
+              ? "Diese Anwendung ist ein Studienprojekt und wurde im Rahmen einer Hochschulausbildung entwickelt. Alle angegebenen Unternehmensdaten (Name, Adresse, Registernummer, Umsatzsteuer-ID) sind Platzhalterwerte und haben keinen realen Bezug. Die App dient ausschließlich Demonstrations- und Lernzwecken."
+              : "This application is a study project developed as part of a university programme. All company details listed below (name, address, register number, VAT ID) are placeholder values and have no real-world reference. The app is intended solely for demonstration and educational purposes."}
+          </p>
+        </section>
+
         <section className="imprint-block">
           <h3>{copy.providerLabel}</h3>
           <p>

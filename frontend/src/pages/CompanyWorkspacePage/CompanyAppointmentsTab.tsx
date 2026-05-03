@@ -703,11 +703,19 @@ export function CompanyAppointmentsTab({
                             const showDescription = isExpanded || (!compact && !medium && !isPending);
                             const showSelect      = isExpanded && !isPending;
                             const showInviteBadge = isPending && !isExpanded;
+                            const cardClassName = [
+                              "planner-card",
+                              compact ? "planner-card--compact" : "",
+                              isExpanded ? "planner-card--expanded" : "",
+                              totalCols > 1 ? "planner-card--overlap" : "",
+                              isPending ? "planner-card--invite" : "",
+                              isDeclined ? "planner-card--declined" : "",
+                            ].filter(Boolean).join(" ");
 
                             return (
                               <div
                                 key={cardKey}
-                                className={`planner-card${compact ? " planner-card--compact" : ""}${isExpanded ? " planner-card--expanded" : ""}${totalCols > 1 ? " planner-card--overlap" : ""}${isPending ? " planner-card--invite" : ""}${isDeclined ? " planner-card--declined" : ""}`}
+                                className={cardClassName}
                                 style={{
                                   top,
                                   left: cardLeft,

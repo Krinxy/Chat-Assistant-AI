@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import { vi } from 'vitest';
 import { Sidebar } from './Sidebar';
 import { uiTextByLanguage } from '../../shared/i18n/uiText';
 
@@ -54,6 +55,30 @@ describe('Sidebar Widget', () => {
     expect(screen.queryByText('Letzte Chats')).not.toBeInTheDocument();
     expect(screen.getByText('DE')).toBeInTheDocument();
     expect(screen.getByText('EN')).toBeInTheDocument();
+  });
+
+  it('navigates to imprint when Impressum link is clicked', () => {
+    const setActiveView = vi.fn();
+    render(
+      <Sidebar
+        isSidebarOpen={true}
+        setIsSidebarOpen={() => {}}
+        activeView="dashboard"
+        setActiveView={setActiveView}
+        language="de"
+        setLanguage={() => {}}
+        theme="light"
+        onToggleTheme={() => {}}
+        copy={uiTextByLanguage.de.sidebar}
+        activeServiceLabels={[]}
+        latestMessagePreview={null}
+        onStartNewChat={() => {}}
+        onOpenRecentChat={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Impressum'));
+    expect(setActiveView).toHaveBeenCalledWith('imprint');
   });
 
   it('shows Aktiv only for current active recent chat', () => {

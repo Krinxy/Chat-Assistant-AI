@@ -547,6 +547,7 @@ export function Sidebar({
             className="sidebar-imprint-link"
             onClick={(event) => {
               event.preventDefault();
+              setActiveView("imprint");
             }}
           >
             {copy.imprint}

@@ -97,9 +97,11 @@ export interface CompanyWorkspaceText {
   appointmentFormDesc: string;
   appointmentFormDay: string;
   appointmentFormTime: string;
+  appointmentFormEnd: string;
   appointmentFormPeople: string;
   appointmentFormSave: string;
   appointmentFormCancel: string;
+  appointmentFormRecurring: string;
   teamFunctionCol: string;
   teamNameCol: string;
   teamLatestEventCol: string;
@@ -203,10 +205,12 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
       appointmentFormName: "Terminname",
       appointmentFormDesc: "Beschreibung",
       appointmentFormDay: "Tag",
-      appointmentFormTime: "Uhrzeit",
+      appointmentFormTime: "Startzeit",
+      appointmentFormEnd: "Endzeit",
       appointmentFormPeople: "Teilnehmer",
       appointmentFormSave: "Termin speichern",
       appointmentFormCancel: "Abbrechen",
+      appointmentFormRecurring: "Wöchentlich wiederholen",
       teamFunctionCol: "Funktion",
       teamNameCol: "Name",
       teamLatestEventCol: "Latest event",
@@ -314,10 +318,12 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
     appointmentFormName: "Appointment name",
     appointmentFormDesc: "Description",
     appointmentFormDay: "Day",
-    appointmentFormTime: "Time",
+    appointmentFormTime: "Start time",
+    appointmentFormEnd: "End time",
     appointmentFormPeople: "Attendees",
     appointmentFormSave: "Save appointment",
     appointmentFormCancel: "Cancel",
+    appointmentFormRecurring: "Repeat weekly",
     teamFunctionCol: "Function",
     teamNameCol: "Name",
     teamLatestEventCol: "Latest event",

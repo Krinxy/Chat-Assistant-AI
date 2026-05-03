@@ -5,6 +5,8 @@ import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 import { CompanyAppointmentsTab } from "../CompanyWorkspacePage/CompanyAppointmentsTab";
 import {
   companyRecords,
+  personalAppointments,
+  personalColleagues,
   weekdayLabelsByLanguage,
 } from "../CompanyWorkspacePage/companyWorkspace.data";
 import { getCompanyWorkspaceText } from "../CompanyWorkspacePage/companyWorkspace.text";
@@ -24,6 +26,12 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
   const [assignedRole] = useState(readDbAssignedRole);
   const [activeTab, setActiveTab] = useState<DeskTab>("overview");
+  // RSVP decisions made this session — maps appointment id → "accepted" | "declined"
+  const [rsvpDecisions, setRsvpDecisions] = useState<Record<string, "accepted" | "declined">>({});
+
+  const handleRsvp = (id: string, decision: "accepted" | "declined") => {
+    setRsvpDecisions((prev) => ({ ...prev, [id]: decision }));
+  };
 
   const copy =
     language === "de"
@@ -49,6 +57,10 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
           meetingsLabel: "Meetings",
           segmentLabel: "Segment",
           ownerLabel: "Owner",
+          rsvpAccept: "Annehmen",
+          rsvpDecline: "Ablehnen",
+          rsvpPendingLabel: "Einladung",
+          rsvpFrom: "Eingeladen von",
         }
       : {
           title: "My Desk",
@@ -72,6 +84,10 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
           meetingsLabel: "Meetings",
           segmentLabel: "Segment",
           ownerLabel: "Owner",
+          rsvpAccept: "Accept",
+          rsvpDecline: "Decline",
+          rsvpPendingLabel: "Invite",
+          rsvpFrom: "Invited by",
         };
 
   const accessibleCompanies = useMemo<CompanyRecord[]>(() => {
@@ -83,13 +99,12 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
     const weekDays = weekdayLabelsByLanguage[language];
 
     // Build name tokens to match against the attendees list.
-    // We check firstName and the first part of fullName (e.g. "Dominic" matches "Dominic Bechtold").
     const nameTokens = [
       ACTIVE_DEV_PROFILE.firstName.toLowerCase(),
       ACTIVE_DEV_PROFILE.fullName.toLowerCase(),
     ];
 
-    return accessibleCompanies.flatMap((company) =>
+    const companyItems = accessibleCompanies.flatMap((company) =>
       company.appointments
         .map((raw, index) =>
           parseAppointmentItem(raw, index % weekDays.length, company.id, index),
@@ -102,7 +117,16 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
           });
         }),
     );
-  }, [accessibleCompanies, language]);
+
+    // Merge with personal appointments, applying any RSVP decisions made this session
+    const personalItems = personalAppointments.map((item) => {
+      const decision = rsvpDecisions[item.id];
+      if (decision !== undefined) return { ...item, rsvp: decision };
+      return item;
+    });
+
+    return [...companyItems, ...personalItems];
+  }, [accessibleCompanies, language, rsvpDecisions]);
 
   const visibleDayIndices = useMemo(() => {
     const hasWeekend = userAppointments.some((item) => item.dayIndex >= 5);
@@ -224,9 +248,11 @@ export function MyDeskPanel({ language }: MyDeskPanelProps) {
               text={text}
               appointmentItems={userAppointments}
               visibleDayIndices={visibleDayIndices}
-              activeTeamMembers={[]}
+              activeTeamMembers={personalColleagues}
               companyAssignees={{}}
               onAssigneeChange={() => undefined}
+              onRsvp={handleRsvp}
+              rsvpCopy={{ accept: copy.rsvpAccept, decline: copy.rsvpDecline, pendingLabel: copy.rsvpPendingLabel, from: copy.rsvpFrom }}
             />
           )
         )}

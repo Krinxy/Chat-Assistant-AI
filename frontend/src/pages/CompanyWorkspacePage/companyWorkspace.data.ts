@@ -2,8 +2,10 @@ import type { Language } from "../../features/chat/types/chat";
 import type {
   CompanyRecord,
   CompanyTab,
+  CompanyTeamMemberEntry,
   DisplayRole,
   HypothesisEntry,
+  ParsedAppointmentItem,
   WeekdayTokenEntry,
 } from "./companyWorkspace.types";
 
@@ -69,29 +71,57 @@ export const companyRecords: CompanyRecord[] = [
       { text: "Dokumenten-Shortcuts reduzieren offene Tickets > 20%.", status: "confirmed" },
     ] satisfies HypothesisEntry[],
     appointments: [
-      "Mo 08:30 Daily Standup | Lena, Amir, Dominic",
-      "Mo 10:00 Risk Review | Amir, Jens",
-      "Mo 11:00 Steering | Lena, Amir, Jens",
-      "Mo 14:00 Demo Prep | Carla, Lena",
-      "Mo 16:30 EOD Sync | Amir",
-      "Di 09:00 QBR Vorbereitung | Jens, Carla, Dominic",
-      "Di 10:30 Legal Abstimmung | Jens",
-      "Di 13:00 Produkt-Feedback | Lena, Amir, Carla",
-      "Di 15:00 Client Check-in | Carla",
-      "Di 17:00 Release Planning | Amir, Carla",
-      "Mi 08:30 Daily Standup | Lena, Amir",
-      "Mi 09:30 Roadmap Session | Carla, Jens, Lena, Dominic",
-      "Mi 11:30 API Workshop | Amir",
-      "Mi 15:30 Enablement | Carla, Lena",
-      "Mi 16:00 Budget Review | Jens",
-      "Do 09:00 Strategy Review | Lena, Amir, Jens, Dominic",
-      "Do 10:30 Einwand-Handling | Carla, Lena",
-      "Do 14:00 Risk Assessment | Jens",
-      "Do 15:30 Next Steps | Amir",
-      "Fr 09:00 Sales Review | Amir, Carla, Jens, Dominic",
-      "Fr 10:30 Weekly Close | Lena, Amir",
-      "Fr 13:00 Retro | Carla, Jens",
-      "Fr 15:00 Forecast | Amir, Lena",
+      // ── W-1 (last week) ──────────────────────────────────────────────────
+      "W-1 Mo 09:00 Sprint Review | Lena, Amir, Dominic",
+      "W-1 Mo 14:30 Kunden-Präsentation | Carla, Jens",
+      "W-1 Di 10:00 Technische Abstimmung | Amir, Carla",
+      "W-1 Mi 09:30 Journey Workshop | Lena, Carla, Dominic",
+      "W-1 Do 15:00 Risiko-Retrospektive | Jens, Amir",
+      "W-1 Fr 11:00 Sprint Abschluss | Lena, Amir, Dominic",
+      // ── W0 (current week) ────────────────────────────────────────────────
+      "Mo 08:30-09:00 Daily Standup | Lena, Amir, Dominic",
+      "Mo 10:00-11:30 Risk Review | Amir, Jens",
+      "Mo 11:00-12:00 Steering | Lena, Amir, Jens",
+      "Mo 14:00-15:00 Demo Prep | Carla, Lena",
+      "Mo 16:30-17:00 EOD Sync | Amir",
+      "Di 09:00-10:30 QBR Vorbereitung | Jens, Carla, Dominic",
+      "Di 10:30-11:30 Legal Abstimmung | Jens",
+      "Di 13:00-14:00 Produkt-Feedback | Lena, Amir, Carla",
+      "Di 15:00-15:30 Client Check-in | Carla",
+      "Di 17:00-18:00 Release Planning | Amir, Carla",
+      "Mi 08:30-09:00 Daily Standup | Lena, Amir",
+      "Mi 09:30-11:30 Roadmap Session | Carla, Jens, Lena, Dominic",
+      "Mi 11:30-12:30 API Workshop | Amir",
+      "Mi 15:30-16:30 Enablement | Carla, Lena",
+      "Mi 16:00-17:00 Budget Review | Jens",
+      "Do 09:00-10:30 Strategy Review | Lena, Amir, Jens, Dominic",
+      "Do 10:30-11:30 Einwand-Handling | Carla, Lena",
+      "Do 14:00-15:00 Risk Assessment | Jens",
+      "Do 15:30-16:00 Next Steps | Amir",
+      "Fr 09:00-10:00 Sales Review | Amir, Carla, Jens, Dominic",
+      "Fr 10:30-11:30 Weekly Close | Lena, Amir",
+      "Fr 13:00-14:30 Retro | Carla, Jens",
+      "Fr 15:00-16:00 Forecast | Amir, Lena",
+      // ── W+1 (next week) ──────────────────────────────────────────────────
+      "W+1 Mo 08:30 Sprint Planning | Lena, Amir, Dominic",
+      "W+1 Mo 10:00 Risk Monitoring | Amir, Jens",
+      "W+1 Di 09:30 Produkt-Roadmap | Carla, Lena",
+      "W+1 Di 14:00 Legal Update | Jens, Dominic",
+      "W+1 Mi 11:00 Data Review | Amir, Carla",
+      "W+1 Mi 14:30 API Consent Sync | Lena, Jens",
+      "W+1 Do 10:00 Quarterly Check-in | Lena, Amir, Carla, Jens, Dominic",
+      "W+1 Do 15:30 Eskalations-Check | Amir",
+      "W+1 Fr 10:00 Weekly Wrap | Amir, Lena",
+      "W+1 Fr 13:00 Forecast Prep | Carla, Jens",
+      // ── W+2 (week after next) ─────────────────────────────────────────────
+      "W+2 Mo 09:00 OKR Review | Lena, Amir, Dominic",
+      "W+2 Mo 14:00 Governance Session | Jens",
+      "W+2 Di 11:00 Security Audit | Jens, Amir",
+      "W+2 Mi 10:30 Feature Preview | Carla, Lena, Dominic",
+      "W+2 Mi 14:00 Architecture Review | Amir, Carla",
+      "W+2 Do 10:00 Stakeholder-Sync | Jens",
+      "W+2 Do 14:30 Release Gate | Lena, Amir, Carla",
+      "W+2 Fr 12:00 Monats-Abschluss | Amir, Carla, Dominic",
     ],
     notes: [
       "Decision Maker will benchmark against two competitors.",
@@ -128,14 +158,32 @@ export const companyRecords: CompanyRecord[] = [
       { text: "Dispatch-Assist Feature senkt Eskalationen in Peak-Slots.", status: "pending" },
     ] satisfies HypothesisEntry[],
     appointments: [
-      "Mo 09:00 Fleet-Status | Daria, Kim, Dominic",
-      "Di 10:30 SLA-Abstimmung | Kim, Faris",
-      "Di 14:00 KPI Review | Daria, Faris, Dominic",
-      "Mi 11:00 Eskalations-Check | Faris",
-      "Mi 14:30 Ops-Sync | Kim, Dominic",
-      "Do 09:30 Renewal Prep | Daria, Kim, Faris",
-      "Do 15:00 Wochenbericht | Daria, Faris, Dominic",
-      "Fr 09:30 Fleet Close | Kim",
+      // ── W-1 (last week) ──────────────────────────────────────────────────
+      "W-1 Mo 10:00 Fleet Recap | Daria, Kim",
+      "W-1 Di 14:30 SLA Analyse | Faris, Dominic",
+      "W-1 Do 09:00 Eskalations-Log | Daria, Kim, Faris",
+      "W-1 Fr 11:00 Sprint Review | Kim, Dominic",
+      // ── W0 (current week) ────────────────────────────────────────────────
+      "Mo 09:00-09:30 Fleet-Status | Daria, Kim, Dominic",
+      "Di 10:30-12:00 SLA-Abstimmung | Kim, Faris",
+      "Di 14:00-15:00 KPI Review | Daria, Faris, Dominic",
+      "Mi 11:00-11:30 Eskalations-Check | Faris",
+      "Mi 14:30-15:30 Ops-Sync | Kim, Dominic",
+      "Do 09:30-11:00 Renewal Prep | Daria, Kim, Faris",
+      "Do 15:00-15:30 Wochenbericht | Daria, Faris, Dominic",
+      "Fr 09:30-10:00 Fleet Close | Kim",
+      // ── W+1 (next week) ──────────────────────────────────────────────────
+      "W+1 Mo 09:30 Route Planning | Daria, Kim",
+      "W+1 Di 11:00 Renewal Final | Faris, Daria, Dominic",
+      "W+1 Mi 10:00 Ops-Update | Kim",
+      "W+1 Mi 15:00 Dispatch Review | Daria, Faris",
+      "W+1 Do 14:00 KPI Board | Daria, Faris",
+      "W+1 Fr 10:30 Wochensync | Kim, Faris, Dominic",
+      // ── W+2 (week after next) ─────────────────────────────────────────────
+      "W+2 Mo 09:00 Q2 Kick-off | Daria, Kim, Faris",
+      "W+2 Mi 11:00 Forecast | Faris, Dominic",
+      "W+2 Do 14:00 SLA Board | Daria, Kim",
+      "W+2 Fr 09:00 Abschluss-Meeting | Daria",
     ],
     notes: ["Customer asks for dashboard access by region managers."],
     teamMembers: ["Sales: Daria", "CSM: Faris", "Ops: Kim"],
@@ -167,6 +215,12 @@ export const companyRecords: CompanyRecord[] = [
       { text: "Weekly Summary mit offenen Themen reduziert Churn-Risiko.", status: "unconfirmed" },
     ] satisfies HypothesisEntry[],
     appointments: [
+      // ── W-1 ──────────────────────────────────────────────────────────────
+      "W-1 Mo 09:00 Compliance Review | Sina, Lea",
+      "W-1 Mi 10:30 Patientendaten-Audit | Daniel, Lea",
+      "W-1 Do 14:00 Security Sync | Lea",
+      "W-1 Fr 11:00 Wochensync | Sina, Daniel",
+      // ── W0 ───────────────────────────────────────────────────────────────
       "Mo 08:30 Compliance Sync | Sina, Lea",
       "Mo 10:00 Patient Journey Review | Daniel, Sina",
       "Di 09:00 Datenschutz-Check | Lea",
@@ -176,6 +230,16 @@ export const companyRecords: CompanyRecord[] = [
       "Do 09:30 IT-Security Review | Lea, Daniel",
       "Do 16:00 Product Board | Daniel, Sina, Lea",
       "Fr 10:00 Wochensync | Sina, Daniel",
+      // ── W+1 ──────────────────────────────────────────────────────────────
+      "W+1 Mo 08:30 Datenschutz-Sprint | Sina, Lea",
+      "W+1 Di 10:00 Produkt-Check | Daniel, Sina",
+      "W+1 Mi 14:00 Risiko-Review | Lea, Sina",
+      "W+1 Do 09:00 Clinical Update | Daniel",
+      "W+1 Fr 12:00 Monats-Abschluss | Sina, Daniel, Lea",
+      // ── W+2 ──────────────────────────────────────────────────────────────
+      "W+2 Mo 10:00 Strategie-Sync | Sina, Daniel",
+      "W+2 Di 14:00 Audit-Vorbereitung | Lea",
+      "W+2 Fr 11:30 Monats-Retro | Sina, Daniel",
     ],
     notes: ["Need role-based masking for sensitive patient hints."],
     teamMembers: ["Analyst: Sina", "CSM: Daniel", "Security: Lea"],
@@ -394,6 +458,12 @@ export const companyRecords: CompanyRecord[] = [
       { text: "Scope-basierte KPI-Slices steigern Cross-Functional Alignment.", status: "unconfirmed" },
     ] satisfies HypothesisEntry[],
     appointments: [
+      // ── W-1 ──────────────────────────────────────────────────────────────
+      "W-1 Mo 09:30 Incident Recap | Florian, Dani",
+      "W-1 Di 11:00 SLA Analyse | Arda, Mia",
+      "W-1 Do 14:30 Eskalations-Review | Florian, Dani",
+      "W-1 Fr 10:00 Sprint Abschluss | Mia, Arda",
+      // ── W0 ───────────────────────────────────────────────────────────────
       "Mo 08:30 Incident Debrief | Florian, Dani",
       "Mo 10:30 Ops Board | Arda, Florian",
       "Mo 14:00 SLA Forecast | Mia",
@@ -406,6 +476,16 @@ export const companyRecords: CompanyRecord[] = [
       "Do 14:00 Cross-Functional | Arda, Mia, Florian",
       "Fr 10:00 Wochenbericht | Mia, Arda",
       "Fr 15:00 Exec Debrief | Arda, Mia, Florian",
+      // ── W+1 ──────────────────────────────────────────────────────────────
+      "W+1 Mo 08:30 NOC Planning | Dani, Florian",
+      "W+1 Di 11:00 SLA Review | Mia, Arda",
+      "W+1 Mi 09:30 Incident Playbook Update | Florian",
+      "W+1 Do 14:00 Enterprise Check-in | Arda, Mia",
+      "W+1 Fr 10:00 Wochenbericht | Mia, Arda",
+      // ── W+2 ──────────────────────────────────────────────────────────────
+      "W+2 Mo 10:00 Q2 Ops Planning | Arda, Florian",
+      "W+2 Mi 14:00 KPI Board | Mia, Dani",
+      "W+2 Fr 11:00 Monats-Retro | Arda, Mia, Florian",
     ],
     notes: ["Need confidence gates for automated escalation suggestions."],
     teamMembers: ["Sales: Arda", "CSM: Mia", "Ops Lead: Florian", "Security: Dani"],
@@ -475,6 +555,12 @@ export const companyRecords: CompanyRecord[] = [
       { text: "Dokumenten-Routing mit Rollenfiltern reduziert Review-Latenz.", status: "pending" },
     ] satisfies HypothesisEntry[],
     appointments: [
+      // ── W-1 ──────────────────────────────────────────────────────────────
+      "W-1 Mo 08:45 Safety Recap | Iris, Tom",
+      "W-1 Di 10:00 Compliance Retro | Lara, Ben",
+      "W-1 Do 14:00 Clinical Review | Iris, Tom, Lara",
+      "W-1 Fr 11:00 Sprint Abschluss | Lara, Ben",
+      // ── W0 ───────────────────────────────────────────────────────────────
       "Mo 08:45 Daily Standup | Iris, Tom, Lara",
       "Mo 10:30 Compliance Board | Iris, Lara",
       "Mo 14:00 Risk Review | Lara, Ben",
@@ -494,6 +580,16 @@ export const companyRecords: CompanyRecord[] = [
       "Fr 09:00 Weekly Retrospective | Iris, Tom, Lara, Ben",
       "Fr 11:30 Steering | Lara, Tom, Iris",
       "Fr 14:00 Governance Sign-off | Lara, Ben",
+      // ── W+1 ──────────────────────────────────────────────────────────────
+      "W+1 Mo 09:00 Regulatory Planning | Lara, Tom",
+      "W+1 Di 11:00 Safety Board | Iris, Ben",
+      "W+1 Mi 14:00 Phase Gate Review | Lara, Iris",
+      "W+1 Do 09:30 Partner Update | Tom",
+      "W+1 Fr 10:00 Weekly Retrospective | Iris, Tom, Lara, Ben",
+      // ── W+2 ──────────────────────────────────────────────────────────────
+      "W+2 Mo 09:30 Q2 Clinical Planning | Iris, Tom, Lara",
+      "W+2 Mi 14:00 Audit-Vorbereitung | Ben, Lara",
+      "W+2 Fr 11:30 Monats-Retro | Iris, Tom",
     ],
     notes: ["Escalation notes should include confidence level for each recommendation."],
     teamMembers: ["Analyst: Iris", "Medical Ops: Tom", "Compliance: Lara", "Security: Ben"],
@@ -551,5 +647,121 @@ export const companyRecords: CompanyRecord[] = [
     ],
     portfolioSummary: "Stabile Nutzung, hohes Potenzial bei Team-Orchestrierung.",
     performanceSummary: "84% beantwortete Fragen, 5 offen, 1 geplanter Termin.",
+  },
+];
+
+// ── Personal desk mock data ────────────────────────────────────────────────────
+
+/**
+ * A small fixed list of colleagues that appear in the personal calendar's
+ * assignee-select and as invite senders.  These are purely simulated — no real
+ * user account exists behind them.
+ */
+export const personalColleagues: CompanyTeamMemberEntry[] = [
+  { id: "colleague-sophie",  functionName: "Product Manager",    fullName: "Sophie Reiter"   },
+  { id: "colleague-markus",  functionName: "Engineering Lead",   fullName: "Markus Haas"     },
+  { id: "colleague-jana",    functionName: "UX Designer",        fullName: "Jana Wolff"      },
+  { id: "colleague-tobias",  functionName: "Sales Manager",      fullName: "Tobias Kramer"   },
+  { id: "colleague-miriam",  functionName: "Customer Success",   fullName: "Miriam Schulte"  },
+];
+
+/**
+ * Personal appointments for Dominic Bechtold (the active dev profile).
+ * Entries with `invitedBy` + `rsvp: "pending"` simulate incoming meeting invites
+ * that still need to be accepted or declined.
+ */
+export const personalAppointments: ParsedAppointmentItem[] = [
+  // ── Own / already-accepted appointments (current week W0) ─────────────────
+  {
+    id: "personal-001",
+    dayIndex: 0, // Mo
+    weekIndex: 0,
+    timeLabel: "08:30",
+    endTimeLabel: "09:00",
+    title: "Daily Standup",
+    attendees: ["Sophie Reiter", "Markus Haas", "Jana Wolff"],
+    recurring: true,
+  },
+  {
+    id: "personal-002",
+    dayIndex: 1, // Di
+    weekIndex: 0,
+    timeLabel: "11:00",
+    endTimeLabel: "12:00",
+    title: "Sprint Review",
+    attendees: ["Sophie Reiter", "Jana Wolff", "Tobias Kramer"],
+    description: "Vorstellung der Ergebnisse aus Sprint 24.",
+  },
+  {
+    id: "personal-003",
+    dayIndex: 3, // Do
+    weekIndex: 0,
+    timeLabel: "14:00",
+    endTimeLabel: "14:30",
+    title: "1:1 mit Sophie",
+    attendees: ["Sophie Reiter"],
+    recurring: true,
+  },
+  {
+    id: "personal-004",
+    dayIndex: 4, // Fr
+    weekIndex: 0,
+    timeLabel: "09:30",
+    endTimeLabel: "10:00",
+    title: "Weekly Retrospektive",
+    attendees: ["Sophie Reiter", "Markus Haas", "Jana Wolff", "Miriam Schulte"],
+    recurring: true,
+  },
+
+  // ── Pending invites — sent by a colleague, awaiting RSVP ──────────────────
+  {
+    id: "personal-invite-001",
+    dayIndex: 1, // Di
+    weekIndex: 0,
+    timeLabel: "15:00",
+    endTimeLabel: "16:00",
+    title: "Roadmap Alignment Q3",
+    attendees: ["Tobias Kramer", "Miriam Schulte", "Dominic Bechtold"],
+    description: "Abstimmung der Roadmap-Prioritäten für Q3. Deine Einschätzung zu Feature X wäre hilfreich.",
+    invitedBy: "Tobias Kramer",
+    rsvp: "pending",
+  },
+  {
+    id: "personal-invite-002",
+    dayIndex: 2, // Mi
+    weekIndex: 0,
+    timeLabel: "10:00",
+    endTimeLabel: "10:30",
+    title: "Design Review: Onboarding Flow",
+    attendees: ["Jana Wolff", "Dominic Bechtold"],
+    description: "Jana möchte Feedback zum überarbeiteten Onboarding-Screen.",
+    invitedBy: "Jana Wolff",
+    rsvp: "pending",
+  },
+  {
+    id: "personal-invite-003",
+    dayIndex: 3, // Do
+    weekIndex: 0,
+    timeLabel: "16:00",
+    endTimeLabel: "17:00",
+    title: "Tech Debt Triage",
+    attendees: ["Markus Haas", "Dominic Bechtold"],
+    description: "Priorisierung offener Tech-Debt-Tickets vor dem nächsten Sprint.",
+    invitedBy: "Markus Haas",
+    rsvp: "pending",
+  },
+
+  // ── Next week (W+1) — one pending invite to show it also works across weeks ─
+  {
+    id: "personal-invite-004",
+    dayIndex: 0, // Mo
+    weekIndex: 1,
+    timeLabel: "13:00",
+    endTimeLabel: "14:00",
+    title: "Customer Feedback Session",
+    attendees: ["Miriam Schulte", "Tobias Kramer", "Dominic Bechtold"],
+    description: "Live-Feedback-Runde mit zwei Bestandskunden. Bitte Notizen vorbereiten.",
+    invitedBy: "Miriam Schulte",
+    rsvp: "pending",
   },
 ];

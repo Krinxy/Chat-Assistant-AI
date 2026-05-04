@@ -46,35 +46,35 @@ export const modelProviders: ModelProvider[] = [
     id: "recent",
     label: "Recently used",
     models: [
-      { id: "gpt-5.3-codex", label: "GPT-5.3-Codex" },
-      { id: "claude-sonnet-4", label: "Claude Sonnet 4" },
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+      { id: "gpt-5-5", label: "GPT-5.5" },
+      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+      { id: "gemini-3-1-pro", label: "Gemini 3.1 Pro" },
     ],
   },
   {
     id: "anthropic",
     label: "Anthropic",
     models: [
-      { id: "claude-opus-4.1", label: "Claude Opus 4.1" },
-      { id: "claude-sonnet-4", label: "Claude Sonnet 4" },
-      { id: "claude-haiku-3.5", label: "Claude Haiku 3.5" },
+      { id: "claude-opus-4-7", label: "Claude Opus 4.7" },
+      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
+      { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
     ],
   },
   {
     id: "openai",
     label: "OpenAI",
     models: [
-      { id: "gpt-5.3-codex", label: "GPT-5.3-Codex" },
-      { id: "gpt-5", label: "GPT-5" },
-      { id: "gpt-4.1", label: "GPT-4.1" },
+      { id: "gpt-5-5", label: "GPT-5.5" },
+      { id: "gpt-5-4", label: "GPT-5" },
+      { id: "gpt-5-nano", label: "GPT-5 Nano" },
     ],
   },
   {
     id: "google",
     label: "Google",
     models: [
-      { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { id: "gemini-3-1-pro", label: "Gemini 3.1 Pro" },
+      { id: "gemini-3-flash", label: "Gemini 3 Flash" },
     ],
   },
   {

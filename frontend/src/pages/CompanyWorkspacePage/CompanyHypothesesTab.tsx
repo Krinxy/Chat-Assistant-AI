@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Language } from "../../features/chat/types/chat";
-import type { HypothesisEntry, HypothesisStatus, ParsedAppointmentItem } from "./companyWorkspace.types";
+import type { HypothesisEntry, HypothesisStatus } from "./companyWorkspace.types";
 
 interface CompanyHypothesesTabProps {
   hypotheses: HypothesisEntry[];
   language: Language;
-  documents: string[];
-  meetings: ParsedAppointmentItem[];
   onAddHypothesis: (entry: HypothesisEntry) => void;
   onUpdateHypothesis: (index: number, entry: HypothesisEntry) => void;
   onDeleteHypothesis: (index: number) => void;
@@ -21,8 +19,6 @@ const STATUS_LABEL: Record<HypothesisStatus, { de: string; en: string }> = {
 export function CompanyHypothesesTab({
   hypotheses,
   language,
-  documents,
-  meetings,
   onAddHypothesis,
   onUpdateHypothesis,
   onDeleteHypothesis,
@@ -35,19 +31,20 @@ export function CompanyHypothesesTab({
       addHypothesis: "Hypothese hinzufügen",
       title: "Titel",
       description: "Beschreibung",
-      sourceDocument: "Dokument",
-      sourceMeeting: "Meeting",
       status: "Status",
-      ragOwned: "Wird später automatisch vom RAG/LLM gesetzt",
+      ragOwned: "Status, Quelldokument und Meeting werden automatisch vom RAG/LLM gesetzt",
+      ragSourceDocument: "Quelldokument (RAG)",
+      ragSourceMeeting: "Meeting (RAG)",
+      ragNotYetSet: "Noch nicht vom RAG gesetzt",
       save: "Speichern",
       create: "Erstellen",
       remove: "Entfernen",
       noHypotheses: "Keine Hypothesen vorhanden.",
-      chooseDocument: "Dokument auswählen",
-      chooseMeeting: "Meeting auswählen",
-      noDocuments: "Keine Dokumente",
-      noMeetings: "Keine Meetings",
+      noHypothesesFiltered: "Keine Hypothesen für diesen Filter.",
       addHintTitle: "Neue Hypothese",
+      filterAll: "Alle",
+      filterConfirmed: "Bestätigt",
+      filterUnconfirmed: "Widerlegt",
     }
     : {
       confirmed: "Confirmed",
@@ -56,27 +53,27 @@ export function CompanyHypothesesTab({
       addHypothesis: "Add hypothesis",
       title: "Title",
       description: "Description",
-      sourceDocument: "Document",
-      sourceMeeting: "Meeting",
       status: "Status",
-      ragOwned: "Will be set automatically by RAG/LLM later",
+      ragOwned: "Status, source document and meeting are set automatically by RAG/LLM",
+      ragSourceDocument: "Source document (RAG)",
+      ragSourceMeeting: "Meeting (RAG)",
+      ragNotYetSet: "Not yet set by RAG",
       save: "Save",
       create: "Create",
       remove: "Remove",
       noHypotheses: "No hypotheses available.",
-      chooseDocument: "Select document",
-      chooseMeeting: "Select meeting",
-      noDocuments: "No documents",
-      noMeetings: "No meetings",
+      noHypothesesFiltered: "No hypotheses match this filter.",
       addHintTitle: "New hypothesis",
+      filterAll: "All",
+      filterConfirmed: "Confirmed",
+      filterUnconfirmed: "Unconfirmed",
     };
 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false);
+  const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "unconfirmed">("all");
   const [editTitle, setEditTitle] = useState<string>("");
   const [editDescription, setEditDescription] = useState<string>("");
-  const [editDocument, setEditDocument] = useState<string>("");
-  const [editMeeting, setEditMeeting] = useState<string>("");
 
   useEffect(() => {
     if (hypotheses.length === 0) {
@@ -95,8 +92,6 @@ export function CompanyHypothesesTab({
     if (isCreatingNew) {
       setEditTitle("");
       setEditDescription("");
-      setEditDocument("");
-      setEditMeeting("");
       return;
     }
 
@@ -109,8 +104,6 @@ export function CompanyHypothesesTab({
       : selectedHypothesis.text;
     setEditTitle(selectedHypothesis.title ?? fallbackTitle);
     setEditDescription(selectedHypothesis.description ?? selectedHypothesis.text);
-    setEditDocument(selectedHypothesis.sourceDocument ?? "");
-    setEditMeeting(selectedHypothesis.sourceMeetingId ?? "");
   }, [isCreatingNew, selectedHypothesis]);
 
   const confirmedCount = useMemo(
@@ -120,6 +113,13 @@ export function CompanyHypothesesTab({
   const unconfirmedCount = useMemo(
     () => hypotheses.filter((item) => item.status === "unconfirmed").length,
     [hypotheses],
+  );
+
+  const filteredHypotheses = useMemo(
+    () => hypotheses
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .filter(({ item }) => filterStatus === "all" || item.status === filterStatus),
+    [hypotheses, filterStatus],
   );
 
   const statusLabel = selectedHypothesis !== null
@@ -143,31 +143,47 @@ export function CompanyHypothesesTab({
         <article className="hyp-list-window">
           <header className="hyp-list-head">
             <h4>{copy.allHypotheses}</h4>
-            <button
-              type="button"
-              onClick={() => {
-                setIsCreatingNew(true);
-                setSelectedIndex(null);
-              }}
-            >
-              {copy.addHypothesis}
-            </button>
+            <div className="hyp-list-head-actions">
+              <select
+                className="hyp-filter-select"
+                value={filterStatus}
+                onChange={(event) => {
+                  setFilterStatus(event.target.value as "all" | "confirmed" | "unconfirmed");
+                }}
+                aria-label="Filter hypotheses"
+              >
+                <option value="all">{copy.filterAll}</option>
+                <option value="confirmed">{copy.filterConfirmed}</option>
+                <option value="unconfirmed">{copy.filterUnconfirmed}</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreatingNew(true);
+                  setSelectedIndex(null);
+                }}
+              >
+                {copy.addHypothesis}
+              </button>
+            </div>
           </header>
 
           {hypotheses.length === 0 ? (
             <p className="hyp-empty">{copy.noHypotheses}</p>
+          ) : filteredHypotheses.length === 0 ? (
+            <p className="hyp-empty">{copy.noHypothesesFiltered}</p>
           ) : (
             <ul className="hyp-items">
-              {hypotheses.map((item, index) => {
+              {filteredHypotheses.map(({ item, originalIndex }) => {
                 const label = STATUS_LABEL[item.status][language];
                 const rowTitle = item.title ?? item.text;
                 return (
-                  <li key={`${rowTitle}-${index}`}>
+                  <li key={`${rowTitle}-${originalIndex}`}>
                     <button
                       type="button"
-                      className={`hyp-item-btn${!isCreatingNew && selectedIndex === index ? " is-active" : ""}`}
+                      className={`hyp-item-btn${!isCreatingNew && selectedIndex === originalIndex ? " is-active" : ""}`}
                       onClick={() => {
-                        setSelectedIndex(index);
+                        setSelectedIndex(originalIndex);
                         setIsCreatingNew(false);
                       }}
                     >
@@ -196,33 +212,28 @@ export function CompanyHypothesesTab({
             <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
           </label>
 
-          <div className="hyp-editor-assignment-grid">
-            <label>
-              <span>{copy.sourceDocument}</span>
-              <select value={editDocument} onChange={(event) => setEditDocument(event.target.value)}>
-                <option value="">{copy.chooseDocument}</option>
-                {documents.length === 0 ? <option value="">{copy.noDocuments}</option> : null}
-                {documents.map((documentName) => (
-                  <option key={documentName} value={documentName}>{documentName}</option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>{copy.sourceMeeting}</span>
-              <select value={editMeeting} onChange={(event) => setEditMeeting(event.target.value)}>
-                <option value="">{copy.chooseMeeting}</option>
-                {meetings.length === 0 ? <option value="">{copy.noMeetings}</option> : null}
-                {meetings.map((meeting) => (
-                  <option key={meeting.id} value={meeting.id}>{meeting.timeLabel} · {meeting.title}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="hyp-status-readonly">
-            <span>{copy.status}: {statusLabel}</span>
-            <small>{copy.ragOwned}</small>
+          <div className="hyp-rag-info">
+            <div className="hyp-rag-info-row">
+              <span className="hyp-rag-info-label">{copy.status}</span>
+              <span className="hyp-rag-info-value">{statusLabel}</span>
+            </div>
+            {!isCreatingNew && selectedHypothesis !== null ? (
+              <>
+                <div className="hyp-rag-info-row">
+                  <span className="hyp-rag-info-label">{copy.ragSourceDocument}</span>
+                  <span className={`hyp-rag-info-value${selectedHypothesis.sourceDocument ? "" : " hyp-rag-info-empty"}`}>
+                    {selectedHypothesis.sourceDocument ?? copy.ragNotYetSet}
+                  </span>
+                </div>
+                <div className="hyp-rag-info-row">
+                  <span className="hyp-rag-info-label">{copy.ragSourceMeeting}</span>
+                  <span className={`hyp-rag-info-value${selectedHypothesis.sourceMeetingId ? "" : " hyp-rag-info-empty"}`}>
+                    {selectedHypothesis.sourceMeetingId ?? copy.ragNotYetSet}
+                  </span>
+                </div>
+              </>
+            ) : null}
+            <small className="hyp-rag-info-hint">{copy.ragOwned}</small>
           </div>
 
           <div className="hyp-editor-actions">
@@ -239,8 +250,8 @@ export function CompanyHypothesesTab({
                     description: normalizedDescription,
                     text: normalizedDescription.length > 0 ? normalizedDescription : normalizedTitle,
                     status: "pending",
-                    sourceDocument: editDocument.length > 0 ? editDocument : null,
-                    sourceMeetingId: editMeeting.length > 0 ? editMeeting : null,
+                    sourceDocument: null,
+                    sourceMeetingId: null,
                   });
                   setIsCreatingNew(false);
                   setSelectedIndex(0);
@@ -253,8 +264,6 @@ export function CompanyHypothesesTab({
                   title: normalizedTitle,
                   description: normalizedDescription,
                   text: normalizedDescription.length > 0 ? normalizedDescription : normalizedTitle,
-                  sourceDocument: editDocument.length > 0 ? editDocument : null,
-                  sourceMeetingId: editMeeting.length > 0 ? editMeeting : null,
                 });
               }}
             >

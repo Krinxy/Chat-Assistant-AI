@@ -99,7 +99,8 @@ describe('CompanyTeamTab', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText(text.teamEditCol));
+    const editButtons = screen.getAllByRole('button', { name: text.teamEditCol });
+    fireEvent.click(editButtons[0]);
     expect(onStartTeamEdit).toHaveBeenCalledWith(mockMember);
   });
 });

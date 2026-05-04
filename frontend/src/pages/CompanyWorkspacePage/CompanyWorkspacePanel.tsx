@@ -6,6 +6,7 @@ import { CompanyAppointmentsTab } from "./CompanyAppointmentsTab";
 import { CompanyHypothesesTab } from "./CompanyHypothesesTab";
 import { CompanyNotesTab } from "./CompanyNotesTab";
 import { CompanyTeamTab } from "./CompanyTeamTab";
+import { CompanyList } from "./CompanyList";
 import { OverviewMetrics } from "./OverviewMetrics";
 import {
   companyRecords,
@@ -45,7 +46,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [isRecentExpanded, setIsRecentExpanded] = useState<boolean>(true);
   const [isFavoritesExpanded, setIsFavoritesExpanded] = useState<boolean>(true);
-  const [isCompanyListExpanded, setIsCompanyListExpanded] = useState<boolean>(true);
   const [isListPaneCollapsed, setIsListPaneCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem("aura_list_pane_collapsed") === "1"; } catch { return false; }
   });
@@ -87,7 +87,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
           return parsed;
         }
       }
-    } catch {}
+    } catch { /* ignore */ }
     return [...OV_WIDGET_DEFAULT_ORDER];
   });
   const ovDragWidget = useRef<OverviewWidgetId | null>(null);
@@ -115,7 +115,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         const toIdx = next.indexOf(to);
         next.splice(fromIdx, 1);
         next.splice(toIdx, 0, from);
-        try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch {}
+        try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch { /* ignore */ }
         return next;
       });
     }
@@ -138,7 +138,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       const idx = next.indexOf(id);
       if (idx <= 0) return prev;
       [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-      try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch {}
+      try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
   }, []);
@@ -149,7 +149,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       const idx = next.indexOf(id);
       if (idx >= next.length - 1) return prev;
       [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
-      try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch {}
+      try { localStorage.setItem("aura_ov_widget_order", JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
   }, []);
@@ -593,7 +593,9 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         return {
           id: `file-note-${selectedCompany.id}-${Date.now()}-${index}`,
           title: normalizedName,
-          content: `${text.noteAttachedPrefix}: ${normalizedName} (${formatFileSize(file.size)}) · ${language === "de" ? "Siehe Dokumente-Tab." : "See documents tab."}`,
+          content: `${text.noteAttachedPrefix}: ${normalizedName} (${formatFileSize(file.size)}) · ${
+            language === "de" ? "Siehe Dokumente-Tab." : "See documents tab."
+          }`,
           createdAt: buildTimeLabel(),
           author: userProfile.fullName,
           status: "open",
@@ -802,10 +804,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       return null;
     }
     const activeHypotheses = hypothesesByCompany[selectedCompany.id] ?? selectedCompany.hypotheses;
-    const hypothesisDocumentOptions = [
-      ...(uploadedDocumentsByCompany[selectedCompany.id] ?? []).map((entry) => entry.name),
-      ...selectedCompany.documents,
-    ].filter((value, index, array) => array.indexOf(value) === index);
 
     if (activeTab === "overview") {
       const totalOpen = selectedCompany.openQuestions + selectedCompany.pendingMeetings;
@@ -977,7 +975,11 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
           {overviewWidgetOrder.map((id, idx) => (
             <div
               key={id}
-              className={`ov-widget${ovDragActive === id ? " ov-widget--dragging" : ""}${ovDragOver === id && ovDragActive !== id ? " ov-widget--drag-over" : ""}`}
+              className={[
+                "ov-widget",
+                ovDragActive === id ? "ov-widget--dragging" : "",
+                ovDragOver === id && ovDragActive !== id ? "ov-widget--drag-over" : "",
+              ].filter(Boolean).join(" ")}
               draggable
               onDragStart={() => handleOvDragStart(id)}
               onDragOver={(e) => { e.preventDefault(); handleOvDragOver(id); }}
@@ -1528,8 +1530,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         <CompanyHypothesesTab
           hypotheses={activeHypotheses}
           language={language}
-          documents={hypothesisDocumentOptions}
-          meetings={appointmentItems}
           onAddHypothesis={handleAddHypothesis}
           onUpdateHypothesis={handleUpdateHypothesis}
           onDeleteHypothesis={handleDeleteHypothesis}
@@ -1670,25 +1670,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
         <div className="company-workspace-header-right">
           <button
             type="button"
-            className="list-pane-toggle"
-            aria-label={isListPaneCollapsed ? "Show company list" : "Hide company list"}
-            title={isListPaneCollapsed ? "Show company list" : "Hide company list"}
-            onClick={() => {
-              setIsListPaneCollapsed((prev) => {
-                const next = !prev;
-                try { localStorage.setItem("aura_list_pane_collapsed", next ? "1" : "0"); } catch {}
-                return next;
-              });
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {isListPaneCollapsed
-                ? <><rect x="3" y="3" width="7" height="18" rx="1" /><path d="M14 3h7M14 12h7M14 21h7" /></>
-                : <><rect x="3" y="3" width="7" height="18" rx="1" /><path d="M14 3h7M14 12h7M14 21h7" /></>}
-            </svg>
-          </button>
-          <button
-            type="button"
             className="profile-chip profile-chip-btn profile-chip-workspace"
             aria-label="Open profile"
             onClick={onOpenProfile}
@@ -1794,71 +1775,18 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
           </article>
 
           <article
-            className={`company-box-card company-box-card-stacked company-collapsible${isCompanyListExpanded ? " is-expanded" : ""}`}
+            className="company-box-card company-box-card-stacked"
           >
-            <button
-              type="button"
-              className="company-collapsible-toggle"
-              aria-expanded={isCompanyListExpanded}
-              onClick={() => setIsCompanyListExpanded((previous) => !previous)}
-            >
-              <h3>{text.searchLabel}</h3>
-              <svg
-                className="company-collapsible-chevron"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            <div className="company-collapsible-body">
-              <label className="company-search-field">
-                <span>{text.searchLabel}</span>
-                <input
-                  type="search"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={text.searchPlaceholder}
-                />
-              </label>
-
-              <ul className="company-list-scroll" aria-label={text.searchLabel}>
-            {filteredCompanies.map((company) => {
-              const isActive = company.id === selectedCompanyId;
-
-              return (
-                <li key={company.id}>
-                  <button
-                    type="button"
-                    className={`company-item-btn${isActive ? " is-active" : ""}`}
-                    onClick={() => setSelectedCompanyId(company.id)}
-                  >
-                    <div className="company-item-main">
-                      <span className="company-list-avatar" aria-hidden="true">{getCompanyInitials(company.name)}</span>
-                      <div>
-                        <strong>{company.name}</strong>
-                        <small>{company.segment}</small>
-                      </div>
-                    </div>
-                    <div className="company-item-meta">
-                      <span>{company.lastVisited}</span>
-                      {company.isFavorite ? <em>*</em> : null}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-
-            {filteredCompanies.length === 0 ? <li className="company-empty-item">{text.noResult}</li> : null}
-          </ul>
-            </div>
+            <h3>{text.searchLabel}</h3>
+            <CompanyList
+              companies={filteredCompanies}
+              selectedCompanyId={selectedCompanyId}
+              onSelectCompany={setSelectedCompanyId}
+              language={language}
+              searchPlaceholder={text.searchPlaceholder}
+              searchLabel={text.searchLabel}
+              noResult={text.noResult}
+            />
           </article>
         </aside>
 

@@ -74,17 +74,17 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
     developers: [
       {
         name: "Dominic Bechtold",
-        programme: "Künstliche Intelligenz und kognitive Systeme",
+        programme: "Künstliche Intelligenz und kognitive Systeme - Student",
         email: "dominic@aura.example",
       },
       {
         name: "Constantin Dendtel",
-        programme: "Künstliche Intelligenz und kognitive Systeme",
+        programme: "Künstliche Intelligenz und kognitive Systeme - Student",
         email: "constantin@aura.example",
       },
     ],
     addressNote: "Anschrift auf Anfrage · Deutschland",
-    university: "Duale Hochschule Baden-Württemberg",
+    university: "Hochschule Ansbach",
 
     academicContextTitle: "Akademischer Kontext",
     academicContextBody:
@@ -120,7 +120,7 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
 
     copyrightTitle: "Urheberrecht",
     copyrightBody:
-      "© 2024–2026 Dominic Bechtold & Constantin Dendtel. Dieses Projekt wurde im "
+      "© 2026 Dominic Bechtold & Constantin Dendtel. Dieses Projekt wurde im "
       + "Rahmen einer Hochschulausbildung erstellt. Quellcode, Design und Konzept sind "
       + "urheberrechtlich geschützt. Eine Nutzung außerhalb des akademischen Kontexts "
       + "bedarf der ausdrücklichen Zustimmung der Autoren.",
@@ -158,7 +158,7 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
     developers: [
       {
         name: "Dominic Bechtold",
-        programme: "Artificial Intelligence and Cognitive Systems",
+        programme: "Artificial Intelligence and Cognitive Systems - Student",
         email: "dominic@aura.example",
       },
       {
@@ -168,7 +168,7 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
       },
     ],
     addressNote: "Address available on request · Germany",
-    university: "Baden-Württemberg Cooperative State University (DHBW)",
+    university: "Ansbach University of Applied Sciences",
 
     academicContextTitle: "Academic context",
     academicContextBody:
@@ -201,7 +201,7 @@ const IMPRINT_COPY: Record<Language, ImprintCopy> = {
 
     copyrightTitle: "Copyright",
     copyrightBody:
-      "© 2024–2026 Dominic Bechtold & Constantin Dendtel. This project was created "
+      "© 2026 Dominic Bechtold & Constantin Dendtel. This project was created "
       + "as part of a university degree programme. Source code, design, and concept "
       + "are protected by copyright. Use outside an academic context requires the "
       + "express consent of the authors.",

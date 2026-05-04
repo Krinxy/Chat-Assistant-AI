@@ -57,14 +57,14 @@ describe('Sidebar Widget', () => {
     expect(screen.getByText('EN')).toBeInTheDocument();
   });
 
-  it('navigates to imprint when Impressum link is clicked', () => {
-    const setActiveView = vi.fn();
+  it('calls onOpenImprint when Impressum link is clicked', () => {
+    const onOpenImprint = vi.fn();
     render(
       <Sidebar
         isSidebarOpen={true}
         setIsSidebarOpen={() => {}}
         activeView="dashboard"
-        setActiveView={setActiveView}
+        setActiveView={() => {}}
         language="de"
         setLanguage={() => {}}
         theme="light"
@@ -74,11 +74,12 @@ describe('Sidebar Widget', () => {
         latestMessagePreview={null}
         onStartNewChat={() => {}}
         onOpenRecentChat={() => {}}
+        onOpenImprint={onOpenImprint}
       />,
     );
 
     fireEvent.click(screen.getByText('Impressum'));
-    expect(setActiveView).toHaveBeenCalledWith('imprint');
+    expect(onOpenImprint).toHaveBeenCalled();
   });
 
   it('shows Aktiv only for current active recent chat', () => {

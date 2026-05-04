@@ -28,6 +28,7 @@ import type {
 } from "./features/chat/types/chat";
 import { CompanyWorkspacePanel } from "./pages/CompanyWorkspacePage/CompanyWorkspacePanel";
 import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
+import { ImprintPanel } from "./pages/ImprintPage/ImprintPanel";
 import { MyDeskPanel } from "./pages/MyDeskPage/MyDeskPanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
@@ -141,6 +142,7 @@ export default function App() {
   const [notificationFeed, setNotificationFeed] = useState<NotificationFeedItem[]>([]);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
+  const [isImprintOpen, setIsImprintOpen] = useState<boolean>(false);
   const [isWelcomeVisible, setIsWelcomeVisible] = useState<boolean>(true);
   const [isWelcomeLeaving, setIsWelcomeLeaving] = useState<boolean>(false);
   const [isViewSwitching, setIsViewSwitching] = useState<boolean>(false);
@@ -617,6 +619,7 @@ export default function App() {
           latestMessagePreview={latestMessagePreview}
           onStartNewChat={handleStartNewChat}
           onOpenRecentChat={handleOpenRecentChat}
+          onOpenImprint={() => setIsImprintOpen(true)}
         />
 
         <main className="main-stage">
@@ -817,6 +820,11 @@ export default function App() {
           ) : null}
         </main>
       </div>
+
+      {isImprintOpen ? (
+        <ImprintPanel language={language} onClose={() => setIsImprintOpen(false)} />
+      ) : null}
+
       {snackbarMessage !== null ? (
         <div className="aura-snackbar" role="status" aria-live="polite">
           {snackbarMessage}

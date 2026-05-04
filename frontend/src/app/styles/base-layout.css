@@ -118,6 +118,9 @@ input {
   width: 42px;
   height: 42px;
   border-radius: 12px;
+  border-color: color-mix(in srgb, var(--feature-lilac) 38%, var(--line));
+  background: color-mix(in srgb, var(--feature-lilac) 12%, var(--panel-solid));
+  color: var(--feature-lilac);
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);

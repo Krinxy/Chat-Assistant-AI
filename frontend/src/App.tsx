@@ -37,6 +37,7 @@ import {
   personalAppointments,
   weekdayLabelsByLanguage,
 } from "./pages/CompanyWorkspacePage/companyWorkspace.data";
+import type { ParsedAppointmentItem } from "./pages/CompanyWorkspacePage/companyWorkspace.types";
 import { userProfile } from "./shared/data/userProfile";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
@@ -52,12 +53,18 @@ const ENABLE_INSTAFEED = false;
 
 type ThemeMode = "light" | "dark";
 type InviteDecision = "accepted" | "declined";
+type InviteStatus = "pending" | InviteDecision;
 
 interface NotificationFeedItem {
   id: string;
   title: string;
   detail: string;
   timestamp: string;
+}
+
+interface InviteNotification extends ParsedAppointmentItem {
+  status: InviteStatus;
+  dayLabel: string;
 }
 
 const getInitialLanguage = (): Language => {
@@ -399,12 +406,12 @@ export default function App() {
     setIsSidebarOpen(true);
   }, []);
 
-  const inviteNotifications = useMemo(() => {
+  const inviteNotifications = useMemo<InviteNotification[]>(() => {
     const weekDays = weekdayLabelsByLanguage[language];
     const invites = personalAppointments
       .filter((appointment) => appointment.invitedBy !== undefined)
       .map((appointment) => {
-        const status = deskRsvpDecisions[appointment.id] ?? appointment.rsvp ?? "pending";
+        const status: InviteStatus = deskRsvpDecisions[appointment.id] ?? appointment.rsvp ?? "pending";
         return {
           ...appointment,
           status,
@@ -561,7 +568,7 @@ export default function App() {
         />
       ) : null}
 
-      {!showChatAndDashboardLayout && !isSidebarOpen ? (
+      {!showChatAndDashboardLayout && activeView !== "companies" && !isSidebarOpen ? (
         <button
           type="button"
           className="mobile-menu-trigger mobile-menu-trigger-floating"

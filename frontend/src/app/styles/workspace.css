@@ -3,7 +3,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-height: 56px;
 }
 
 .company-workspace-header-right {
@@ -14,10 +15,10 @@
 }
 
 .company-workspace-title-row {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
 }
 
@@ -27,13 +28,13 @@
 
 .company-assigned-role {
   min-width: 0;
-  display: inline-flex;
+  display: none;
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
   border-radius: 15px;
   padding: 8px 12px;
-  background: color-mix(in srgb, var(--feature-lilac) 8%, var(--panel-solid));
+  background: transparent;
 }
 
 .company-assigned-role-inline {
@@ -2796,17 +2797,14 @@
 @media (max-width: 900px) {
   .workspace-sidebar-trigger {
     display: inline-flex;
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 400;
+    position: static;
+    margin-right: 2px;
   }
 
   .company-workspace-header {
     position: sticky;
     top: 0;
     z-index: 12;
-    padding-left: 58px;
   }
 }
 

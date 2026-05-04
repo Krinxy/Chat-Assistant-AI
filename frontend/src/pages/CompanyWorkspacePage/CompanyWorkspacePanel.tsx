@@ -175,17 +175,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
   }, [roleScopedCompanies]);
 
   const filteredCompanies = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    if (query.length === 0) {
-      return roleScopedCompanies;
-    }
-
-    return roleScopedCompanies.filter((company) => {
-      const searchable = `${company.name} ${company.segment} ${company.owner}`.toLowerCase();
-      return searchable.includes(query);
-    });
-  }, [roleScopedCompanies, searchTerm]);
+    return roleScopedCompanies;
+  }, [roleScopedCompanies]);
 
   useEffect(() => {
     if (filteredCompanies.length === 0) {

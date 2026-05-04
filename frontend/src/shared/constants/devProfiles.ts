@@ -20,12 +20,20 @@ export const DEV_PROFILES = {
     id: "consti",
     firstName: "Constantin",
     fullName: "Constantin Dendtel",
-    initials: "69",
-    email: "consti69@aura.local",
+    initials: "CD",
+    email: "consti@aura.local",
+    role: "Product Owner",
+  },
+  testuser: {
+    id: "testuser",
+    firstName: "Test",
+    fullName: "Test User",
+    initials: "42",
+    email: "testuser42@aura.local",
     role: "Product Owner",
   },
 } satisfies Record<string, DevProfile>;
 
 // ─── Switch active profile here ──────────────────────────────────────────────
-// Change "dominic" to "consti" (or any key above) to switch the active profile.
-export const ACTIVE_DEV_PROFILE: DevProfile = DEV_PROFILES.dominic;
+// Change "testuser" to "dominic" or "consti" to switch the active profile.
+export const ACTIVE_DEV_PROFILE: DevProfile = DEV_PROFILES.testuser;

@@ -109,6 +109,7 @@ export interface CompanyWorkspaceText {
   teamSave: string;
   teamCancel: string;
   teamNoMembers: string;
+  teamFunctionOptions: string[];
   noteLabels: NoteLabelOption[];
 }
 
@@ -135,7 +136,7 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
       recentEventsTitle: "Letzte Aktivitaeten",
       tabs: {
         overview: "Uebersicht",
-        portfolio: "Portfolio",
+        portfolio: "Portfolio & Performance",
         performance: "Performance",
         documents: "Dokumente",
         hypotheses: "Hypothesen",
@@ -218,6 +219,24 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
       teamSave: "Speichern",
       teamCancel: "Abbrechen",
       teamNoMembers: "Keine Teammitglieder vorhanden.",
+      teamFunctionOptions: [
+        "CEO",
+        "CFO",
+        "CTO",
+        "Head of Sales",
+        "Head of Marketing",
+        "Key Account Manager",
+        "IT Lead",
+        "Projektmanager",
+        "Product Manager",
+        "Sales Manager",
+        "Marketing Manager",
+        "HR Manager",
+        "Analyst",
+        "Customer Success Manager",
+        "Berater",
+        "Sonstiges",
+      ],
       noteLabels: [
         { id: "followup", label: "Follow-up" },
         { id: "blocker", label: "Blocker" },
@@ -248,7 +267,7 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
     recentEventsTitle: "Recent events",
     tabs: {
       overview: "Overview",
-      portfolio: "Portfolio",
+      portfolio: "Portfolio & Performance",
       performance: "Performance",
       documents: "Documents",
       hypotheses: "Hypotheses",
@@ -331,6 +350,24 @@ export const getCompanyWorkspaceText = (language: Language): CompanyWorkspaceTex
     teamSave: "Save",
     teamCancel: "Cancel",
     teamNoMembers: "No team members available.",
+    teamFunctionOptions: [
+      "CEO",
+      "CFO",
+      "CTO",
+      "Head of Sales",
+      "Head of Marketing",
+      "Key Account Manager",
+      "IT Lead",
+      "Project Manager",
+      "Product Manager",
+      "Sales Manager",
+      "Marketing Manager",
+      "HR Manager",
+      "Analyst",
+      "Customer Success Manager",
+      "Consultant",
+      "Other",
+    ],
     noteLabels: [
       { id: "followup", label: "Follow-up" },
       { id: "blocker", label: "Blocker" },

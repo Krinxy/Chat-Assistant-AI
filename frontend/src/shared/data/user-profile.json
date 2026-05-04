@@ -1,8 +1,8 @@
 {
-  "firstName": "Dominic",
-  "fullName": "Dominic Bechtold",
-  "initials": "67",
-  "email": "dominic67@aura.local",
+  "firstName": "Test",
+  "fullName": "Test User",
+  "initials": "42",
+  "email": "testuser42@aura.local",
   "role": {
     "de": "Product Owner",
     "en": "Product Owner"

@@ -27,6 +27,7 @@ interface SidebarProps {
   } | null;
   onStartNewChat: () => void;
   onOpenRecentChat: (previewText: string, timeLabel: string) => void;
+  onOpenImprint?: () => void;
 }
 
 type NavIcon = (props: { className?: string }) => JSX.Element;
@@ -256,6 +257,7 @@ export function Sidebar({
   latestMessagePreview,
   onStartNewChat,
   onOpenRecentChat,
+  onOpenImprint,
 }: SidebarProps) {
   const [recentChatsByLanguageState, setRecentChatsByLanguageState] = useState<
     Record<Language, RecentChatItem[]>
@@ -547,6 +549,7 @@ export function Sidebar({
             className="sidebar-imprint-link"
             onClick={(event) => {
               event.preventDefault();
+              onOpenImprint?.();
             }}
           >
             {copy.imprint}

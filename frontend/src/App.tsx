@@ -28,10 +28,16 @@ import type {
 } from "./features/chat/types/chat";
 import { CompanyWorkspacePanel } from "./pages/CompanyWorkspacePage/CompanyWorkspacePanel";
 import { FeatureGuidePanel } from "./pages/FeatureGuidePage/FeatureGuidePanel";
+import { ImprintPanel } from "./pages/ImprintPage/ImprintPanel";
 import { MyDeskPanel } from "./pages/MyDeskPage/MyDeskPanel";
 import { getGreetingFromUnixTime } from "./features/chat/utils/chat";
 import { ProfilePanel } from "./pages/ProfilePage/ProfilePanel";
 import { UserProfilePanel } from "./pages/ProfilePage/UserProfilePanel";
+import {
+  personalAppointments,
+  weekdayLabelsByLanguage,
+} from "./pages/CompanyWorkspacePage/companyWorkspace.data";
+import type { ParsedAppointmentItem } from "./pages/CompanyWorkspacePage/companyWorkspace.types";
 import { userProfile } from "./shared/data/userProfile";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
@@ -43,8 +49,23 @@ import { Sidebar } from "./widgets/sidebar/Sidebar";
 const WELCOME_START_EXIT_MS = 2100;
 const WELCOME_HIDE_MS = 3000;
 const WELCOME_SKIP_HIDE_MS = 420;
+const ENABLE_INSTAFEED = false;
 
 type ThemeMode = "light" | "dark";
+type InviteDecision = "accepted" | "declined";
+type InviteStatus = "pending" | InviteDecision;
+
+interface NotificationFeedItem {
+  id: string;
+  title: string;
+  detail: string;
+  timestamp: string;
+}
+
+interface InviteNotification extends ParsedAppointmentItem {
+  status: InviteStatus;
+  dayLabel: string;
+}
 
 const getInitialLanguage = (): Language => {
   try {
@@ -124,7 +145,11 @@ export default function App() {
   const [localModelOptions, setLocalModelOptions] = useState<ModelOption[]>([]);
   const [localLlmConfig, setLocalLlmConfig] = useState<LocalLlmConfig | null>(null);
   const [unixTime, setUnixTime] = useState<number>(Math.floor(Date.now() / 1000));
+  const [deskRsvpDecisions, setDeskRsvpDecisions] = useState<Record<string, InviteDecision>>({});
+  const [notificationFeed, setNotificationFeed] = useState<NotificationFeedItem[]>([]);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
+  const [isImprintOpen, setIsImprintOpen] = useState<boolean>(false);
   const [isWelcomeVisible, setIsWelcomeVisible] = useState<boolean>(true);
   const [isWelcomeLeaving, setIsWelcomeLeaving] = useState<boolean>(false);
   const [isViewSwitching, setIsViewSwitching] = useState<boolean>(false);
@@ -381,6 +406,61 @@ export default function App() {
     setIsSidebarOpen(true);
   }, []);
 
+  const inviteNotifications = useMemo<InviteNotification[]>(() => {
+    const weekDays = weekdayLabelsByLanguage[language];
+    const invites = personalAppointments
+      .filter((appointment) => appointment.invitedBy !== undefined)
+      .map((appointment) => {
+        const status: InviteStatus = deskRsvpDecisions[appointment.id] ?? appointment.rsvp ?? "pending";
+        return {
+          ...appointment,
+          status,
+          dayLabel: weekDays[appointment.dayIndex] ?? "",
+        };
+      });
+
+    return invites.sort((a, b) => a.weekIndex - b.weekIndex || a.dayIndex - b.dayIndex || a.timeLabel.localeCompare(b.timeLabel));
+  }, [deskRsvpDecisions, language]);
+
+  const handleDeskRsvpDecision = useCallback((appointmentId: string, decision: InviteDecision): void => {
+    setDeskRsvpDecisions((previous) => ({ ...previous, [appointmentId]: decision }));
+    const appointment = personalAppointments.find((entry) => entry.id === appointmentId);
+    if (appointment === undefined) {
+      return;
+    }
+
+    const actionLabel = language === "de"
+      ? (decision === "accepted" ? "zugesagt" : "abgesagt")
+      : (decision === "accepted" ? "accepted" : "declined");
+    const actorLabel = language === "de" ? "Du hast" : "You";
+    const message = `${actorLabel} ${actionLabel}: ${appointment.title}`;
+
+    setNotificationFeed((previous) => ([
+      {
+        id: `${appointmentId}-${Date.now()}`,
+        title: message,
+        detail: `${appointment.timeLabel}${appointment.endTimeLabel !== undefined ? ` - ${appointment.endTimeLabel}` : ""}`,
+        timestamp: new Date().toLocaleTimeString(language === "de" ? "de-DE" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+      },
+      ...previous,
+    ]).slice(0, 16));
+    setSnackbarMessage(message);
+  }, [language]);
+
+  useEffect(() => {
+    if (snackbarMessage === null) {
+      return;
+    }
+
+    const timeout = globalThis.setTimeout(() => {
+      setSnackbarMessage(null);
+    }, 3200);
+
+    return () => {
+      globalThis.clearTimeout(timeout);
+    };
+  }, [snackbarMessage]);
+
   const handleOpenLocalLlmSetup = useCallback((): void => {
     setActiveView("chat");
     setIsSidebarOpen(false);
@@ -470,16 +550,6 @@ export default function App() {
       };
     }
 
-    if (activeView === "notifications") {
-      return {
-        title: language === "de" ? "Benachrichtigungen" : "Notifications",
-        description:
-          language === "de"
-            ? "Status-Updates, Modellwarnungen und Workflow-Hinweise werden hier gesammelt."
-            : "Status updates, model warnings, and workflow hints are collected here.",
-      };
-    }
-
     return null;
   }, [activeView, language]);
 
@@ -498,7 +568,7 @@ export default function App() {
         />
       ) : null}
 
-      {!showChatAndDashboardLayout && !isSidebarOpen ? (
+      {!showChatAndDashboardLayout && activeView !== "companies" && !isSidebarOpen ? (
         <button
           type="button"
           className="mobile-menu-trigger mobile-menu-trigger-floating"
@@ -556,6 +626,7 @@ export default function App() {
           latestMessagePreview={latestMessagePreview}
           onStartNewChat={handleStartNewChat}
           onOpenRecentChat={handleOpenRecentChat}
+          onOpenImprint={() => setIsImprintOpen(true)}
         />
 
         <main className="main-stage">
@@ -574,6 +645,7 @@ export default function App() {
               onOpenSidebar={() => {
                 setIsSidebarOpen(true);
               }}
+              showStories={ENABLE_INSTAFEED}
             />
           ) : null}
 
@@ -630,7 +702,90 @@ export default function App() {
           ) : null}
 
           {activeView === "mydesk" ? (
-            <MyDeskPanel language={language} />
+            <MyDeskPanel
+              language={language}
+              rsvpDecisions={deskRsvpDecisions}
+              onRsvpDecision={handleDeskRsvpDecision}
+            />
+          ) : null}
+
+          {activeView === "notifications" ? (
+            <section
+              className="utility-view-panel notifications-panel"
+              aria-label={language === "de" ? "Benachrichtigungen" : "Notifications"}
+            >
+              <header className="utility-view-header">
+                <h2>{language === "de" ? "Benachrichtigungen" : "Notifications"}</h2>
+              </header>
+
+              <div className="notifications-layout">
+                <article className="notifications-block">
+                  <h3>{language === "de" ? "Termin-Einladungen" : "Appointment invites"}</h3>
+                  <ul className="notifications-list">
+                    {inviteNotifications.map((invite) => (
+                      <li key={invite.id} className="notifications-item">
+                        <div className="notifications-item-content">
+                          <strong>{invite.title}</strong>
+                          <p>
+                            {invite.dayLabel} · {invite.timeLabel}
+                            {invite.endTimeLabel !== undefined ? `-${invite.endTimeLabel}` : ""}
+                            {invite.invitedBy !== undefined ? ` · ${language === "de" ? "von" : "by"} ${invite.invitedBy}` : ""}
+                          </p>
+                          {invite.status === "pending" ? (
+                            <div className="notifications-rsvp-actions">
+                              <button
+                                type="button"
+                                className="notifications-rsvp-btn notifications-rsvp-btn--accept"
+                                onClick={() => handleDeskRsvpDecision(invite.id, "accepted")}
+                              >
+                                {language === "de" ? "Annehmen" : "Accept"}
+                              </button>
+                              <button
+                                type="button"
+                                className="notifications-rsvp-btn notifications-rsvp-btn--decline"
+                                onClick={() => handleDeskRsvpDecision(invite.id, "declined")}
+                              >
+                                {language === "de" ? "Ablehnen" : "Decline"}
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                        <span className={`notifications-status notifications-status--${invite.status}`}>
+                          {invite.status === "pending"
+                            ? (language === "de" ? "Offen" : "Pending")
+                            : invite.status === "accepted"
+                              ? (language === "de" ? "Zugesagt" : "Accepted")
+                              : (language === "de" ? "Abgesagt" : "Declined")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+
+                <article className="notifications-block">
+                  <h3>{language === "de" ? "Live Feed" : "Live feed"}</h3>
+                  {notificationFeed.length === 0 ? (
+                    <p className="notifications-empty">
+                      {language === "de"
+                        ? "Sobald du unter Desk auf Einladungen reagierst, erscheinen Events hier live."
+                        : "As soon as you respond to invites in Desk, events appear here live."}
+                    </p>
+                  ) : (
+                    <ul className="notifications-list">
+                      {notificationFeed.map((entry) => (
+                        <li key={entry.id} className="notifications-item notifications-item--feed">
+                          <div>
+                            <strong>{entry.title}</strong>
+                            <p>{entry.detail}</p>
+                          </div>
+                          <time>{entry.timestamp}</time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
+              </div>
+            </section>
           ) : null}
 
           {activeView === "settings" ? (
@@ -672,6 +827,16 @@ export default function App() {
           ) : null}
         </main>
       </div>
+
+      {isImprintOpen ? (
+        <ImprintPanel language={language} onClose={() => setIsImprintOpen(false)} />
+      ) : null}
+
+      {snackbarMessage !== null ? (
+        <div className="aura-snackbar" role="status" aria-live="polite">
+          {snackbarMessage}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -66,6 +66,8 @@ export interface CompanyNoteEntry {
   title: string;
   content: string;
   createdAt: string;
+  author?: string;
+  status?: "open" | "closed";
   source: CompanyNoteSource;
   labels: string[];
   linkedEvent: string | null;
@@ -104,6 +106,10 @@ export type HypothesisStatus = "pending" | "confirmed" | "unconfirmed";
 export interface HypothesisEntry {
   text: string;
   status: HypothesisStatus;
+  title?: string;
+  description?: string;
+  sourceDocument?: string | null;
+  sourceMeetingId?: string | null;
 }
 
 export interface WeekdayTokenEntry {

@@ -1,109 +1,286 @@
+import { useEffect, useMemo, useState } from "react";
 import type { Language } from "../../features/chat/types/chat";
 import type { HypothesisEntry, HypothesisStatus } from "./companyWorkspace.types";
 
 interface CompanyHypothesesTabProps {
   hypotheses: HypothesisEntry[];
   language: Language;
+  onAddHypothesis: (entry: HypothesisEntry) => void;
+  onUpdateHypothesis: (index: number, entry: HypothesisEntry) => void;
+  onDeleteHypothesis: (index: number) => void;
 }
 
 const STATUS_LABEL: Record<HypothesisStatus, { de: string; en: string }> = {
-  confirmed:   { de: "Bestätigt",  en: "Confirmed"   },
-  unconfirmed: { de: "Widerlegt",  en: "Unconfirmed" },
-  pending:     { de: "Ausstehend", en: "Pending"      },
+  confirmed: { de: "Bestätigt", en: "Confirmed" },
+  unconfirmed: { de: "Widerlegt", en: "Unconfirmed" },
+  pending: { de: "Ausstehend", en: "Pending" },
 };
 
-const HYPO_R = 36;
-const HYPO_C = 2 * Math.PI * HYPO_R;
+export function CompanyHypothesesTab({
+  hypotheses,
+  language,
+  onAddHypothesis,
+  onUpdateHypothesis,
+  onDeleteHypothesis,
+}: CompanyHypothesesTabProps) {
+  const copy = language === "de"
+    ? {
+      confirmed: "Bestätigt",
+      unconfirmed: "Widerlegt",
+      allHypotheses: "Alle Hypothesen",
+      addHypothesis: "Hypothese hinzufügen",
+      title: "Titel",
+      description: "Beschreibung",
+      status: "Status",
+      ragOwned: "Status, Quelldokument und Meeting werden automatisch vom RAG/LLM gesetzt",
+      ragSourceDocument: "Quelldokument (RAG)",
+      ragSourceMeeting: "Meeting (RAG)",
+      ragNotYetSet: "Noch nicht vom RAG gesetzt",
+      save: "Speichern",
+      create: "Erstellen",
+      remove: "Entfernen",
+      noHypotheses: "Keine Hypothesen vorhanden.",
+      noHypothesesFiltered: "Keine Hypothesen für diesen Filter.",
+      addHintTitle: "Neue Hypothese",
+      filterAll: "Alle",
+      filterConfirmed: "Bestätigt",
+      filterUnconfirmed: "Widerlegt",
+    }
+    : {
+      confirmed: "Confirmed",
+      unconfirmed: "Unconfirmed",
+      allHypotheses: "All hypotheses",
+      addHypothesis: "Add hypothesis",
+      title: "Title",
+      description: "Description",
+      status: "Status",
+      ragOwned: "Status, source document and meeting are set automatically by RAG/LLM",
+      ragSourceDocument: "Source document (RAG)",
+      ragSourceMeeting: "Meeting (RAG)",
+      ragNotYetSet: "Not yet set by RAG",
+      save: "Save",
+      create: "Create",
+      remove: "Remove",
+      noHypotheses: "No hypotheses available.",
+      noHypothesesFiltered: "No hypotheses match this filter.",
+      addHintTitle: "New hypothesis",
+      filterAll: "All",
+      filterConfirmed: "Confirmed",
+      filterUnconfirmed: "Unconfirmed",
+    };
 
-interface DonutSegmentProps { dash: number; offset: number; color: string; }
-function DonutSegment({ dash, offset, color }: DonutSegmentProps) {
-  if (dash <= 0) return null;
-  return (
-    <circle
-      cx="44" cy="44" r={HYPO_R}
-      fill="none"
-      stroke={color}
-      strokeWidth="11"
-      strokeLinecap="butt"
-      strokeDasharray={`${dash} ${HYPO_C}`}
-      strokeDashoffset={-offset}
-      transform="rotate(-90 44 44)"
-    />
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false);
+  const [filterStatus, setFilterStatus] = useState<"all" | "confirmed" | "unconfirmed">("all");
+  const [editTitle, setEditTitle] = useState<string>("");
+  const [editDescription, setEditDescription] = useState<string>("");
+
+  useEffect(() => {
+    if (hypotheses.length === 0) {
+      setSelectedIndex(null);
+      setIsCreatingNew(true);
+      return;
+    }
+    if (selectedIndex === null || selectedIndex >= hypotheses.length) {
+      setSelectedIndex(0);
+    }
+  }, [hypotheses.length, selectedIndex]);
+
+  const selectedHypothesis = selectedIndex !== null ? hypotheses[selectedIndex] ?? null : null;
+
+  useEffect(() => {
+    if (isCreatingNew) {
+      setEditTitle("");
+      setEditDescription("");
+      return;
+    }
+
+    if (selectedHypothesis === null) {
+      return;
+    }
+
+    const fallbackTitle = selectedHypothesis.text.length > 56
+      ? `${selectedHypothesis.text.slice(0, 56)}...`
+      : selectedHypothesis.text;
+    setEditTitle(selectedHypothesis.title ?? fallbackTitle);
+    setEditDescription(selectedHypothesis.description ?? selectedHypothesis.text);
+  }, [isCreatingNew, selectedHypothesis]);
+
+  const confirmedCount = useMemo(
+    () => hypotheses.filter((item) => item.status === "confirmed").length,
+    [hypotheses],
   );
-}
+  const unconfirmedCount = useMemo(
+    () => hypotheses.filter((item) => item.status === "unconfirmed").length,
+    [hypotheses],
+  );
 
-export function CompanyHypothesesTab({ hypotheses, language }: CompanyHypothesesTabProps) {
-  const confirmed   = hypotheses.filter((h) => h.status === "confirmed").length;
-  const unconfirmed = hypotheses.filter((h) => h.status === "unconfirmed").length;
-  const pending     = hypotheses.filter((h) => h.status === "pending").length;
-  const total       = hypotheses.length;
+  const filteredHypotheses = useMemo(
+    () => hypotheses
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .filter(({ item }) => filterStatus === "all" || item.status === filterStatus),
+    [hypotheses, filterStatus],
+  );
 
-  const confirmedDash   = total > 0 ? (confirmed   / total) * HYPO_C : 0;
-  const unconfirmedDash = total > 0 ? (unconfirmed / total) * HYPO_C : 0;
-  const pendingDash     = total > 0 ? (pending     / total) * HYPO_C : 0;
-
-  const t = language === "de"
-    ? { title: "Hypothesen", rag: "RAG-Validierung ausstehend", empty: "Keine Hypothesen hinterlegt." }
-    : { title: "Hypotheses", rag: "RAG validation pending",     empty: "No hypotheses on record."    };
+  const statusLabel = selectedHypothesis !== null
+    ? STATUS_LABEL[selectedHypothesis.status][language]
+    : STATUS_LABEL.pending[language];
 
   return (
-    <div className="hyp-panel">
-      <div className="hyp-top">
-        <div className="hyp-donut-wrap">
-          <svg viewBox="0 0 88 88" className="hyp-donut-svg" aria-hidden="true">
-            <circle cx="44" cy="44" r={HYPO_R} fill="none" stroke="rgba(124,106,247,0.1)" strokeWidth="11" />
-            {total === 0 ? (
-              <circle cx="44" cy="44" r={HYPO_R} fill="none" stroke="rgba(124,106,247,0.18)" strokeWidth="11" />
-            ) : (
+    <div className="hyp-layout">
+      <aside className="hyp-left-column">
+        <article className="hyp-summary-window">
+          <div className="hyp-summary-card">
+            <span>{copy.confirmed}</span>
+            <strong>{confirmedCount}</strong>
+          </div>
+          <div className="hyp-summary-card">
+            <span>{copy.unconfirmed}</span>
+            <strong>{unconfirmedCount}</strong>
+          </div>
+        </article>
+
+        <article className="hyp-list-window">
+          <header className="hyp-list-head">
+            <h4>{copy.allHypotheses}</h4>
+            <div className="hyp-list-head-actions">
+              <select
+                className="hyp-filter-select"
+                value={filterStatus}
+                onChange={(event) => {
+                  setFilterStatus(event.target.value as "all" | "confirmed" | "unconfirmed");
+                }}
+                aria-label="Filter hypotheses"
+              >
+                <option value="all">{copy.filterAll}</option>
+                <option value="confirmed">{copy.filterConfirmed}</option>
+                <option value="unconfirmed">{copy.filterUnconfirmed}</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreatingNew(true);
+                  setSelectedIndex(null);
+                }}
+              >
+                {copy.addHypothesis}
+              </button>
+            </div>
+          </header>
+
+          {hypotheses.length === 0 ? (
+            <p className="hyp-empty">{copy.noHypotheses}</p>
+          ) : filteredHypotheses.length === 0 ? (
+            <p className="hyp-empty">{copy.noHypothesesFiltered}</p>
+          ) : (
+            <ul className="hyp-items">
+              {filteredHypotheses.map(({ item, originalIndex }) => {
+                const label = STATUS_LABEL[item.status][language];
+                const rowTitle = item.title ?? item.text;
+                return (
+                  <li key={`${rowTitle}-${originalIndex}`}>
+                    <button
+                      type="button"
+                      className={`hyp-item-btn${!isCreatingNew && selectedIndex === originalIndex ? " is-active" : ""}`}
+                      onClick={() => {
+                        setSelectedIndex(originalIndex);
+                        setIsCreatingNew(false);
+                      }}
+                    >
+                      <span>{rowTitle}</span>
+                      <small>{label}</small>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </article>
+      </aside>
+
+      <section className="hyp-editor-window">
+        <div className="hyp-editor-form">
+          <h4>{isCreatingNew ? copy.addHintTitle : editTitle}</h4>
+
+          <label>
+            <span>{copy.title}</span>
+            <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+          </label>
+
+          <label>
+            <span>{copy.description}</span>
+            <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+          </label>
+
+          <div className="hyp-rag-info">
+            <div className="hyp-rag-info-row">
+              <span className="hyp-rag-info-label">{copy.status}</span>
+              <span className="hyp-rag-info-value">{statusLabel}</span>
+            </div>
+            {!isCreatingNew && selectedHypothesis !== null ? (
               <>
-                <DonutSegment dash={confirmedDash}   offset={0}                                color="#7c6af7" />
-                <DonutSegment dash={unconfirmedDash} offset={confirmedDash}                    color="#c4b5fd" />
-                <DonutSegment dash={pendingDash}     offset={confirmedDash + unconfirmedDash}  color="rgba(124,106,247,0.28)" />
-              </>
-            )}
-            <text x="44" y="41" textAnchor="middle" fill="white" fontSize="15" fontWeight="800">{total}</text>
-            <text x="44" y="54" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="8">{t.title}</text>
-          </svg>
-        </div>
-
-        <div className="hyp-legend">
-          <div className="hyp-legend-row">
-            <span className="hyp-legend-dot" style={{ background: "#7c6af7" }} />
-            <span className="hyp-legend-label">{STATUS_LABEL.confirmed[language]}</span>
-            <strong className="hyp-legend-val">{confirmed}</strong>
-          </div>
-          <div className="hyp-legend-row">
-            <span className="hyp-legend-dot" style={{ background: "#c4b5fd" }} />
-            <span className="hyp-legend-label">{STATUS_LABEL.unconfirmed[language]}</span>
-            <strong className="hyp-legend-val">{unconfirmed}</strong>
-          </div>
-          <div className="hyp-legend-row">
-            <span className="hyp-legend-dot" style={{ background: "rgba(124,106,247,0.35)" }} />
-            <span className="hyp-legend-label">{STATUS_LABEL.pending[language]}</span>
-            <strong className="hyp-legend-val">{pending}</strong>
-          </div>
-          <span className="hyp-rag-label">{t.rag}</span>
-        </div>
-      </div>
-
-      {hypotheses.length === 0 ? (
-        <p className="hyp-empty">{t.empty}</p>
-      ) : (
-        <div className="hyp-list">
-          {hypotheses.map((h, i) => {
-            const label = STATUS_LABEL[h.status][language];
-            return (
-              <div key={i} className={`hyp-card hyp-card--${h.status}`}>
-                <div className="hyp-card-stripe" />
-                <div className="hyp-card-body">
-                  <p className="hyp-card-text">{h.text}</p>
-                  <span className={`hyp-status-pill hyp-status-pill--${h.status}`}>{label}</span>
+                <div className="hyp-rag-info-row">
+                  <span className="hyp-rag-info-label">{copy.ragSourceDocument}</span>
+                  <span className={`hyp-rag-info-value${selectedHypothesis.sourceDocument ? "" : " hyp-rag-info-empty"}`}>
+                    {selectedHypothesis.sourceDocument ?? copy.ragNotYetSet}
+                  </span>
                 </div>
-              </div>
-            );
-          })}
+                <div className="hyp-rag-info-row">
+                  <span className="hyp-rag-info-label">{copy.ragSourceMeeting}</span>
+                  <span className={`hyp-rag-info-value${selectedHypothesis.sourceMeetingId ? "" : " hyp-rag-info-empty"}`}>
+                    {selectedHypothesis.sourceMeetingId ?? copy.ragNotYetSet}
+                  </span>
+                </div>
+              </>
+            ) : null}
+            <small className="hyp-rag-info-hint">{copy.ragOwned}</small>
+          </div>
+
+          <div className="hyp-editor-actions">
+            <button
+              type="button"
+              onClick={() => {
+                const normalizedTitle = editTitle.trim();
+                const normalizedDescription = editDescription.trim();
+                if (normalizedTitle.length === 0) return;
+
+                if (isCreatingNew) {
+                  onAddHypothesis({
+                    title: normalizedTitle,
+                    description: normalizedDescription,
+                    text: normalizedDescription.length > 0 ? normalizedDescription : normalizedTitle,
+                    status: "pending",
+                    sourceDocument: null,
+                    sourceMeetingId: null,
+                  });
+                  setIsCreatingNew(false);
+                  setSelectedIndex(0);
+                  return;
+                }
+
+                if (selectedHypothesis === null || selectedIndex === null) return;
+                onUpdateHypothesis(selectedIndex, {
+                  ...selectedHypothesis,
+                  title: normalizedTitle,
+                  description: normalizedDescription,
+                  text: normalizedDescription.length > 0 ? normalizedDescription : normalizedTitle,
+                });
+              }}
+            >
+              {isCreatingNew ? copy.create : copy.save}
+            </button>
+            {!isCreatingNew && selectedIndex !== null ? (
+              <button
+                type="button"
+                className="hyp-action-btn"
+                onClick={() => onDeleteHypothesis(selectedIndex)}
+              >
+                {copy.remove}
+              </button>
+            ) : null}
+          </div>
         </div>
-      )}
+      </section>
     </div>
   );
 }

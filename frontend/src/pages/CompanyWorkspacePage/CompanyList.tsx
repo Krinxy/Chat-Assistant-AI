@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
 import type { CompanyRecord } from "./companyWorkspace.types";
 import { getCompanyInitials } from "./companyWorkspace.utils";
-import type { Language } from "../../features/chat/types/chat";
 
 interface CompanyListProps {
   companies: CompanyRecord[];
   selectedCompanyId: string;
   onSelectCompany: (companyId: string) => void;
-  language: Language;
   searchPlaceholder: string;
   searchLabel: string;
   noResult: string;
@@ -17,7 +15,6 @@ export function CompanyList({
   companies,
   selectedCompanyId,
   onSelectCompany,
-  language,
   searchPlaceholder,
   searchLabel,
   noResult,

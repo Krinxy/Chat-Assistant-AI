@@ -41,12 +41,11 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
 
   const [assignedRole] = useState(readDbAssignedRole);
-  const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeTab, setActiveTab] = useState<CompanyTab>("overview");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [isRecentExpanded, setIsRecentExpanded] = useState<boolean>(true);
   const [isFavoritesExpanded, setIsFavoritesExpanded] = useState<boolean>(true);
-  const [isListPaneCollapsed, setIsListPaneCollapsed] = useState<boolean>(() => {
+  const [isListPaneCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem("aura_list_pane_collapsed") === "1"; } catch { return false; }
   });
   const tabRowRef = useRef<HTMLDivElement | null>(null);
@@ -1782,7 +1781,6 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
               companies={filteredCompanies}
               selectedCompanyId={selectedCompanyId}
               onSelectCompany={setSelectedCompanyId}
-              language={language}
               searchPlaceholder={text.searchPlaceholder}
               searchLabel={text.searchLabel}
               noResult={text.noResult}

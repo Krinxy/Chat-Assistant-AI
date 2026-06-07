@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { background: #1e1e2e; margin: 0; padding: 40px; display: flex; justify-content: center; }
+    .mermaid svg { width: 1400px !important; height: auto !important; max-width: none !important; }
+  </style>
+</head>
+<body>
+  <div class="mermaid">
+flowchart TD
+    A([Start]) --> B[Login / Auth]
+    B --> C[Welcome Overlay\nPersonalisierter Gruß]
+    C --> D[Dashboard / Home]
+
+    D --> E[Sidebar-Navigation]
+
+    E --> F[💬 Chat]
+    E --> G[📊 Empfehlungen]
+    E --> H[🔔 Benachrichtigungen]
+    E --> I[👤 Profil]
+    E --> J[🏢 Company Workspace]
+    E --> K[🖥 My Desk]
+    E --> L[📖 Feature Guide]
+    E --> M[⚙️ Einstellungen]
+    E --> N[📜 Impressum]
+
+    F --> F1[Nachricht eingeben\nText / Voice Input]
+    F1 --> F2[KI-Antwort streamen]
+    F2 --> F3[Neue Session starten\noder Chat-Verlauf öffnen]
+
+    G --> G1[Verhaltensbasierte\nVorschläge anzeigen]
+
+    H --> H1[Status-Updates\nModellwarnungen anzeigen]
+
+    I --> I1[Profil-Ansicht\nBenutzerdaten]
+    I --> I2[Account-Einstellungen\nPasswort / Email]
+
+    J --> J1[Overview / Metriken]
+    J --> J2[Team-Tab]
+    J --> J3[Notizen-Tab]
+    J --> J4[Hypothesen-Tab]
+    J --> J5[Termine-Tab]
+
+    K --> K1[Persönlicher\nArbeitsbereich]
+
+    L --> L1[Feature-Übersicht\nHilfe / Forum]
+
+    D --> D1[Header\nGreeting + Stories]
+    D --> D2[Dashboard Aside\nWetter-Widget\nEmpfehlungs-Widget]
+
+    style A fill:#7c3aed,color:#fff,stroke:#7c3aed
+    style B fill:#2563eb,color:#fff,stroke:#2563eb
+    style C fill:#0f766e,color:#fff,stroke:#0f766e
+    style D fill:#1d4ed8,color:#fff,stroke:#1d4ed8
+    style E fill:#374151,color:#fff,stroke:#6b7280
+    style F fill:#15803d,color:#fff,stroke:#15803d
+    style G fill:#b45309,color:#fff,stroke:#b45309
+    style H fill:#b91c1c,color:#fff,stroke:#b91c1c
+    style I fill:#7c3aed,color:#fff,stroke:#7c3aed
+    style J fill:#0f766e,color:#fff,stroke:#0f766e
+    style K fill:#1d4ed8,color:#fff,stroke:#1d4ed8
+    style L fill:#6b21a8,color:#fff,stroke:#6b21a8
+    style M fill:#374151,color:#fff,stroke:#6b7280
+    style N fill:#374151,color:#fff,stroke:#6b7280
+  </div>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+</body>
+</html>

@@ -108,7 +108,7 @@ Dokumente selbst bleiben on-prem (ChromaDB + lokale Embeddings). Bewusste Entsch
 
 ### Guardrails-Strategie
 - **3 separate LLM-Calls** (alle via Gemini): Input Guard, Query Refinement, Output Guard
-- Guardrail-Calls nutzen `gemini-2.0-flash` (schnell, günstig); Hauptantwort optional `gemini-1.5-pro`
+- Guardrail-Calls können schnelleres Modell nutzen (z.B. `gemini-flash`)
 - Output-Guardrail: **blocking** (Client wartet, höhere Qualitätssicherung)
 
 ### pyproject.toml Dependencies (backend-Gruppe)
@@ -234,117 +234,219 @@ SQLite: Conversation Turn speichern
 
 ---
 
-## 6. Implementierungs-Phasen mit Definition of Done
+## 6. Arbeitspaket-Plan – Sequenziell-Parallele Umsetzung (2 Personen)
 
-### Phase 1 – LLM Client + Basis-Chat-Streaming
-**Was:** Gemini via LangChain einbinden, nackter SSE-Streaming-Endpunkt ohne RAG
+### Übersicht
+
+Zwei parallele Spuren die nach AP 0 gleichzeitig starten und beim Integration-Merge zusammenkommen.
+GitHub Issues sind der primäre Tracking-Ort — diese Sektion dokumentiert Abhängigkeiten und Aufteilung.
+
+```
+AP 0  – Projektfundament & CI/CD          [beide · blocking]
+  │
+  ├── Spur A ──────────────────────────────────────────────────────────
+  │   AP 1A  #19  ChromaDB Integration & Retrieval Validation
+  │   AP 2A  #20  Gemini Integration via LangChain & Streaming Chat
+  │   AP 3A        Basis-Chat & Session Memory
+  │
+  └── Spur B ──────────────────────────────────────────────────────────
+      AP 1B  #21  JWT Authentication & Role-Based Access Control
+      AP 2B  #22  Guardrails – Input Guard, Query Refiner, Output Guard
+      AP 3B  #23  Document API Endpoints & JWT Protection
+
+  ⛙  Integration-Merge  [beide · alle APs 1–3 müssen grün sein]
+
+  AP 4        RAG Chain (vollständig, alle Komponenten zusammen)
+  AP 5        Monitoring & Hardening  [optional]
+```
+
+---
+
+### AP 0 – Projektfundament & CI/CD
+**Wer:** beide gemeinsam · **Blocking:** alle anderen APs
 
 **Tasks:**
-- `services/dependency/llm.py`: `ChatGoogleGenerativeAI` als Singleton, API-Key aus ENV
+- `pyproject.toml` mit allen Deps finalisieren (einmalig, vollständig)
+- `.flake8`, `mypy.ini`, `.isort.cfg`, `bandit`-Config anlegen
+- GitHub Actions Pipeline: alle 5 Guards aus Section 7 Qualität
+- `pytest`-Config mit `--cov-fail-under=80`
+- `docker-compose.yml` für lokales Dev-Setup
+- `.env.example` mit `GEMINI_API_KEY`, `JWT_SECRET`, `CHROMA_PATH`
+
+**Definition of Done:**
+- [ ] Pipeline läuft durch auf leerem Repo
+- [ ] Alle Tools konfiguriert und lokal ausführbar
+- [ ] `.env.example` vollständig, keine echten Keys committed
+
+---
+
+### Spur A – Infrastruktur & RAG
+
+#### AP 1A – ChromaDB Integration & Retrieval Validation
+**GitHub:** `#19` · **Blocked by:** AP 0
+
+**Tasks:**
+- `services/dependency/vectordb.py`: `PersistentClient`, Cosine-Similarity-Collection, Singleton
+- `services/core/ingestion/loader.py`: PDF/DOCX/TXT → Text
+- `services/core/ingestion/chunker.py`: `RecursiveCharacterTextSplitter` (512/50)
+- `services/core/ingestion/embedder.py`: sentence-transformers → ChromaDB upsert
+- `conftest.py`: Mock-Fixture für ChromaDB
+
+**Definition of Done:**
+- [ ] 20-Dokument Ground-Truth-Corpus in ChromaDB ladbar
+- [ ] Top-1-Hit-Rate ≥ 80 % auf Ground-Truth-Queries
+- [ ] Cosine-Similarity-Score ≥ definierter Threshold
+- [ ] Unit-Tests für loader, chunker, embedder mit Mock-ChromaDB
+- [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
+
+---
+
+#### AP 2A – Gemini Integration via LangChain & Streaming Chat
+**GitHub:** `#20` · **Blocked by:** `#19`
+
+**Tasks:**
+- `langchain-google-genai` zu `pyproject.toml`
+- `services/dependency/llm.py`: `ChatGoogleGenerativeAI` Singleton Factory (Flash + Pro)
 - `utils/streaming.py`: SSE-Generator-Helper
-- `api/chat.py`: `POST /api/chat` nimmt `{message, session_id}`, streamt Gemini-Antwort
+- `api/chat.py`: `POST /api/chat` mit `{message, session_id}`, streamt Gemini-Antwort
+- `/health`: LLM-Status ohne echten Inference-Call
 - `main.py`: Router einbinden
 
 **Definition of Done:**
-- [ ] `POST /api/chat` liefert SSE-Stream mit Gemini-Antwort
-- [ ] API-Key kommt ausschließlich aus Environment-Variable `GEMINI_API_KEY`
-- [ ] Kein Hardcoded-Token, keine Secrets im Code
-- [ ] Tests für LLM-Dependency (mit Mock)
-- [ ] Health-Check meldet LLM-Status
+- [ ] `POST /api/chat` liefert Token-by-Token SSE-Stream
+- [ ] `GEMINI_API_KEY` ausschließlich aus ENV, nie geloggt
+- [ ] `convert_system_message_to_human=True` gesetzt
+- [ ] Unit-Tests mit gemockten API-Calls, kein echter Call in CI
+- [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
 
 ---
 
-### Phase 2 – Document Ingestion Pipeline
-**Was:** Dokumente hochladen, chunken, embedden, in ChromaDB speichern
+#### AP 3A – Basis-Chat & Session Memory
+**Blocked by:** `#20`
 
 **Tasks:**
-- `services/dependency/vectordb.py`: ChromaDB Client (persistent, Singleton)
-- `services/core/ingestion/loader.py`: PDF/DOCX/TXT → Text
-- `services/core/ingestion/chunker.py`: `RecursiveCharacterTextSplitter` (LangChain)
-- `services/core/ingestion/embedder.py`: Embedding + ChromaDB upsert
-- `api/documents.py`: Upload, List, Delete Endpunkte
-
-**Definition of Done:**
-- [ ] PDF, DOCX und TXT-Dateien können hochgeladen werden
-- [ ] Chunks landen persistent in ChromaDB
-- [ ] `GET /api/documents` listet alle gespeicherten Dokumente
-- [ ] `DELETE /api/documents/{id}` entfernt Dokument + Chunks
-- [ ] Tests für Loader, Chunker, Embedder (mit Mock-ChromaDB)
-
----
-
-### Phase 3 – RAG Chain (Retrieval + Generation)
-**Was:** Retrieval aus ChromaDB + Prompt-Assembly + Gemini-Stream in einer LCEL Chain
-
-**Tasks:**
-- `services/core/rag/retriever.py`: ChromaDB Similarity Search, gibt Chunks + Metadaten zurück
-- `services/core/rag/chain.py`: LCEL Runnable: retriever | prompt_template | llm | output_parser
-- Streaming über `chain.astream()` in den SSE-Generator einbinden
-- `/api/chat` auf RAG-Chain umstellen
-- Antwort enthält `sources`-Feld (welche Chunks wurden genutzt)
-
-**Definition of Done:**
-- [ ] Antworten basieren nachweislich auf hochgeladenen Dokumenten
-- [ ] SSE-Stream liefert Token-by-Token
-- [ ] Response enthält Quellenangaben (Dokument-Name, Chunk-Index)
-- [ ] Ohne passende Dokumente: klare "Keine Informationen gefunden"-Antwort
-- [ ] Tests für Chain (mit Mock-Retriever und Mock-LLM)
-
----
-
-### Phase 4 – Guardrails (Input + Refinement + Output)
-**Was:** Drei separate LLM-Calls als Quality Gate
-
-**Tasks:**
-- `services/core/guardrails/input_guard.py`: Klassifizierung der Anfrage (safe/unsafe)
-- `services/core/guardrails/query_refiner.py`: Query-Umformulierung für besseres Retrieval
-- `services/core/guardrails/output_guard.py`: Plausibilitätsprüfung der Antwort (blocking)
-- In `/api/chat` Flow integrieren (vor und nach Chain)
-- Separate Prompt-Templates für jeden Guardrail
-
-**Definition of Done:**
-- [ ] Unangemessene Anfragen werden abgelehnt (400 + Reason)
-- [ ] Refined Query verbessert Retrieval messbar (manueller Test)
-- [ ] Output-Guardrail blockiert bis Antwort verifiziert
-- [ ] Guardrail-Rejections werden geloggt
-- [ ] Tests für alle drei Guardrails (mit Mock-LLM)
-
----
-
-### Phase 5 – Session Memory (SQLite)
-**Was:** Gesprächsverlauf pro Session persistent speichern
-
-**Tasks:**
+- `aiosqlite` zu `pyproject.toml`
 - `services/core/rag/memory.py`: async SQLite CRUD für Conversation Turns
 - DB-Schema: `sessions(id, created_at)`, `messages(id, session_id, role, content, created_at)`
-- LangChain Memory-Integration: letzte N Nachrichten als History in Prompt
-- Session-ID kommt im Request-Body mit
+- `POST /api/sessions`, `GET /api/sessions/{id}/history`
+- LangChain Memory-Integration: letzte 10 Nachrichten als History in Prompt
 
 **Definition of Done:**
 - [ ] Gesprächsverlauf wird pro Session in SQLite gespeichert
-- [ ] History fließt in den Prompt ein (letzten 10 Nachrichten)
-- [ ] Neue Session via `POST /api/sessions` erstellbar
-- [ ] `GET /api/sessions/{id}/history` liefert Verlauf
-- [ ] Tests für Memory-Schicht
+- [ ] History fließt in den Prompt ein (letzte 10 Nachrichten)
+- [ ] Session-Endpunkte funktionieren ohne Auth (wird in AP 3B gesichert)
+- [ ] Unit-Tests für Memory-Schicht
+- [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
 
 ---
 
-### Phase 6 – Auth (JWT)
-**Was:** Login/Register, JWT-geschützte Endpunkte, admin/user Rollen
+### Spur B – Security & Integration
+
+#### AP 1B – JWT Authentication & Role-Based Access Control
+**GitHub:** `#21` · **Blocked by:** AP 0
 
 **Tasks:**
+- `python-jose[cryptography]`, `passlib[bcrypt]` zu `pyproject.toml`
+- User-Tabelle in SQLite: `users(id, email, hashed_password, role, created_at)`
 - `services/dependency/auth.py`: JWT-Decode als FastAPI Dependency
 - `api/auth.py`: `POST /api/auth/register`, `POST /api/auth/login`
-- User-Tabelle in SQLite (id, email, hashed_password, role)
-- Alle `/api/chat` und `/api/documents` Endpunkte mit JWT absichern
-- `admin`-Rolle: darf Dokumente löschen; `user`-Rolle: darf nur chatten + lesen
+- Rollen: `admin` (upload + delete), `user` (chat + list)
+- SSO-Extension-Point vorbereiten (abstrakte Auth-Dependency, swappable)
 
 **Definition of Done:**
-- [ ] Login liefert JWT-Token
-- [ ] Alle Chat- und Dokument-Endpunkte prüfen JWT
-- [ ] `admin` kann Dokumente hochladen und löschen
-- [ ] `user` kann nur chatten und Dokumente listen
-- [ ] Tests für Auth-Flow (inkl. abgelaufener Token)
+- [ ] Login liefert signierten JWT-Token
+- [ ] Kein Token → `401`, abgelaufener Token → `401` mit klarer Message
+- [ ] `user` auf geschützter Admin-Route → `403`
+- [ ] Passwörter bcrypt-gehasht, nie geloggt
+- [ ] `JWT_SECRET` ausschließlich aus ENV
+- [ ] Unit-Tests inkl. abgelaufener + manipulierter Token
+
+---
+
+#### AP 2B – Guardrails – Input Guard, Query Refiner & Output Guard
+**GitHub:** `#22` · **Blocked by:** `#20` (Gemini muss stehen)
+
+**Tasks:**
+- `services/core/guardrails/input_guard.py`: Query klassifizieren (`safe`/`unsafe`)
+- `services/core/guardrails/query_refiner.py`: Query für Retrieval umformulieren
+- `services/core/guardrails/output_guard.py`: Plausibilitätsprüfung der Antwort (blocking)
+- Eigenes Prompt-Template pro Guardrail, alle auf `gemini-2.0-flash`
+- Guardrail-Rejections loggen mit `session_id`, `reason`, `timestamp`
+
+**Definition of Done:**
+- [ ] Unsafe Query → `400` + Reason, nichts in ChromaDB oder SQLite geschrieben
+- [ ] Refined Query messbar besser auf 5 manuellen Test-Queries
+- [ ] Output-Guardrail blocking — kein fire-and-forget
+- [ ] Unit-Tests für alle drei mit gemocktem Gemini
+- [ ] Kein User-Datum oder Chunk-Inhalt in Logs
+- [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
+
+---
+
+#### AP 3B – Document API Endpoints & JWT Protection
+**GitHub:** `#23` · **Blocked by:** `#19` (ChromaDB) · `#21` (JWT)
+
+**Tasks:**
+- `api/documents.py`: `POST /api/documents/upload`, `GET /api/documents`, `DELETE /api/documents/{id}`
+- `python-multipart` zu `pyproject.toml`
+- Upload → `loader → chunker → embedder → ChromaDB upsert` in einer Request-Lifecycle
+- Delete → Dokument-Metadata UND alle zugehörigen Chunks aus ChromaDB entfernen
+- JWT-Middleware auf alle drei Routes
+- Rollen-Check: `admin` für POST + DELETE, `user` nur GET
+- Duplicate-Detection: gleicher Filename + Hash → `409 Conflict`
+
+**Definition of Done:**
+- [ ] Upload PDF → Chunks in ChromaDB → List zeigt Dokument → Delete → Chunks weg
+- [ ] Duplicate-Upload → `409`
+- [ ] `user` auf DELETE → `403`, kein Token → `401`
+- [ ] Kein falsches Format → `415`
+- [ ] Unit-Tests mit gemocktem ChromaDB + gemockter Auth-Dependency
+- [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
+
+---
+
+### ⛙ Integration-Merge
+**Wer:** beide gemeinsam · **Blocked by:** alle APs 1–3 beider Spuren
+
+Vor dem Merge müssen alle folgenden Issues auf `closed` stehen: `#19`, `#20`, `#21`, `#22`, `#23` + AP 3A.
+
+**Merge-Checkliste:**
+- [ ] Spur-A-Branch und Spur-B-Branch konfliktfrei zusammengeführt
+- [ ] Vollständiger End-to-End-Test: Register → Login → Upload → Chat → Guardrail → RAG-Antwort mit Sources
+- [ ] Alle CI/CD-Guards grün auf `main`
+- [ ] Keine offenen `TODO`s oder `FIXME`s in mergtem Code
+
+---
+
+### AP 4 – RAG Chain (vollständig)
+**Blocked by:** Integration-Merge
+
+**Tasks:**
+- `services/core/rag/retriever.py`: ChromaDB Similarity Search, Chunks + Metadaten
+- `services/core/rag/chain.py`: LCEL: `retriever | prompt_template | llm | output_parser`
+- `chain.astream()` in SSE-Generator einbinden
+- `/api/chat` auf RAG-Chain umstellen (ersetzt nackten Gemini-Call)
+- Guardrails in Flow integrieren: Input Guard → Query Refiner → Chain → Output Guard
+- Response enthält `sources`-Feld (Dokument-Name, Chunk-Index)
+- Fallback: "Keine Informationen gefunden" wenn kein relevanter Chunk
+
+**Definition of Done:**
+- [ ] Antworten basieren nachweislich auf hochgeladenen Dokumenten
+- [ ] SSE-Stream liefert Token-by-Token mit `sources`
+- [ ] Guardrails aktiv im vollständigen Flow
+- [ ] Auth auf `/api/chat` aktiv
+- [ ] Tests für Chain mit Mock-Retriever + Mock-LLM
+- [ ] SonarQube Quality Gate bestanden
+- [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
+
+---
+
+### AP 5 – Monitoring & Hardening (optional, nach Go-Live)
+**Tasks:**
+- OpenTelemetry SDK + FastAPI-Instrumentation
+- Traces für RAG-Chain (Embedding-Latenz vs. Retrieval vs. LLM)
+- SonarQube-Scan in CI/CD Pipeline
+- Performance-Baseline dokumentieren
 
 ---
 
@@ -415,6 +517,7 @@ VectorDB-Vergleich für spätere Skalierung:
 | Qdrant | Schnell, filtered search | Eigener Server nötig |
 | pgvector | SQL-Integration | PostgreSQL-Overhead |
 | Milvus | High-Performance, on-prem | Komplexes Setup |
+| Weaviate | Hybrid Search, GraphQL | Ressourcenintensiv |
 
 ---
 
@@ -441,6 +544,16 @@ class EmbeddingService:
         return self.model.encode([query], normalize_embeddings=True)[0].tolist()
 ```
 
+Embedding-Modell-Vergleich (2026):
+
+| Modell | Dims | Stärke | Hinweis |
+|---|---|---|---|
+| `all-MiniLM-L6-v2` ✓ | 384 | Schnell, kompakt | Standard im Projekt |
+| `paraphrase-multilingual-mpnet-base-v2` | 768 | Multilingual | Für DE/EN-Mischcontent |
+| `BAAI/bge-large-en-v1.5` | 1024 | SOTA Open-Source | Höherer RAM-Bedarf |
+| `voyage-3-large` | 1024 | Anthropic-empfohlen | Cloud, kostenpflichtig |
+| `text-embedding-3-large` | 3072 | OpenAI SOTA | Cloud, kostenpflichtig |
+
 ---
 
 ### LLM Factory (Gemini)
@@ -458,6 +571,10 @@ def get_llm(model: str = "gemini-2.0-flash") -> ChatGoogleGenerativeAI:
         streaming=True,
         convert_system_message_to_human=True  # Gemini-Quirk
     )
+
+# Modell-Strategie im Projekt:
+# - Guardrails (Input/Output Guard, Query Refinement): "gemini-2.0-flash"  → schnell, günstig
+# - Hauptantwort (RAG Chain): "gemini-2.0-flash" oder "gemini-1.5-pro"    → Qualität vs. Kosten
 ```
 
 ---
@@ -506,6 +623,7 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from typing import AsyncIterator, List
+from dataclasses import dataclass
 
 RAG_PROMPT = ChatPromptTemplate.from_template(
     """Du bist ein hilfreicher Assistent. Beantworte die Frage ausschließlich basierend auf dem folgenden Kontext.
@@ -518,6 +636,11 @@ Frage: {question}
 
 Antwort:"""
 )
+
+@dataclass
+class RAGResponse:
+    answer: str
+    sources: List[dict]
 
 def build_rag_chain(retriever: ChromaRetriever, llm):
     def format_context(docs: List[tuple]) -> str:
@@ -561,12 +684,13 @@ def rerank(query: str, docs: List[str], top_n: int = 3) -> List[str]:
 
 ```python
 from langgraph.graph import StateGraph, START, END
+from langchain_core.documents import Document
 from typing import TypedDict, List
 
 class RAGState(TypedDict):
     question: str
     refined_query: str
-    context: List[tuple]
+    context: List[Document]
     answer: str
     sources: List[dict]
 
@@ -597,5 +721,6 @@ rag_graph = builder.compile()
 
 ## 9. Offene Entscheidungen
 
+- [ ] **Output-Guardrail blocking oder fire-and-forget?** (bisher: blocking geplant)
 - [ ] **Dokument-Zugriffskontrolle:** geteilte Wissensbasis für alle User ODER per-user Collections in ChromaDB?
 - [ ] **Guardrail-Modell:** `gemini-flash` für alle Guards, oder `gemini-pro` für Output-Guard?

@@ -289,7 +289,7 @@ class WhisperRuntimeConfig:
     model_revision: str = field(default_factory=_resolve_model_revision)
     low_cpu_mem_usage: bool = True
     use_safetensors: bool = True
-    enable_fake_fallback: bool = field(default_factory=lambda: _parse_bool_env("WHISPER_ENABLE_FAKE_FALLBACK", True))
+    enable_fake_fallback: bool = field(default_factory=lambda: _parse_bool_env("WHISPER_ENABLE_FAKE_FALLBACK", False))
     fake_transcript_text: str = field(default_factory=_resolve_fake_transcript_text)
 
 

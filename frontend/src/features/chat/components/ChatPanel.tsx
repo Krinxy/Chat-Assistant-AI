@@ -423,10 +423,14 @@ export function ChatPanel({
           return;
         }
 
-        recorder.requestData();
+        // Reset timing before stop so the next segment starts fresh
         const flushNow = Date.now();
         segmentStartedAtRef.current = flushNow;
         lastVoiceActivityAtRef.current = flushNow;
+        // Stop instead of requestData — stop produces a self-contained WebM file per
+        // segment (no EBML header missing on second+ flushes). onstop restarts the
+        // recorder for the next segment.
+        recorder.stop();
       };
 
       type AudioContextConstructor = typeof AudioContext;
@@ -599,6 +603,18 @@ export function ChatPanel({
 
       recorder.onstop = () => {
         if (!isStoppingRecordingRef.current) {
+          // Mid-session segment flush: restart recorder so the next segment is also
+          // a self-contained WebM (complete EBML header, decodable independently).
+          globalThis.setTimeout(() => {
+            if (transcriptionSocketRef.current !== transcriptionSocket) {
+              return;
+            }
+            try {
+              recorder.start();
+            } catch {
+              teardownLiveTranscription(copy.speechUnsupported);
+            }
+          }, 0);
           return;
         }
 

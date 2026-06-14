@@ -1,4 +1,4 @@
-import raw from "../../../../config/frontend.yaml";
+import raw from "../../../config/frontend.yaml";
 
 interface SpeechConfig {
   monitor_poll_ms: number;

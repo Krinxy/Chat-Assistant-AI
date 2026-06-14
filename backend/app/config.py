@@ -8,7 +8,7 @@ from typing import List
 
 import yaml
 
-_CONFIG_PATH = Path(__file__).parent.parent.parent / "config" / "backend.yaml"
+_CONFIG_PATH = Path(__file__).parent.parent / "config" / "backend.yaml"
 
 
 def _section(cls, raw: dict, key: str):

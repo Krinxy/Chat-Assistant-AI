@@ -1,0 +1,43 @@
+# ── Auth ──────────────────────────────────────────────────────────────────────
+auth:
+  password_min_length: 8
+  reset_token_minutes: 15
+  access_token_expires_minutes: 15   # also overridable via JWT_EXPIRES_MINUTES env var
+
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
+rate_limit:
+  login_max_attempts: 5
+  login_window_seconds: 60
+  forgot_password_max_attempts: 3
+  forgot_password_window_seconds: 600   # 10 minutes
+  reset_password_max_attempts: 5
+  reset_password_window_seconds: 60
+
+# ── API / Server ──────────────────────────────────────────────────────────────
+api:
+  body_limit_bytes: 1048576        # 1 MB
+  hsts_max_age_seconds: 31536000   # 1 year
+  # allowed_origins: overridden by ALLOWED_ORIGINS env var in production
+  allowed_origins:
+    - "http://localhost:5173"
+    - "http://localhost:5174"
+    - "http://localhost:5175"
+
+# ── Transcription ─────────────────────────────────────────────────────────────
+transcription:
+  speech_cache_ttl_seconds: 20
+  receive_poll_ms: 120
+  receive_poll_ms_min: 40
+  receive_poll_ms_max: 1000
+  max_inflight_chunks_min: 1
+  max_inflight_chunks_max: 8
+  whisper_model: "openai/whisper-large-v3-turbo"
+  whisper_model_revision: "main"
+  sampling_rate: 16000
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+redis:
+  port: 6379
+  db: 0
+  timeout_seconds: 0.25
+  scan_count: 100

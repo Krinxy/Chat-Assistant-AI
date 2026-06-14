@@ -46,7 +46,11 @@ backend = [
   "transformers>=4.45.0",
   "accelerate>=0.34.0",
   "safetensors>=0.4.5",
-  "imageio-ffmpeg>=0.5.1"
+  "imageio-ffmpeg>=0.5.1",
+  "python-jose[cryptography]>=3.3.0",
+  "passlib[bcrypt]>=1.7.4",
+  "sqlalchemy>=2.0.0",
+  "aiosqlite>=0.20.0"
 ]
 
 frontend = [
@@ -91,7 +95,11 @@ development = [
   "seaborn>=0.13.0",
   "networkx>=3.3",
   "fakeredis>=2.24.0",
-  "duckdb>=1.1.0"
+  "duckdb>=1.1.0",
+  "python-jose[cryptography]>=3.3.0",
+  "passlib[bcrypt]>=1.7.4",
+  "sqlalchemy>=2.0.0",
+  "aiosqlite>=0.20.0"
 ]
 
 all = [

@@ -1,5 +1,5 @@
 ---
-description: JWT auth and API-first deployment for the AURA backend — milestone by milestone with confirmation at each step
+description: JWT auth and API-first deployment for the AURA backend - milestone by milestone with confirmation at each step
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

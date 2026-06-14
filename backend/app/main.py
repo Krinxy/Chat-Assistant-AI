@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
 
+from .config import cfg  # noqa: E402
 from .api.auth import router as auth_router  # noqa: E402
 from .api.chat import router as chat_router  # noqa: E402
 from .api.documents import router as documents_router  # noqa: E402
@@ -24,7 +25,7 @@ from .services.utils.transcription.preflight import (  # noqa: E402
 )
 
 
-_BODY_LIMIT_BYTES = 1 * 1024 * 1024  # 1 MB
+_BODY_LIMIT_BYTES = cfg.api.body_limit_bytes
 
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
 
@@ -50,7 +51,7 @@ class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         if _IS_PRODUCTION:
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = f"max-age={cfg.api.hsts_max_age_seconds}; includeSubDomains"
         return response
 
 
@@ -87,8 +88,8 @@ def create_app() -> FastAPI:
     app.add_middleware(_BodySizeLimitMiddleware)
 
     # CORS: explicit allowlist — wildcard + credentials is a security hole
-    _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5175")
-    _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    # env var ALLOWED_ORIGINS takes precedence; falls back to config/backend.yaml
+    _allowed_origins = cfg.api.allowed_origins
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins,

@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 from uuid import uuid4
 
+from ....config import cfg as _cfg
 from .redis_fake import FakeRedisCache
 from .redis_runtime import RedisCache, try_create_redis_cache_from_env
 
@@ -37,7 +38,9 @@ class SpeechTranscriptionCache:
         config: SpeechCacheConfig | None = None,
     ) -> None:
         self._redis_cache = redis_cache or _try_create_redis_cache_from_env() or FakeRedisCache()
-        self._config = config or SpeechCacheConfig(ttl_seconds=_resolve_ttl_seconds_from_env(default_value=20))
+        self._config = config or SpeechCacheConfig(
+            ttl_seconds=_resolve_ttl_seconds_from_env(default_value=_cfg.transcription.speech_cache_ttl_seconds)
+        )
 
     @property
     def backend_name(self) -> str:

@@ -44,6 +44,7 @@ import { userProfile } from "./shared/data/userProfile";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
 import { WelcomeOverlay } from "./shared/components/ui/WelcomeOverlay";
+import { featureFlags } from "./shared/config/appConfig";
 import { DashboardAside } from "./widgets/dashboard/DashboardAside";
 import { Header } from "./widgets/header/Header";
 import { Sidebar } from "./widgets/sidebar/Sidebar";
@@ -51,7 +52,7 @@ import { Sidebar } from "./widgets/sidebar/Sidebar";
 const WELCOME_START_EXIT_MS = 2100;
 const WELCOME_HIDE_MS = 3000;
 const WELCOME_SKIP_HIDE_MS = 420;
-const ENABLE_INSTAFEED = false;
+const ENABLE_INSTAFEED = featureFlags.enable_instafeed;
 
 type ThemeMode = "light" | "dark";
 type InviteDecision = "accepted" | "declined";

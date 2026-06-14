@@ -2,6 +2,7 @@ import { type PointerEvent, useMemo, useRef, useState } from "react";
 
 import type { CompanyStoryItem } from "../../features/chat/types/chat";
 import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
+import { featureFlags } from "../../shared/config/appConfig";
 
 interface HeaderProps {
   greeting: string;
@@ -25,7 +26,7 @@ const storyGradients = [
   "linear-gradient(145deg, #9d79ff 0%, #7340ff 100%)",
   "linear-gradient(145deg, #c3a9ff 0%, #8861ff 100%)",
 ];
-const ENABLE_HEADER_STORY_STRIP = false;
+const ENABLE_HEADER_STORY_STRIP = featureFlags.enable_header_story_strip;
 
 const resolveStoryGradient = (storyId: string): string => {
   let seed = 0;

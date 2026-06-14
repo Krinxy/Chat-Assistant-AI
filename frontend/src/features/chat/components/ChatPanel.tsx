@@ -13,6 +13,7 @@ import { ChatSkeletonMessage } from "../../../shared/components/feedback/ChatSke
 import { useOutsideClick } from "../../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../../shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "../../../shared/constants/devProfiles";
+import { speechCfg } from "../../../shared/config/appConfig";
 import type {
   AttachmentAction,
   BrainrotStyleKey,
@@ -86,12 +87,12 @@ type TranscriptionServerMessage =
   | TranscriptionStoppedMessage
   | { type: "ready" | "started" };
 
-const SPEECH_MONITOR_POLL_MS = 180;
-const SPEECH_ACTIVITY_RMS_THRESHOLD = 0.02;
-const SPEECH_MIN_SEGMENT_MS = 2400;
-const SPEECH_SILENCE_FLUSH_MS = 2200;
-const SPEECH_MAX_SEGMENT_MS = 18000;
-const TRANSCRIPT_ANIMATION_STEP_MS = 58;
+const SPEECH_MONITOR_POLL_MS = speechCfg.monitor_poll_ms;
+const SPEECH_ACTIVITY_RMS_THRESHOLD = speechCfg.rms_threshold;
+const SPEECH_MIN_SEGMENT_MS = speechCfg.min_segment_ms;
+const SPEECH_SILENCE_FLUSH_MS = speechCfg.silence_flush_ms;
+const SPEECH_MAX_SEGMENT_MS = speechCfg.max_segment_ms;
+const TRANSCRIPT_ANIMATION_STEP_MS = speechCfg.transcript_animation_step_ms;
 
 const normalizeSpeechLanguage = (speechLocale: string): "de" | "en" => {
   const [languageCode] = speechLocale.split("-");

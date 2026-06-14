@@ -31,8 +31,9 @@ import {
   parseAppointmentItem,
   readDbAssignedRole,
 } from "./companyWorkspace.utils";
+import { featureFlags } from "../../shared/config/appConfig";
 
-const ENABLE_WORKSPACE_NEWSFEED = false;
+const ENABLE_WORKSPACE_NEWSFEED = featureFlags.enable_workspace_newsfeed;
 
 const OV_WIDGET_DEFAULT_ORDER = ["metrics", "events", "scopes", "kpis"] as const;
 type OverviewWidgetId = typeof OV_WIDGET_DEFAULT_ORDER[number];

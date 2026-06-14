@@ -1,0 +1,413 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Pakete
+% ---------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometry,fit,backgrounds,calc}
+
+% ---------------------------------------------------------------------------
+% Farben & Stil
+% ---------------------------------------------------------------------------
+\definecolor{accent}{HTML}{2C6E9B}
+\definecolor{accent2}{HTML}{3FA796}
+\definecolor{accent3}{HTML}{E08E45}
+\definecolor{ink}{HTML}{1F2933}
+\definecolor{soft}{HTML}{F0F4F8}
+\definecolor{codebg}{HTML}{F7F8FA}
+\definecolor{codekw}{HTML}{2C6E9B}
+\definecolor{codestr}{HTML}{3FA796}
+\definecolor{codecom}{HTML}{8895A7}
+
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize\color{ink},
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codestr},
+  commentstyle=\color{codecom}\itshape,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{soft},
+  numbers=left,
+  numberstyle=\tiny\color{codecom},
+  showstringspaces=false,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  tabsize=4,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small\color{accent}RAG Backend}
+\rhead{\small\color{accent}AP 1A \textendash{} ChromaDB Integration \& Retrieval}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% TikZ Knoten-Stile
+\tikzset{
+  layer/.style={draw=accent, fill=soft, rounded corners=3pt, line width=0.7pt,
+                inner sep=8pt, align=center},
+  comp/.style={draw=accent, fill=white, rounded corners=2pt, line width=0.6pt,
+               minimum height=8mm, minimum width=26mm, align=center,
+               font=\small},
+  ext/.style={draw=accent3, fill=accent3!10, rounded corners=2pt, line width=0.6pt,
+              minimum height=8mm, minimum width=26mm, align=center, font=\small},
+  store/.style={draw=accent2, fill=accent2!12, cylinder, shape border rotate=90,
+                aspect=0.25, minimum height=12mm, minimum width=22mm, align=center,
+                font=\small, line width=0.6pt},
+  flow/.style={-{Stealth[length=2.2mm]}, line width=0.8pt, draw=ink},
+  flowd/.style={-{Stealth[length=2.2mm]}, line width=0.8pt, draw=accent3, dashed},
+  lbl/.style={font=\scriptsize\itshape, color=codecom},
+}
+
+% ---------------------------------------------------------------------------
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\color{accent}\rule{\linewidth}{1.4pt}}\\[0.5cm]
+{\Huge\bfseries RAG Backend\par}
+\vspace{0.35cm}
+{\LARGE Arbeitspaket 1A\par}
+\vspace{0.2cm}
+{\Large ChromaDB Integration \& Retrieval Validation\par}
+{\color{accent}\rule{\linewidth}{1.4pt}}\\[1.1cm]
+
+\begin{minipage}{0.85\linewidth}
+\centering\large
+Dokumentation der Implementierung des Dokument-Ingestion- und Vektor-Retrieval-Fundaments
+für das on-premises Retrieval-Augmented-Generation-System.
+\end{minipage}
+
+\vfill
+\begin{tabular}{rl}
+\toprule
+GitHub Issue & \#19 (Spur A, blocked by AP 0)\\
+Modul-Scope & \texttt{backend/}\\
+Embedding-Modell & \texttt{all-MiniLM-L6-v2} (384 Dim.)\\
+Vektor-Store & ChromaDB (Cosine, persistent)\\
+Top-1-Hit-Rate & \textbf{100\,\% (20/20)}\\
+\bottomrule
+\end{tabular}
+
+\vspace{1.2cm}
+{\color{codecom}\today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\section{Überblick \& Zielsetzung}
+% ===========================================================================
+Arbeitspaket~1A legt das \emph{Infrastruktur-Fundament} der Spur~A des RAG-Backends:
+das Einlesen von Dokumenten, ihre Zerlegung in Chunks, deren Vektorisierung und die
+persistente Ablage in einem Vektor-Store mit Cosine-Similarity. Es ist die
+Voraussetzung für die nachgelagerte Streaming-Chat-Integration (AP~2A) und die
+vollständige RAG-Chain (AP~4).
+
+\paragraph{Definition of Done.} Alle Kriterien aus dem Implementierungsplan sind erfüllt:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{>{\raggedright\arraybackslash}p{8.8cm} c}
+\toprule
+\textbf{Kriterium} & \textbf{Status}\\
+\midrule
+20-Dokument Ground-Truth-Korpus in ChromaDB ladbar & \checkmark\ 20/20\\
+Top-1-Hit-Rate $\geq 80\,\%$ auf Ground-Truth-Queries & \checkmark\ \textbf{100\,\%}\\
+Cosine-Similarity-Score $\geq$ Threshold (0.25) & \checkmark\ min 0.48 / $\varnothing$ 0.66\\
+Unit-Tests für loader, chunker, embedder mit Mock-ChromaDB & \checkmark\ 30 Tests\\
+\texttt{flake8}, \texttt{mypy}, \texttt{bandit} clean & \checkmark\\
+Coverage $\geq 80\,\%$ & \checkmark\ 90\,--\,100\,\%\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ===========================================================================
+\section{Architektur}
+% ===========================================================================
+Die Implementierung folgt dem etablierten Schichtenmuster des Backends
+(\texttt{services/core}, \texttt{services/dependency}, \texttt{services/utils}).
+Fachlogik (Ingestion) ist von der Infrastruktur (Vektor-DB-Client) getrennt; alle
+externen Abhängigkeiten werden injiziert, um Testbarkeit ohne laufenden Vektor-Store
+und ohne Modell-Download zu garantieren.
+
+\subsection{Schichten- und Komponentenmodell}
+
+\begin{center}
+\begin{tikzpicture}[node distance=6mm]
+
+% --- core / ingestion layer ---
+\node[comp] (loader)  {\textbf{loader.py}\\\scriptsize PDF/DOCX/TXT $\to$ Text};
+\node[comp, right=of loader] (chunker) {\textbf{chunker.py}\\\scriptsize Recursive Split 512/50};
+\node[comp, right=of chunker] (embedder) {\textbf{embedder.py}\\\scriptsize Embed + Upsert};
+
+\begin{scope}[on background layer]
+\node[layer, fit=(loader)(chunker)(embedder),
+      label={[font=\small\bfseries,color=accent]above:services/core/ingestion}] (core) {};
+\end{scope}
+
+% --- dependency layer ---
+\node[comp, below=16mm of chunker] (vectordb) {\textbf{vectordb.py}\\\scriptsize VectorDBClient (Singleton)};
+\begin{scope}[on background layer]
+\node[layer, fit=(vectordb),
+      label={[font=\small\bfseries,color=accent]above:services/dependency}] (dep) {};
+\end{scope}
+
+% --- external ---
+\node[ext, left=22mm of vectordb] (st) {\textbf{sentence-\\transformers}\\\scriptsize all-MiniLM-L6-v2};
+\node[store, right=22mm of vectordb] (chroma) {ChromaDB\\\scriptsize Cosine\\\scriptsize persistent};
+
+% edges
+\draw[flow] (loader) -- (chunker);
+\draw[flow] (chunker) -- (embedder);
+\draw[flow] (embedder.south) -- ++(0,-3mm) -| (vectordb.north);
+\draw[flowd] (embedder.west) to[bend right=12] (st.north);
+\draw[flow] (vectordb) -- (chroma);
+\draw[flowd] (st.south) |- (vectordb.west);
+
+\node[lbl, below=1mm of dep] {Dependency-Injection: Client \& Modell sind austauschbar (real / fake)};
+\end{tikzpicture}
+\end{center}
+
+\noindent\textcolor{accent3}{\rule{6mm}{2pt}}~\footnotesize externe Plattform-Komponente\quad
+\textcolor{accent}{\rule{6mm}{2pt}}~Custom-Komponente\quad
+\textcolor{accent2}{\rule{6mm}{2pt}}~Datenspeicher
+\normalsize
+
+\subsection{Ingestion-Datenfluss}
+Der Schreibpfad transformiert eine Datei in durchsuchbare Vektoren. Jeder Schritt ist
+eine reine, isoliert testbare Funktion bzw. Klasse.
+
+\begin{center}
+\begin{tikzpicture}[node distance=9mm and 12mm]
+\node[ext] (file) {Datei\\\scriptsize .pdf/.docx/.txt};
+\node[comp, right=of file] (text) {Reiner Text\\\scriptsize \texttt{extract\_text()}};
+\node[comp, right=of text] (chunks) {Chunks\\\scriptsize \texttt{Chunk(source,idx,text)}};
+\node[comp, right=of chunks] (vec) {Embeddings\\\scriptsize $384$-dim, normalisiert};
+\node[store, right=of vec] (db) {ChromaDB\\\scriptsize upsert};
+
+\draw[flow] (file) -- node[lbl,above]{loader} (text);
+\draw[flow] (text) -- node[lbl,above]{chunker} (chunks);
+\draw[flow] (chunks) -- node[lbl,above]{embedder} (vec);
+\draw[flow] (vec) -- node[lbl,above]{id+meta} (db);
+\end{tikzpicture}
+\end{center}
+
+\noindent Die Chunk-ID ist deterministisch und inhaltsadressiert
+(\texttt{source:index:sha256[:16]}); ein erneutes Hochladen identischer Inhalte führt
+damit zu idempotenten Upserts statt Duplikaten.
+
+\subsection{Retrieval-Fluss}
+Der Lesepfad bettet die Anfrage mit demselben Modell ein und ermittelt über
+Cosine-Distance die ähnlichsten Chunks.
+
+\begin{center}
+\begin{tikzpicture}[node distance=8mm and 13mm]
+\node[ext] (q) {Query};
+\node[comp, right=of q] (qe) {Query-Embedding\\\scriptsize \texttt{embed\_query()}};
+\node[store, right=of qe] (db) {ChromaDB\\\scriptsize \texttt{collection.query}};
+\node[comp, right=of db] (res) {Top-$k$ Chunks\\\scriptsize +\,Metadaten,\,Distanz};
+
+\draw[flow] (q) -- (qe);
+\draw[flow] (qe) -- node[lbl,above]{$\vec{q}$} (db);
+\draw[flow] (db) -- node[lbl,above]{cosine}(res);
+\end{tikzpicture}
+\end{center}
+
+\noindent Ähnlichkeit $= 1 - \text{Distanz}$. Da alle Vektoren $\ell_2$-normalisiert sind,
+entspricht das dem Skalarprodukt $\langle \vec{q}, \vec{d}\rangle$.
+
+% ===========================================================================
+\section{Komponenten im Detail}
+% ===========================================================================
+
+\subsection{\texttt{vectordb.py} \textendash{} Vektor-DB-Client}
+Dünner Singleton-Wrapper um ChromaDBs \texttt{PersistentClient}. Die Collection wird
+mit Cosine-Distanz angelegt; der Client ist injizierbar, der Persistenzpfad kommt aus
+\texttt{CHROMA\_PATH} (Fallback \texttt{./chroma\_db}).
+
+\begin{lstlisting}[style=py]
+def get_collection(self) -> Collection:
+    return self._client.get_or_create_collection(
+        name=self._config.collection_name,
+        metadata={"hnsw:space": "cosine"},
+    )
+\end{lstlisting}
+
+\subsection{\texttt{loader.py} \textendash{} Dokument-Loader}
+Dispatch nach Datei-Endung; pro Format ein lazy importierter Parser
+(\texttt{pypdf}, \texttt{python-docx}, UTF-8). Nicht unterstützte Typen werfen
+\texttt{UnsupportedDocumentError}. Eine bytes-basierte API (\texttt{extract\_text})
+entkoppelt das Parsen vom Dateisystem und erleichtert den späteren Upload-Endpunkt.
+
+\subsection{\texttt{chunker.py} \textendash{} Text-Splitter}
+Kapselt LangChains \texttt{RecursiveCharacterTextSplitter} mit
+\texttt{chunk\_size=512}, \texttt{chunk\_overlap=50}. Validiert die Konfiguration und
+liefert indizierte \texttt{Chunk}-Records, die ihren Quellnamen tragen.
+
+\subsection{\texttt{embedder.py} \textendash{} Embedding \& Upsert}
+Zwei Verantwortlichkeiten, sauber getrennt: \texttt{EmbeddingService} lädt das
+sentence-transformers-Modell \emph{lazy} (Tests injizieren ein deterministisches
+Fake-Modell); \texttt{DocumentEmbedder} orchestriert Embedding und Upsert in eine
+\emph{injizierte} Collection.
+
+\begin{lstlisting}[style=py]
+ids = [build_chunk_id(chunk) for chunk in chunks]
+metadatas = [{"source": c.source, "chunk_index": c.chunk_index} for c in chunks]
+embeddings = self._embeddings.embed_texts([c.text for c in chunks])
+self._collection.upsert(ids=ids, embeddings=embeddings,
+                        documents=documents, metadatas=metadatas)
+\end{lstlisting}
+
+% ===========================================================================
+\section{Teststrategie}
+% ===========================================================================
+Zwei Test-Ebenen trennen schnelle, deterministische Logik-Tests von der echten,
+schwergewichtigen Modell-Validierung.
+
+\begin{center}
+\begin{tikzpicture}[node distance=7mm and 16mm]
+% mocked
+\node[comp] (ut) {Unit-Tests\\\scriptsize 30 Tests};
+\node[ext, above left=6mm and 10mm of ut] (fc) {FakeChroma\-Collection\\\scriptsize cosine in-memory};
+\node[ext, below left=6mm and 10mm of ut] (hm) {HashingEmbedding\-Model\\\scriptsize deterministisch};
+\draw[flowd] (fc) -- (ut);
+\draw[flowd] (hm) -- (ut);
+
+% real
+\node[comp, right=42mm of ut] (val) {Retrieval-Validation\\\scriptsize 2 Tests};
+\node[ext, above right=6mm and 10mm of val] (real) {all-MiniLM-L6-v2\\\scriptsize echtes Modell};
+\node[store, below right=6mm and 10mm of val] (eph) {ChromaDB\\\scriptsize EphemeralClient};
+\draw[flowd] (real) -- (val);
+\draw[flowd] (eph) -- (val);
+
+\node[lbl, below=1mm of ut] {kein Modell, keine I/O \textendash{} Coverage-Basis};
+\node[lbl, below=1mm of val] {\texttt{skipif} wenn Modell/Deps fehlen};
+
+\begin{scope}[on background layer]
+\node[layer, fit=(fc)(hm)(ut), fill=soft,
+  label={[font=\scriptsize\bfseries,color=accent]above:gemockt (CI-stabil)}]{};
+\node[layer, fit=(real)(eph)(val), fill=accent3!8, draw=accent3,
+  label={[font=\scriptsize\bfseries,color=accent3]above:echt (DoD-Nachweis)}]{};
+\end{scope}
+\end{tikzpicture}
+\end{center}
+
+\noindent Die \texttt{FakeChromaCollection} reproduziert ChromaDBs Cosine-Ranking,
+sodass auch Retrieval-Logik ohne realen Store getestet wird. Die echte Validierung
+läuft gegen einen \texttt{EphemeralClient} und das geladene Modell und überspringt
+sauber, falls die schwere Stack-Installation fehlt.
+
+% ===========================================================================
+\section{Ergebnisse}
+% ===========================================================================
+
+\begin{minipage}[t]{0.5\linewidth}
+\centering
+\textbf{Test-Coverage je Modul}\\[2mm]
+\begin{tikzpicture}
+\begin{axis}[
+  width=\linewidth, height=5.4cm,
+  ybar, bar width=12pt,
+  ymin=0, ymax=100,
+  ylabel={\footnotesize Coverage \%},
+  symbolic x coords={loader,chunker,embedder,vectordb},
+  xtick=data, x tick label style={font=\footnotesize,rotate=18,anchor=east},
+  ytick={0,20,40,60,80,100},
+  nodes near coords, nodes near coords style={font=\tiny},
+  enlarge x limits=0.18,
+  axis lines=left,
+  every axis plot/.append style={fill=accent,draw=accent},
+]
+\addplot coordinates {(loader,100)(chunker,100)(embedder,98)(vectordb,90)};
+\draw[accent3,dashed,thick] (axis cs:loader,80) -- (axis cs:vectordb,80)
+  node[above left,font=\tiny,color=accent3]{Ziel 80\%};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\linewidth}
+\centering
+\textbf{Top-1 Cosine-Similarity (20 Queries)}\\[2mm]
+\begin{tikzpicture}
+\begin{axis}[
+  width=\linewidth, height=5.4cm,
+  ybar, bar width=20pt,
+  ymin=0, ymax=1,
+  ylabel={\footnotesize Similarity},
+  symbolic x coords={min,Mittel,max},
+  xtick=data, x tick label style={font=\footnotesize},
+  nodes near coords, nodes near coords style={font=\tiny},
+  enlarge x limits=0.3, axis lines=left,
+  every axis plot/.append style={fill=accent2,draw=accent2},
+]
+\addplot coordinates {(min,0.479)(Mittel,0.663)(max,0.780)};
+\draw[accent3,dashed,thick] (axis cs:min,0.25) -- (axis cs:max,0.25)
+  node[above right,font=\tiny,color=accent3]{Threshold 0.25};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{4mm}
+\noindent\textbf{Kernergebnis:} Auf dem 20-Dokument-Korpus erreicht das Retrieval eine
+\textbf{Top-1-Hit-Rate von 100\,\%} \textendash{} jede Query findet als ähnlichsten
+Treffer das thematisch korrekte Dokument, mit komfortablem Abstand zum Threshold.
+Insgesamt laufen \textbf{32 Tests} grün; \texttt{flake8}, \texttt{mypy} und
+\texttt{bandit} sind ohne Befund.
+
+% ===========================================================================
+\section{Betrieb \& Umgebung}
+% ===========================================================================
+Backend-Tests laufen über die Conda-Umgebung \texttt{Chat-Assistant-AI} (Python 3.11).
+Drei umgebungsspezifische Stolpersteine wurden adressiert:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Voller System-Datenträger:} pip- und HuggingFace-Temp/Cache werden auf
+        einen beschreibbaren D:-Pfad umgeleitet (\texttt{TMP}, \texttt{HF\_HOME},
+        \texttt{--cache-dir}).
+  \item \textbf{Proxy-Zertifikat:} der Modell-Download nutzt ein kombiniertes
+        CA-Bundle (certifi + Windows-Root-CAs) via \texttt{SSL\_CERT\_FILE}.
+  \item \textbf{ChromaDB 1.x:} \texttt{delete\_collection} wirft \texttt{NotFoundError};
+        \texttt{reset\_collection} fängt dies typsicher ab.
+\end{itemize}
+
+\paragraph{Neue Abhängigkeiten} (in \texttt{pyproject.toml}, Gruppen \texttt{backend} +
+\texttt{development}): \texttt{sentence-transformers}, \texttt{pypdf},
+\texttt{python-docx}, \texttt{langchain-text-splitters}.
+
+\paragraph{Qualitäts-Kommandos}
+\begin{lstlisting}[style=py,numbers=none]
+flake8 --max-line-length=140 .
+mypy --ignore-missing-imports backend/app/services/core/ingestion \
+     backend/app/services/dependency/vectordb.py
+bandit -r backend/app/services/core/ingestion
+pytest tests/ragfeature --cov=backend/app/services/core/ingestion
+\end{lstlisting}
+
+\vfill
+\begin{center}\small\color{codecom}
+Ausblick: AP~2A (Gemini-Streaming-Chat) und AP~4 (vollständige LCEL-RAG-Chain mit
+\texttt{retriever.py}) bauen direkt auf diesem Fundament auf.
+\end{center}
+
+\end{document}

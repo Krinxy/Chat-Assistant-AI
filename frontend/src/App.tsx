@@ -135,7 +135,7 @@ const getInitialBrainrotStyle = (): BrainrotStyleKey => {
 };
 
 export default function App() {
-  const { isAuthenticated, login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
 
   const initialLanguageRef = useRef<Language>(getInitialLanguage());
   const initialLanguage = initialLanguageRef.current;
@@ -688,6 +688,7 @@ export default function App() {
                 onReturnToDashboard={handleReturnToDashboard}
                 onOpenProfile={handleOpenProfile}
                 copy={ui.chat}
+                authToken={user?.token}
               />
 
               {!hasStartedChat ? (

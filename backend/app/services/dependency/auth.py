@@ -4,7 +4,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, WebSocketException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy import select
@@ -31,6 +31,28 @@ def _get_iss() -> str:
 
 def _get_aud() -> str:
     return os.getenv("JWT_AUD", "aura-api")
+
+
+def verify_ws_token(token: str | None) -> None:
+    """
+    Stateless JWT validation for WebSocket auth (no DB lookup).
+    Raises WebSocketException(1008) on missing or invalid token.
+    In AUTH_MODE=mock the caller should skip this check entirely.
+    """
+    if not token:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    try:
+        payload = jwt.decode(
+            token,
+            _get_secret(),
+            algorithms=[_ALGORITHM],
+            audience=_get_aud(),
+            issuer=_get_iss(),
+        )
+        if payload.get("sub") is None:
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    except JWTError:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 
 class AbstractAuthProvider(ABC):

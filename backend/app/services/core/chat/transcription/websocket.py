@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from ....dependency.auth import verify_ws_token
 from .handler import LiveTranscriptionHandler
 
 router = APIRouter()
@@ -40,6 +41,9 @@ def _resolve_int_env(
 
 @router.websocket("/ws/transcribe")
 async def transcribe_audio(websocket: WebSocket) -> None:
+    if os.getenv("AUTH_MODE", "").lower() != "mock":
+        verify_ws_token(websocket.query_params.get("token"))
+
     session_id = session_handler.open_session()
 
     receive_poll_ms = _resolve_int_env(

@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, Response  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # noqa: E402
 
 from .config import cfg  # noqa: E402
 from .api.auth import router as auth_router  # noqa: E402
@@ -80,7 +81,19 @@ def create_app() -> FastAPI:
         title="Chat Assistant AI Speech Backend",
         version="0.1.0",
         lifespan=lifespan,
+        # Disable API docs in production — avoids endpoint disclosure on public servers.
+        # Set ENVIRONMENT=production to enable this. Override TRUSTED_PROXY_IPS for Hetzner.
+        docs_url=None if _IS_PRODUCTION else "/docs",
+        redoc_url=None if _IS_PRODUCTION else "/redoc",
+        openapi_url=None if _IS_PRODUCTION else "/openapi.json",
     )
+
+    # Trust X-Forwarded-For from the reverse proxy (nginx on Hetzner).
+    # Set TRUSTED_PROXY_IPS env var to the proxy's IP (comma-separated) in production.
+    # Defaults to 127.0.0.1 (nginx on same host). In dev, no proxy headers are present
+    # so this middleware is effectively a no-op.
+    _trusted_proxy_ips = os.getenv("TRUSTED_PROXY_IPS", "127.0.0.1")
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 
     # Middleware order is LIFO — last added runs first on requests, last on responses.
     # Security headers run last (outermost) so they're always present regardless of errors.

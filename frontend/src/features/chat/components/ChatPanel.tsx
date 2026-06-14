@@ -49,6 +49,7 @@ interface ChatPanelProps {
   onReturnToDashboard: () => void;
   onOpenProfile: () => void;
   copy: UiText["chat"];
+  authToken?: string;
 }
 
 type PersonaFieldKey = keyof PersonaQuestionnaireAnswers;
@@ -105,24 +106,25 @@ const normalizeSpeechLanguage = (speechLocale: string): "de" | "en" => {
   return "en";
 };
 
-const resolveTranscriptionWsUrl = (): string => {
+const resolveTranscriptionWsUrl = (token?: string): string => {
   const configuredUrl = import.meta.env.VITE_TRANSCRIPTION_WS_URL?.trim();
+  let base: string;
 
   if (configuredUrl !== undefined && configuredUrl.length > 0) {
     if (configuredUrl.startsWith("https://")) {
-      return `wss://${configuredUrl.slice("https://".length)}`;
+      base = `wss://${configuredUrl.slice("https://".length)}`;
+    } else if (configuredUrl.startsWith("http://")) {
+      base = `ws://${configuredUrl.slice("http://".length)}`;
+    } else {
+      base = configuredUrl;
     }
-
-    if (configuredUrl.startsWith("http://")) {
-      return `ws://${configuredUrl.slice("http://".length)}`;
-    }
-
-    return configuredUrl;
+  } else {
+    const protocol = globalThis.location?.protocol === "https:" ? "wss" : "ws";
+    const host = globalThis.location?.hostname ?? "localhost";
+    base = `${protocol}://${host}:8000/ws/transcribe`;
   }
 
-  const protocol = globalThis.location?.protocol === "https:" ? "wss" : "ws";
-  const host = globalThis.location?.hostname ?? "localhost";
-  return `${protocol}://${host}:8000/ws/transcribe`;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 };
 
 const getSupportedAudioMimeType = (): string | undefined => {
@@ -165,6 +167,7 @@ export function ChatPanel({
   onReturnToDashboard,
   onOpenProfile,
   copy,
+  authToken,
 }: ChatPanelProps) {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState<boolean>(false);
   const [isServicesMenuOpen, setIsServicesMenuOpen] = useState<boolean>(false);
@@ -368,14 +371,9 @@ export function ChatPanel({
     if (recorder !== null && recorder.state === "recording") {
       isStoppingRecordingRef.current = true;
       clearSpeechChunkMonitor();
-
-      // Flush the final in-memory audio segment before the recorder stops.
-      try {
-        recorder.requestData();
-      } catch {
-        // Ignore recorder flush errors and continue shutdown.
-      }
-
+      // stop() fires ondataavailable with all audio since the last start() — no
+      // prior requestData() needed. requestData() before stop() would emit a
+      // complete chunk followed by a headerless trailing fragment on stop().
       recorder.stop();
       return;
     }
@@ -546,7 +544,7 @@ export function ChatPanel({
 
     let transcriptionSocket: WebSocket;
     try {
-      transcriptionSocket = new WebSocket(resolveTranscriptionWsUrl());
+      transcriptionSocket = new WebSocket(resolveTranscriptionWsUrl(authToken));
     } catch {
       mediaStream.getTracks().forEach((track) => {
         track.stop();

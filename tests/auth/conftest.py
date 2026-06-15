@@ -24,9 +24,9 @@ async def _override_get_db():
 @pytest_asyncio.fixture()
 async def client():
     """Admin mock client — AUTH_MODE=mock, role=admin."""
-    from backend.app.services.dependency.ratelimit import _hits
+    from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    _hits.clear()
+    IpRateLimiter._hits.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "mock"
@@ -51,9 +51,9 @@ async def client():
 @pytest_asyncio.fixture()
 async def jwt_auth_client():
     """Real JWT client for /api/auth/me and role-enforcement tests — AUTH_MODE=jwt."""
-    from backend.app.services.dependency.ratelimit import _hits
+    from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    _hits.clear()
+    IpRateLimiter._hits.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "jwt"

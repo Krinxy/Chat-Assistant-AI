@@ -27,9 +27,9 @@ async def _override_get_db():
 @pytest_asyncio.fixture()
 async def jwt_client():
     """Real JWT client — AUTH_MODE=jwt, validates tokens against DB."""
-    from backend.app.services.dependency.ratelimit import _hits
+    from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    _hits.clear()
+    IpRateLimiter._hits.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "jwt"

@@ -34,16 +34,13 @@ class EmbeddingService:
         return self._model_name
 
     def embed_texts(self, texts: Sequence[str]) -> list[list[float]]:
-        """Return normalized embeddings for a batch of texts (used during ingestion)."""
         if len(texts) == 0:
             return []
-
         model = self._ensure_model()
         vectors = model.encode(list(texts), normalize_embeddings=True)
-        return _to_float_matrix(vectors)
+        return EmbeddingService._to_float_matrix(vectors)
 
     def embed_query(self, query: str) -> list[float]:
-        """Return the normalized embedding for a single query (used during retrieval)."""
         return self.embed_texts([query])[0]
 
     def _ensure_model(self) -> SupportsEncode:
@@ -51,8 +48,13 @@ class EmbeddingService:
             from sentence_transformers import SentenceTransformer
 
             self._model = SentenceTransformer(self._model_name)
-
         return self._model
+
+    @staticmethod
+    def _to_float_matrix(vectors: object) -> list[list[float]]:
+        tolist = getattr(vectors, "tolist", None)
+        raw = tolist() if callable(tolist) else vectors
+        return [[float(value) for value in row] for row in raw]  # type: ignore[union-attr]
 
 
 @dataclass(frozen=True)
@@ -62,22 +64,17 @@ class UpsertResult:
 
 
 class DocumentEmbedder:
-    """Embed document chunks and upsert them into a ChromaDB collection.
-
-    The collection is injected (a real ChromaDB collection in production, a fake in tests),
-    so this orchestration layer can be unit-tested without a running vector store.
-    """
+    """Embed document chunks and upsert them into a ChromaDB collection."""
 
     def __init__(self, collection: Collection, embedding_service: EmbeddingService) -> None:
         self._collection = collection
         self._embeddings = embedding_service
 
     def upsert_chunks(self, chunks: Sequence[Chunk]) -> UpsertResult:
-        """Embed every chunk and upsert it under a stable, content-addressed id."""
         if len(chunks) == 0:
             return UpsertResult(chunk_ids=[], embedded_count=0)
 
-        ids = [build_chunk_id(chunk) for chunk in chunks]
+        ids = [DocumentEmbedder.build_chunk_id(chunk) for chunk in chunks]
         documents = [chunk.text for chunk in chunks]
         metadatas = [{"source": chunk.source, "chunk_index": chunk.chunk_index} for chunk in chunks]
         embeddings = self._embeddings.embed_texts(documents)
@@ -91,14 +88,11 @@ class DocumentEmbedder:
         )
         return UpsertResult(chunk_ids=ids, embedded_count=len(ids))
 
+    @staticmethod
+    def build_chunk_id(chunk: Chunk) -> str:
+        content_hash = hashlib.sha256(chunk.text.encode("utf-8")).hexdigest()[:16]
+        return f"{chunk.source}:{chunk.chunk_index}:{content_hash}"
 
-def build_chunk_id(chunk: Chunk) -> str:
-    """Build a deterministic chunk id from its source, index and content hash."""
-    content_hash = hashlib.sha256(chunk.text.encode("utf-8")).hexdigest()[:16]
-    return f"{chunk.source}:{chunk.chunk_index}:{content_hash}"
 
-
-def _to_float_matrix(vectors: object) -> list[list[float]]:
-    tolist = getattr(vectors, "tolist", None)
-    raw = tolist() if callable(tolist) else vectors
-    return [[float(value) for value in row] for row in raw]  # type: ignore[union-attr]
+# module-level alias for backward compat
+build_chunk_id = DocumentEmbedder.build_chunk_id

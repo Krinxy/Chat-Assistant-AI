@@ -29,10 +29,7 @@ interface UseChatSessionResult {
 
 export function useChatSession({
   selectedModelId,
-  selectedModelLabel: _selectedModelLabel,
   language,
-  isBrainrotEnabled: _isBrainrotEnabled = false,
-  brainrotStyle: _brainrotStyle = "meme67",
   actionStartedPrefix,
   reasoningText,
   onFirstUserMessage,
@@ -176,7 +173,7 @@ export function useChatSession({
       const isGeminiModel = selectedModelId.toLowerCase().includes("gemini");
 
       if (isGeminiModel) {
-        sendChatMessage(trimmed, sessionIdRef.current)
+        void sendChatMessage(trimmed, sessionIdRef.current)
           .then((response) => {
             sessionIdRef.current = response.session_id;
             streamReply(thinkingId, response.message);

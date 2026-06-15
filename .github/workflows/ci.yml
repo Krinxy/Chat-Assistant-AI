@@ -63,10 +63,20 @@ jobs:
             fi
           done
 
+          PYTHON_MYPY_TARGETS=()
+          for target in backend frontend shared; do
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+              PYTHON_MYPY_TARGETS+=("$target")
+            fi
+          done
+
           if [ "${#PYTHON_TARGETS[@]}" -gt 0 ]; then
             python -m flake8 "${PYTHON_TARGETS[@]}" --max-line-length=140 --exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache
             python -m black --required-version 25.1.0 --check "${PYTHON_TARGETS[@]}" --line-length=140 --exclude '/(\.git|__pycache__|\.venv|venv|node_modules|dist|build|\.mypy_cache|\.pytest_cache)/'
-            python -m mypy "${PYTHON_TARGETS[@]}"
+          fi
+
+          if [ "${#PYTHON_MYPY_TARGETS[@]}" -gt 0 ]; then
+            python -m mypy "${PYTHON_MYPY_TARGETS[@]}"
           fi
 
           if [ -f package.json ]; then
@@ -124,6 +134,12 @@ jobs:
           fi
 
           python -m bandit -r "${PYTHON_SECURITY_TARGETS[@]}" -ll -x "tests,backend/tests"
+
+          python -m pip install pip-audit --quiet
+          python -m pip_audit --desc on 2>&1 | tee /tmp/pip-audit.txt || {
+            echo "pip-audit found vulnerabilities — see above"
+            exit 1
+          }
 
   test-and-build:
     name: Test And Build Gate
@@ -186,11 +202,13 @@ jobs:
           fi
 
           if [ -f package.json ]; then
+            npm audit --audit-level=high
             npm test --if-present
             npm run build --if-present
           fi
 
           if [ -f frontend/package.json ]; then
+            npm --prefix frontend audit --audit-level=high
             npm --prefix frontend test --if-present
             npm --prefix frontend run build --if-present
           fi

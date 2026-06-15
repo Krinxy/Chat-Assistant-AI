@@ -35,11 +35,11 @@ def _get_aud() -> str:
 
 
 def _hash_password(plain: str) -> str:
-    return _pwd_context.hash(plain)
+    return str(_pwd_context.hash(plain))
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    return bool(_pwd_context.verify(plain, hashed))
 
 
 def _validate_password(password: str) -> None:
@@ -63,7 +63,7 @@ def create_access_token(email: str) -> str:
         "nbf": now,
         "jti": str(uuid.uuid4()),
     }
-    return jwt.encode(payload, _get_secret(), algorithm=_ALGORITHM)
+    return str(jwt.encode(payload, _get_secret(), algorithm=_ALGORITHM))
 
 
 async def register_user(email: str, password: str, role: str, db: AsyncSession) -> User:
@@ -109,17 +109,17 @@ async def request_password_reset(email: str, db: AsyncSession) -> str:
     if user is None:
         # Return a dummy token so timing + response are identical for unknown emails
         dummy_expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
-        return jwt.encode(
+        return str(jwt.encode(
             {"sub": email, "purpose": "password_reset", "exp": dummy_expire},
             _get_secret(),
             algorithm=_ALGORITHM,
-        )
+        ))
     expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
-    return jwt.encode(
+    return str(jwt.encode(
         {"sub": user.email, "purpose": "password_reset", "exp": expire},
         _get_secret(),
         algorithm=_ALGORITHM,
-    )
+    ))
 
 
 async def reset_password(reset_token: str, new_password: str, db: AsyncSession) -> None:

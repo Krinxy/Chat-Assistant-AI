@@ -124,7 +124,7 @@ def _decode_audio_chunk_with_ffmpeg(
     )
 
     try:
-        with subprocess.Popen(  # nosec B603
+        with subprocess.Popen(  # nosec B603 — list-form argv, no shell=True; mime_type enters via closed allowlist in _resolve_ffmpeg_input_format
             ffmpeg_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -206,7 +206,7 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
     cuda_available = callable(getattr(cuda_module, "is_available", None))
     if cuda_available:
         try:
-            if bool(cuda_module.is_available()):
+            if bool(cuda_module.is_available()):  # type: ignore[union-attr]
                 return TorchRuntimeSelection(device="cuda:0", dtype=float16_dtype)
         except Exception:  # noqa: BLE001  # nosec B110
             pass
@@ -215,7 +215,7 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
     xpu_available = callable(getattr(xpu_module, "is_available", None))
     if xpu_available:
         try:
-            if bool(xpu_module.is_available()):
+            if bool(xpu_module.is_available()):  # type: ignore[union-attr]
                 return TorchRuntimeSelection(device="xpu:0", dtype=bfloat16_dtype)
         except Exception:  # noqa: BLE001  # nosec B110
             pass
@@ -225,7 +225,7 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
     mps_available = callable(getattr(mps_module, "is_available", None))
     if mps_available:
         try:
-            if bool(mps_module.is_available()):
+            if bool(mps_module.is_available()):  # type: ignore[union-attr]
                 return TorchRuntimeSelection(device="mps", dtype=float16_dtype)
         except Exception:  # noqa: BLE001  # nosec B110
             pass

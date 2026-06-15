@@ -141,7 +141,7 @@ pretty = true
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
-exclude = ["build", "dist", "node_modules", "venv", ".venv"]
+exclude = ["build", "dist", "node_modules", "venv", ".venv", "tests"]
 
 [tool.chat_assistant]
 # Retry policy for API access: at most 3 attempts.

@@ -16,7 +16,7 @@ repos:
     hooks:
       - id: bandit
         name: bandit-security-gate
-        args: ["-r", "backend", "-ll", "-x", "tests,backend/tests"]
+        args: ["-r", "backend", "frontend", "-ll", "-x", "tests,backend/tests"]
         pass_filenames: false
 
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -24,7 +24,8 @@ repos:
     hooks:
       - id: mypy
         args: ["--ignore-missing-imports"]
-        additional_dependencies: ["types-PyYAML", "types-requests", "types-passlib"]
+        additional_dependencies: ["types-PyYAML", "types-requests", "types-passlib", "pytest"]
+        exclude: ^tests/
 
   - repo: local
     hooks:

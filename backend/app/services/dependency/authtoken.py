@@ -61,7 +61,7 @@ def authtoken(_func: Callable[..., Any] | None = None, *, role: str | None = Non
             return await func(*args, **kwargs)
 
         # Patch the signature so FastAPI introspects Depends() at startup
-        wrapper.__signature__ = sig.replace(parameters=new_params)
+        wrapper.__signature__ = sig.replace(parameters=new_params)  # type: ignore[attr-defined]
         return wrapper
 
     # Support both @authtoken and @authtoken(role="admin")

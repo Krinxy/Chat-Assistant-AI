@@ -11,7 +11,7 @@ load_dotenv()
 from fastapi import FastAPI, Request, Response  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
-from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint  # noqa: E402
 
 from .api.auth import router as auth_router  # noqa: E402
 from .api.chat import router as chat_router  # noqa: E402
@@ -30,7 +30,7 @@ _IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
 
 
 class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: object) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         cl = request.headers.get("content-length")
         if cl and int(cl) > _BODY_LIMIT_BYTES:
             return Response(
@@ -38,12 +38,12 @@ class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
                 status_code=413,
                 media_type="application/json",
             )
-        return await call_next(request)  # type: ignore[arg-type]
+        return await call_next(request)
 
 
 class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: object) -> Response:
-        response: Response = await call_next(request)  # type: ignore[arg-type]
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        response: Response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"

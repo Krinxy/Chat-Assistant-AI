@@ -166,29 +166,31 @@ export function useChatSession({
         reasoning: reasoningText,
       };
 
-      scheduleTimeout(() => {
-        setMessages((previous) => [...previous, thinkingMessage]);
-      }, 80);
-
       const isGeminiModel = selectedModelId.toLowerCase().includes("gemini");
 
       if (isGeminiModel) {
-        void sendChatMessage(trimmed, sessionIdRef.current)
-          .then((response) => {
-            sessionIdRef.current = response.session_id;
-            streamReply(thinkingId, response.message);
-          })
-          .catch((err: unknown) => {
-            const rejected = err instanceof ApiError && err.statusCode === 400;
-            const noAuth = err instanceof ApiError && err.statusCode === 401;
-            const errorText = rejected
-              ? (language === "de" ? `Anfrage abgelehnt: ${err.message}` : `Request rejected: ${err.message}`)
-              : noAuth
-                ? (language === "de" ? "Bitte einloggen, um den Chat zu nutzen." : "Please log in to use the chat.")
-                : (language === "de" ? "Verbindung zum Server fehlgeschlagen." : "Failed to connect to the server.");
-            showErrorReply(thinkingId, errorText);
-          });
+        scheduleTimeout(() => {
+          setMessages((previous) => [...previous, thinkingMessage]);
+          void sendChatMessage(trimmed, sessionIdRef.current)
+            .then((response) => {
+              sessionIdRef.current = response.session_id;
+              streamReply(thinkingId, response.message);
+            })
+            .catch((err: unknown) => {
+              const rejected = err instanceof ApiError && err.statusCode === 400;
+              const noAuth = err instanceof ApiError && err.statusCode === 401;
+              const errorText = rejected
+                ? (language === "de" ? `Anfrage abgelehnt: ${err.message}` : `Request rejected: ${err.message}`)
+                : noAuth
+                  ? (language === "de" ? "Bitte einloggen, um den Chat zu nutzen." : "Please log in to use the chat.")
+                  : (language === "de" ? "Verbindung zum Server fehlgeschlagen." : "Failed to connect to the server.");
+              showErrorReply(thinkingId, errorText);
+            });
+        }, 80);
       } else {
+        scheduleTimeout(() => {
+          setMessages((previous) => [...previous, thinkingMessage]);
+        }, 80);
         const fullReply =
           language === "de"
             ? "Dieses LLM ist noch nicht angelegt. Kontaktiere den Admin. Aktuell arbeiten wir nur mit Google Gemini."

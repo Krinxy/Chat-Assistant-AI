@@ -1,0 +1,41 @@
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+
+export interface ChatApiResponse {
+  status: string;
+  message: string;
+  session_id: string;
+  user: string;
+}
+
+export class ApiError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export async function sendChatMessage(message: string, sessionId: string): Promise<ChatApiResponse> {
+  const token = globalThis.localStorage?.getItem("auth_token");
+
+  const response = await fetch(`${BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ message, session_id: sessionId }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+    const detail = errorBody?.detail;
+    const reason = typeof detail === "object" && detail !== null ? (detail as Record<string, string>).reason : undefined;
+    const errorMsg = reason ?? (typeof detail === "string" ? detail : response.statusText);
+    throw new ApiError(response.status, errorMsg);
+  }
+
+  return response.json() as Promise<ChatApiResponse>;
+}

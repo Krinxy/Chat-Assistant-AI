@@ -1,0 +1,44 @@
+# ── Backend Hyperparameters ────────────────────────────────────────────────────
+# Central configuration for all backend components.
+# Secret values (GEMINI_API_KEY, JWT_SECRET, etc.) live in .env — never here.
+
+llm:
+  # Shared defaults for all guardrail calls
+  guardrails:
+    model: gemini-2.0-flash
+    temperature: 0.1
+  # Main chat response generation (RAG chain, AP 4)
+  chat:
+    model: gemini-2.0-flash
+    temperature: 0.7
+
+guardrails:
+  input_guard:
+    enabled: true
+    prompt_file: input_guard.txt
+  query_refiner:
+    enabled: true
+    prompt_file: query_refiner.txt
+  output_guard:
+    enabled: true
+    prompt_file: output_guard.txt
+
+api:
+  rate_limit:
+    chat_requests_per_minute: 60
+    auth_login_per_60s: 5
+    auth_forgot_per_600s: 3
+  cors:
+    # Loaded from ALLOWED_ORIGINS env var at runtime
+    allowed_origins: []
+
+rag:
+  retriever:
+    top_k: 4
+    similarity_threshold: 0.3
+  chunker:
+    chunk_size: 512
+    chunk_overlap: 50
+  embedder:
+    model: all-MiniLM-L6-v2
+    dimensions: 384

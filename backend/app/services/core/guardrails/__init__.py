@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any, Optional
+
+from ...dependency.llm import LLMClient
+
+_PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+
+class GuardStatus(str, Enum):
+    PASSED = "passed"
+    REJECTED = "rejected"
+    UNAVAILABLE = "unavailable"
+
+
+@dataclass
+class GuardOutcome:
+    status: GuardStatus
+    reason: Optional[str] = None
+
+
+def load_prompt(filename: str) -> str:
+    """Load a prompt template from the guardrails/prompts directory."""
+    return (_PROMPTS_DIR / filename).read_text(encoding="utf-8").strip()
+
+
+def build_llm_client(config: dict[str, Any]) -> LLMClient:
+    """Build an LLMClient from a config dict with 'model' and 'temperature' keys."""
+    return LLMClient.from_config(config)

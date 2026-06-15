@@ -43,7 +43,17 @@ describe("useChatSession", () => {
     expect(assistantReply?.text).toContain("Dieses LLM ist noch nicht angelegt");
   });
 
-  it("keeps Gemini models active for mocked streaming replies", () => {
+  it("calls backend and streams response for Gemini models", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValueOnce({
+        status: "ok",
+        message: "This is the backend reply.",
+        session_id: "test-session-123",
+        user: "test@example.com",
+      }),
+    } as unknown as Response);
+
     const { result } = renderHook(() =>
       useChatSession({
         selectedModelId: "gemini-2.5-pro",
@@ -58,19 +68,60 @@ describe("useChatSession", () => {
       result.current.setDraft("Was ist neu?");
     });
 
-    act(() => {
+    await act(async () => {
       result.current.sendMessage({
         preventDefault: vi.fn(),
       } as unknown as FormEvent<HTMLFormElement>);
-      vi.runAllTimers();
+      await vi.runAllTimersAsync();
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/chat"),
+      expect.objectContaining({ method: "POST" }),
+    );
+
+    const assistantReply = result.current.messages.find(
+      (message) => message.role === "assistant" && !message.isThinking,
+    );
+
+    expect(assistantReply?.text).not.toContain("Dieses LLM ist noch nicht angelegt");
+    expect(assistantReply?.text).toBeDefined();
+  });
+
+  it("shows auth error when backend returns 401 for Gemini models", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      json: vi.fn().mockResolvedValueOnce({ detail: "Not authenticated" }),
+    } as unknown as Response);
+
+    const { result } = renderHook(() =>
+      useChatSession({
+        selectedModelId: "gemini-2.5-pro",
+        selectedModelLabel: "Gemini 2.5 Pro",
+        language: "de",
+        actionStartedPrefix: "Aktion gestartet",
+        reasoningText: "Denke nach...",
+      }),
+    );
+
+    act(() => {
+      result.current.setDraft("Hallo");
+    });
+
+    await act(async () => {
+      result.current.sendMessage({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent<HTMLFormElement>);
+      await vi.runAllTimersAsync();
     });
 
     const assistantReply = result.current.messages.find(
       (message) => message.role === "assistant" && !message.isThinking,
     );
 
-    expect(assistantReply?.text).toContain("Gemini 2.5 Pro");
-    expect(assistantReply?.text).not.toContain("Dieses LLM ist noch nicht angelegt");
+    expect(assistantReply?.text).toContain("einloggen");
   });
 
   it("adds uploaded images as user attachments", () => {

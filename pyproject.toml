@@ -54,7 +54,8 @@ backend = [
   "python-jose[cryptography]>=3.3.0",
   "passlib[bcrypt]>=1.7.4",
   "sqlalchemy>=2.0.0",
-  "aiosqlite>=0.20.0"
+  "aiosqlite>=0.20.0",
+  "langchain-google-genai>=2.0"
 ]
 
 frontend = [
@@ -107,7 +108,8 @@ development = [
   "python-jose[cryptography]>=3.3.0",
   "passlib[bcrypt]>=1.7.4",
   "sqlalchemy>=2.0.0",
-  "aiosqlite>=0.20.0"
+  "aiosqlite>=0.20.0",
+  "langchain-google-genai>=2.0"
 ]
 
 all = [

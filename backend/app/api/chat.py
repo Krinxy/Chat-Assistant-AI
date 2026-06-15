@@ -5,8 +5,12 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..db.session import get_db
+from ..models.session import ChatSession
 from ..models.user import User
+from ..services.core.chat.memory import SessionMemoryManager
 from ..services.core.guardrails import GuardStatus
 from ..services.core.guardrails.helpers import InputSanitizer
 from ..services.core.guardrails.input_guard import InputGuard
@@ -107,8 +111,9 @@ class ChatPipeline:
             return message
         return await self._query_refiner.refine(message, session_id)
 
-    async def _generate(self, refined_query: str) -> str:
-        # Stub — replaced by the full RAG chain in AP 4
+    async def _generate(self, refined_query: str, context: str = "") -> str:
+        # Stub — replaced by the full RAG chain in AP 4.
+        # context is the formatted conversation history injected here.
         return f"[stub] Received: {refined_query}"
 
     async def _apply_output_guard(self, message: str, response: str, session_id: str) -> tuple[str, str]:
@@ -122,7 +127,7 @@ class ChatPipeline:
 
     # ── main entry point ───────────────────────────────────────────────────────
 
-    async def run(self, message: str, session_id: str) -> tuple[str, str]:
+    async def run(self, message: str, session_id: str, context: str = "") -> tuple[str, str]:
         """Execute the full pipeline. Returns (response_message, status).
 
         Raises:
@@ -132,7 +137,7 @@ class ChatPipeline:
             raise HTTPException(status_code=400, detail=self._input_rejected_msg)
 
         refined_query = await self._refine_query(message, session_id)
-        generated = await self._generate(refined_query)
+        generated = await self._generate(refined_query, context)
         return await self._apply_output_guard(message, generated, session_id)
 
     # ── factory ────────────────────────────────────────────────────────────────
@@ -173,6 +178,7 @@ def initialize(app: FastAPI) -> None:
     cfg = ConfigLoader.get_backend()
     app.state.chat_pipeline = ChatPipeline.from_config(cfg)
     app.state.chat_rate_limiter = RateLimiter.from_config(cfg)
+    app.state.session_memory = SessionMemoryManager.from_config(cfg)
 
 
 # ── FastAPI dependencies ───────────────────────────────────────────────────────
@@ -186,6 +192,10 @@ def _rate_limiter_dep(request: Request) -> RateLimiter:
     return request.app.state.chat_rate_limiter  # type: ignore[no-any-return]
 
 
+def _memory_dep(request: Request) -> SessionMemoryManager:
+    return request.app.state.session_memory  # type: ignore[no-any-return]
+
+
 # ── endpoint ───────────────────────────────────────────────────────────────────
 
 
@@ -196,12 +206,33 @@ async def chat(
     current_user: User,
     pipeline: ChatPipeline = Depends(_pipeline_dep),
     rate_limiter: RateLimiter = Depends(_rate_limiter_dep),
+    memory: SessionMemoryManager = Depends(_memory_dep),
+    db: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
     if not await rate_limiter.is_allowed(current_user.email):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait before sending another message.")
 
     message = ChatPipeline.validate_message(body.message, pipeline._max_message_length)
-    session_id = body.session_id or str(uuid.uuid4())
 
-    response_message, status = await pipeline.run(message, session_id)
+    # Resolve session: validate existing or auto-create for first message
+    if body.session_id:
+        session = await db.get(ChatSession, body.session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found.")
+        session_id = body.session_id
+        # Restore buffer from DB summary if not already in memory
+        memory.get_or_create(session_id, summary=session.summary or "")
+    else:
+        session_id = str(uuid.uuid4())
+        db.add(ChatSession(id=session_id))
+        await db.commit()
+        memory.create(session_id)
+
+    context = memory.get_context(session_id)
+    response_message, status = await pipeline.run(message, session_id, context)
+
+    # Record turns in the in-memory buffer
+    memory.add_turn(session_id, "user", message)
+    memory.add_turn(session_id, "assistant", response_message)
+
     return ChatResponse(status=status, user=current_user.email, message=response_message, session_id=session_id)

@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 
+import { LoginPanel } from "./pages/LoginPage/LoginPanel";
+import { useAuth } from "./shared/hooks/useAuth";
 import { ChatPanel } from "./features/chat/components/ChatPanel";
 import {
   attachmentActionsByLanguage,
@@ -132,6 +134,8 @@ const getInitialBrainrotStyle = (): BrainrotStyleKey => {
 };
 
 export default function App() {
+  const { isAuthenticated, login } = useAuth();
+
   const initialLanguageRef = useRef<Language>(getInitialLanguage());
   const initialLanguage = initialLanguageRef.current;
 
@@ -552,6 +556,10 @@ export default function App() {
 
     return null;
   }, [activeView, language]);
+
+  if (!isAuthenticated) {
+    return <LoginPanel language={language} onLoginSuccess={login} />;
+  }
 
   return (
     <div className={`dashboard-root ${hasStartedChat ? "chat-mode-root" : "is-dashboard"}`}>

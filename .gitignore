@@ -1,9 +1,9 @@
 # =========================
-# Environment & Secrets 
+# Environment & Secrets
 # =========================
 .env
 .env.*
-.env.example
+!.env.example
 settings.local.json
 *.pem
 *.key
@@ -21,6 +21,13 @@ secrets.json
 .DS_Store
 Thumbs.db
 node_modules/.cache/
+
+# =========================
+# Database files
+# =========================
+*.db
+*.sqlite
+*.sqlite3
 
 # =========================
 # Python

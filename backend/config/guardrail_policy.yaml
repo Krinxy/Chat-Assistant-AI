@@ -1,0 +1,47 @@
+# Guardrail Policy — defines disallowed content categories.
+# Loaded by PolicyGuard as a local fallback when the LLM-based guard is UNAVAILABLE.
+# Add keywords/patterns under each category; set enabled: false to deactivate a category.
+
+version: "1.0"
+
+disallowed_categories:
+  sexual_content:
+    enabled: true
+    description: "Explicit or implicit sexual content of any kind"
+    keywords:
+      - porn
+      - nude
+      - erotic
+      - explicit sexual
+
+  harassment:
+    enabled: true
+    description: "Harassment, bullying, or targeted intimidation"
+    keywords:
+      - harass
+      - bully
+      - intimidate
+      - stalk
+
+  violence:
+    enabled: true
+    description: "Instructions for violence, weapons, or harm"
+    keywords:
+      - how to kill
+      - make a bomb
+      - synthesize poison
+      - build a weapon
+
+  jailbreak_attempts:
+    enabled: true
+    description: "Attempts to override or circumvent system instructions"
+    patterns:
+      - "ignore (all |previous )?instructions"
+      - "forget (your |all )?instructions"
+      - "you are now (a |an )?"
+      - "pretend (you are|to be)"
+      - "disregard (your |all )?previous"
+      - "your new (system )?prompt"
+      - "act as (if |though )?(you have no|you are)"
+      - "DAN mode"
+      - "developer mode"

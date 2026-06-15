@@ -15,21 +15,22 @@ llm:
 guardrails:
   input_guard:
     enabled: true
-    prompt_file: input_guard.txt
   query_refiner:
     enabled: true
-    prompt_file: query_refiner.txt
   output_guard:
     enabled: true
-    prompt_file: output_guard.txt
 
 api:
   rate_limit:
     chat_requests_per_minute: 60
+    window_seconds: 60
     auth_login_per_60s: 5
     auth_forgot_per_600s: 3
   input_validation:
     max_message_length: 4000
+  messages:
+    input_rejected: "Request rejected by content policy."
+    output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."
   cors:
     # Loaded from ALLOWED_ORIGINS env var at runtime
     allowed_origins: []

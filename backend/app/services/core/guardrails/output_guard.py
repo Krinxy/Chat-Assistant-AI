@@ -6,8 +6,8 @@ from typing import Any, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ...dependency.llm import LLMClient, LLMNotConfiguredError
-from ..guardrails import GuardOutcome, GuardStatus, build_llm_client, load_prompt
-from .helpers import categorize_api_error, log_guard_event, parse_json_response, sanitize_user_input
+from ..guardrails import GuardOutcome, GuardStatus, LLMClientFactory, PromptLoader
+from .helpers import ApiErrorCategorizer, GuardLogger, InputSanitizer, LLMResponseParser
 
 
 class OutputGuard:
@@ -26,11 +26,11 @@ class OutputGuard:
     # ── helpers ────────────────────────────────────────────────────────────────
 
     def _parse(self, raw: str) -> tuple[bool, str]:
-        parsed = parse_json_response(raw)
+        parsed = LLMResponseParser.parse_json(raw)
         return bool(parsed.get("plausible", True)), str(parsed.get("reason", ""))
 
     def _log(self, session_id: str, event: str, reason: Optional[str] = None) -> None:
-        log_guard_event("output", session_id, event, reason)
+        GuardLogger.log("output", session_id, event, reason)
 
     # ── main entry point ───────────────────────────────────────────────────────
 
@@ -38,8 +38,8 @@ class OutputGuard:
         """Blocking check on the response. Returns PASSED, REJECTED, or UNAVAILABLE."""
         try:
             llm = self._llm_client.get()
-            safe_query = sanitize_user_input(query)
-            safe_response = sanitize_user_input(response)
+            safe_query = InputSanitizer.sanitize(query)
+            safe_response = InputSanitizer.sanitize(response)
             human_content = f"<user_query>\n{safe_query}\n</user_query>\n\n<ai_response>\n{safe_response}\n</ai_response>"
             result = await llm.ainvoke(
                 [
@@ -65,7 +65,7 @@ class OutputGuard:
             return GuardOutcome(status=GuardStatus.PASSED)
 
         except Exception as exc:
-            event = categorize_api_error(exc)
+            event = ApiErrorCategorizer.categorize(exc)
             self._log(session_id, event, type(exc).__name__)
             return GuardOutcome(status=GuardStatus.UNAVAILABLE, reason=type(exc).__name__)
 
@@ -73,6 +73,6 @@ class OutputGuard:
 
     @classmethod
     def from_config(cls, llm_config: dict[str, Any], guard_config: dict[str, Any]) -> "OutputGuard":
-        llm_client = build_llm_client(llm_config)
-        prompt = load_prompt(guard_config.get("prompt_file", "output_guard.txt"))
+        llm_client = LLMClientFactory.from_config(llm_config)
+        prompt = PromptLoader.load("output_guard")
         return cls(llm_client=llm_client, prompt_template=prompt)

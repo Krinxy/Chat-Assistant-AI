@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from langchain_google_genai import ChatGoogleGenerativeAI
+
 
 class LLMNotConfiguredError(Exception):
     """Raised when GEMINI_API_KEY is not set in the environment."""
@@ -11,8 +13,10 @@ class LLMNotConfiguredError(Exception):
 class LLMClient:
     """Factory for Gemini LLM instances via langchain-google-genai.
 
-    Reads GEMINI_API_KEY from the environment at call time (never at init time)
-    so the key can be injected via .env without restarting the process.
+    Reads GEMINI_API_KEY from the environment at call time so the key can be
+    injected via .env without restarting the process. SystemMessage is sent
+    as a genuine system instruction (convert_system_message_to_human is NOT set)
+    to preserve the trusted/untrusted boundary required for prompt injection mitigation.
     """
 
     def __init__(self, model: str = "gemini-2.0-flash", temperature: float = 0.1) -> None:
@@ -33,13 +37,10 @@ class LLMClient:
         if not api_key:
             raise LLMNotConfiguredError("GEMINI_API_KEY not set")
 
-        from langchain_google_genai import ChatGoogleGenerativeAI  # noqa: PLC0415
-
         return ChatGoogleGenerativeAI(
             model=self._model,
             google_api_key=api_key,
             temperature=self._temperature,
-            convert_system_message_to_human=True,
         )
 
     @classmethod

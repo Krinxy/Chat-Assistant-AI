@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import deque
+from typing import Any
 
 
 class RateLimiter:
@@ -34,3 +35,11 @@ class RateLimiter:
                 return False
             bucket.append(now)
             return True
+
+    @classmethod
+    def from_config(cls, config: dict[str, Any]) -> "RateLimiter":
+        rate_cfg = config.get("api", {}).get("rate_limit", {})
+        return cls(
+            max_requests=int(rate_cfg.get("chat_requests_per_minute", 60)),
+            window_seconds=int(rate_cfg.get("window_seconds", 60)),
+        )

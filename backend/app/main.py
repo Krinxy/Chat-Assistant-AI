@@ -14,6 +14,7 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint  # noqa: E402
 
 from .api.auth import router as auth_router  # noqa: E402
+from .api.chat import initialize as initialize_chat  # noqa: E402
 from .api.chat import router as chat_router  # noqa: E402
 from .api.documents import router as documents_router  # noqa: E402
 from .db.session import init_db  # noqa: E402
@@ -69,6 +70,7 @@ def create_app() -> FastAPI:
                 "AUTH_MODE=mock must not run in production (ENVIRONMENT=production). " "Set AUTH_MODE=jwt and provide a real JWT_SECRET."
             )
         await init_db()
+        initialize_chat(_app)
         preload_on_startup = _parse_bool_env("TRANSCRIPTION_PRELOAD_ON_STARTUP", True)
         report = await run_in_threadpool(lambda: run_transcription_preflight(preload_runtime=preload_on_startup))
         print_preflight_report(report)

@@ -74,7 +74,6 @@ async def test_check_strips_markdown_code_fence() -> None:
 @pytest.mark.asyncio
 async def test_from_config_builds_guard() -> None:
     llm_cfg = {"model": "gemini-2.0-flash", "temperature": 0.1}
-    guard_cfg = {"prompt_file": "input_guard.txt"}
-    guard = InputGuard.from_config(llm_cfg, guard_cfg)
+    guard = InputGuard.from_config(llm_cfg, {})
     assert isinstance(guard, InputGuard)
     assert guard._llm_client.model == "gemini-2.0-flash"

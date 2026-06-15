@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import Any, Optional
 
 from ...dependency.llm import LLMClient
-
-_PROMPTS_DIR = Path(__file__).parent / "prompts"
+from .prompts import GUARD_PROMPTS
 
 
 class GuardStatus(str, Enum):
@@ -22,17 +20,21 @@ class GuardOutcome:
     reason: Optional[str] = None
 
 
-def load_prompt(filename: str) -> str:
-    """Load a prompt template from the guardrails/prompts directory.
+class PromptLoader:
+    """Returns compiled system prompt strings from the in-code Pydantic registry."""
 
-    Guards against path traversal: filename must resolve inside _PROMPTS_DIR.
-    """
-    resolved = (_PROMPTS_DIR / filename).resolve()
-    if not resolved.is_relative_to(_PROMPTS_DIR.resolve()):
-        raise ValueError(f"Prompt file outside allowed directory: {filename!r}")
-    return resolved.read_text(encoding="utf-8").strip()
+    @staticmethod
+    def load(name: str) -> str:
+        """Return the system prompt for a named guard (input_guard, query_refiner, output_guard)."""
+        prompt = getattr(GUARD_PROMPTS, name, None)
+        if prompt is None:
+            raise ValueError(f"Unknown guard prompt name: {name!r}")
+        return str(prompt.system)
 
 
-def build_llm_client(config: dict[str, Any]) -> LLMClient:
-    """Build an LLMClient from a config dict with 'model' and 'temperature' keys."""
-    return LLMClient.from_config(config)
+class LLMClientFactory:
+    """Constructs LLMClient instances from config dicts."""
+
+    @staticmethod
+    def from_config(config: dict[str, Any]) -> LLMClient:
+        return LLMClient.from_config(config)

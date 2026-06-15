@@ -71,5 +71,3 @@ htmlcov/
 *.log
 *.xml
 *.txt
-# Allow guardrail prompt templates
-!backend/app/services/core/guardrails/prompts/*.txt

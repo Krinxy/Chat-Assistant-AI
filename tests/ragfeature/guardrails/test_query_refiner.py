@@ -65,6 +65,5 @@ async def test_refine_strips_whitespace() -> None:
 @pytest.mark.asyncio
 async def test_from_config_builds_refiner() -> None:
     llm_cfg = {"model": "gemini-2.0-flash", "temperature": 0.1}
-    guard_cfg = {"prompt_file": "query_refiner.txt"}
-    refiner = QueryRefiner.from_config(llm_cfg, guard_cfg)
+    refiner = QueryRefiner.from_config(llm_cfg, {})
     assert isinstance(refiner, QueryRefiner)

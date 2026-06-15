@@ -23,7 +23,6 @@ from .services.utils.transcription.preflight import (  # noqa: E402
     run_transcription_preflight,
 )
 
-
 _BODY_LIMIT_BYTES = 1 * 1024 * 1024  # 1 MB
 
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"

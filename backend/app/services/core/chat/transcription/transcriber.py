@@ -124,7 +124,9 @@ def _decode_audio_chunk_with_ffmpeg(
     )
 
     try:
-        with subprocess.Popen(  # nosec B603 — list-form argv, no shell=True; mime_type enters via closed allowlist in _resolve_ffmpeg_input_format
+        # mime_type is user-supplied but passes through a closed allowlist in
+        # _resolve_ffmpeg_input_format before entering the argv — no injection path.
+        with subprocess.Popen(  # nosec B603
             ffmpeg_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

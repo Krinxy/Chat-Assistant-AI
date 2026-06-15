@@ -109,17 +109,21 @@ async def request_password_reset(email: str, db: AsyncSession) -> str:
     if user is None:
         # Return a dummy token so timing + response are identical for unknown emails
         dummy_expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
-        return str(jwt.encode(
-            {"sub": email, "purpose": "password_reset", "exp": dummy_expire},
+        return str(
+            jwt.encode(
+                {"sub": email, "purpose": "password_reset", "exp": dummy_expire},
+                _get_secret(),
+                algorithm=_ALGORITHM,
+            )
+        )
+    expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
+    return str(
+        jwt.encode(
+            {"sub": user.email, "purpose": "password_reset", "exp": expire},
             _get_secret(),
             algorithm=_ALGORITHM,
-        ))
-    expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
-    return str(jwt.encode(
-        {"sub": user.email, "purpose": "password_reset", "exp": expire},
-        _get_secret(),
-        algorithm=_ALGORITHM,
-    ))
+        )
+    )
 
 
 async def reset_password(reset_token: str, new_password: str, db: AsyncSession) -> None:

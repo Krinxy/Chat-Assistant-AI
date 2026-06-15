@@ -8,18 +8,31 @@ from fastapi import APIRouter, HTTPException
 
 from ..models.user import User
 from ..services.core.guardrails import GuardStatus
+from ..services.core.guardrails.helpers import sanitize_user_input
 from ..services.core.guardrails.input_guard import InputGuard
 from ..services.core.guardrails.output_guard import OutputGuard
 from ..services.core.guardrails.query_refiner import QueryRefiner
 from ..services.dependency.authtoken import authtoken
 from ..services.utils.config import ConfigLoader
+from ..services.utils.rate_limit import RateLimiter
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 _OUTPUT_REJECTED_MSG = "I'm unable to provide a response to this query. Please rephrase your question."
+_INPUT_REJECTED_MSG = "Request rejected by content policy."
 
-# Module-level singleton — lazily initialised on first request
+# Module-level singletons — lazily initialised on first request
 _pipeline: Optional["ChatPipeline"] = None
+_rate_limiter: Optional[RateLimiter] = None
+
+
+def _get_rate_limiter() -> RateLimiter:
+    global _rate_limiter
+    if _rate_limiter is None:
+        cfg = ConfigLoader.get_backend()
+        rpm = int(cfg.get("api", {}).get("rate_limit", {}).get("chat_requests_per_minute", 60))
+        _rate_limiter = RateLimiter(max_requests=rpm, window_seconds=60)
+    return _rate_limiter
 
 
 @dataclass
@@ -36,6 +49,20 @@ class ChatResponse:
     session_id: str
 
 
+def _validate_message(raw: str, max_length: int) -> str:
+    """Sanitize and validate a raw message string.
+
+    Strips null bytes/control characters, enforces length limit.
+    Raises HTTPException(422) on invalid input.
+    """
+    sanitized = sanitize_user_input(raw).strip()
+    if not sanitized:
+        raise HTTPException(status_code=422, detail="Message cannot be empty.")
+    if len(sanitized) > max_length:
+        raise HTTPException(status_code=422, detail=f"Message too long (max {max_length} characters).")
+    return sanitized
+
+
 class ChatPipeline:
     """Orchestrates the full chat request flow: input guard → refine → generate → output guard.
 
@@ -43,17 +70,20 @@ class ChatPipeline:
     Private methods handle individual pipeline steps for clarity and testability.
     """
 
-    def __init__(self, input_guard: InputGuard, query_refiner: QueryRefiner, output_guard: OutputGuard) -> None:
+    def __init__(
+        self, input_guard: InputGuard, query_refiner: QueryRefiner, output_guard: OutputGuard, max_message_length: int = 4000
+    ) -> None:
         self._input_guard = input_guard
         self._query_refiner = query_refiner
         self._output_guard = output_guard
+        self._max_message_length = max_message_length
 
     # ── private steps ──────────────────────────────────────────────────────────
 
-    async def _apply_input_guard(self, message: str, session_id: str) -> Optional[str]:
-        """Return rejection reason if rejected, else None."""
+    async def _apply_input_guard(self, message: str, session_id: str) -> bool:
+        """Return True if the message was rejected by the input guard."""
         outcome = await self._input_guard.check(message, session_id)
-        return outcome.reason if outcome.status == GuardStatus.REJECTED else None
+        return outcome.status == GuardStatus.REJECTED
 
     async def _refine_query(self, message: str, session_id: str) -> str:
         return await self._query_refiner.refine(message, session_id)
@@ -77,12 +107,9 @@ class ChatPipeline:
         Raises:
             HTTPException 400: if the input guard rejects the query.
         """
-        rejection_reason = await self._apply_input_guard(message, session_id)
-        if rejection_reason is not None:
-            raise HTTPException(
-                status_code=400,
-                detail={"error": "Request rejected by content policy", "reason": rejection_reason},
-            )
+        if await self._apply_input_guard(message, session_id):
+            # LLM-generated rejection reason is intentionally not forwarded to the client.
+            raise HTTPException(status_code=400, detail=_INPUT_REJECTED_MSG)
 
         refined_query = await self._refine_query(message, session_id)
         generated = await self._generate(refined_query)
@@ -95,11 +122,13 @@ class ChatPipeline:
         cfg = config or ConfigLoader.get_backend()
         llm_cfg = cfg.get("llm", {}).get("guardrails", {})
         guard_cfg = cfg.get("guardrails", {})
+        max_len = int(cfg.get("api", {}).get("input_validation", {}).get("max_message_length", 4000))
 
         return cls(
             input_guard=InputGuard.from_config(llm_cfg, guard_cfg.get("input_guard", {})),
             query_refiner=QueryRefiner.from_config(llm_cfg, guard_cfg.get("query_refiner", {})),
             output_guard=OutputGuard.from_config(llm_cfg, guard_cfg.get("output_guard", {})),
+            max_message_length=max_len,
         )
 
 
@@ -113,7 +142,13 @@ def _get_pipeline() -> "ChatPipeline":
 @router.post("", response_model=ChatResponse)
 @authtoken
 async def chat(body: ChatRequest, current_user: User) -> ChatResponse:
-    session_id = body.session_id or str(uuid.uuid4())
+    rate_limiter = _get_rate_limiter()
+    if not await rate_limiter.is_allowed(current_user.email):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait before sending another message.")
+
     pipeline = _get_pipeline()
-    response_message, status = await pipeline.run(body.message, session_id)
+    message = _validate_message(body.message, pipeline._max_message_length)
+    session_id = body.session_id or str(uuid.uuid4())
+
+    response_message, status = await pipeline.run(message, session_id)
     return ChatResponse(status=status, user=current_user.email, message=response_message, session_id=session_id)

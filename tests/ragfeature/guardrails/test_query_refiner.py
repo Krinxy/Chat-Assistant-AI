@@ -7,7 +7,7 @@ import pytest
 from backend.app.services.core.guardrails.query_refiner import QueryRefiner
 from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError
 
-_PROMPT = "Refine this query for retrieval: {query}"
+_PROMPT = "Refine the query in the <user_query> block for retrieval."
 
 
 def _make_refiner(llm_response: str) -> QueryRefiner:

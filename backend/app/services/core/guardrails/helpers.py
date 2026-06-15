@@ -2,10 +2,34 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+
+# Strips null bytes and non-printable ASCII control characters (excludes \t, \n, \r).
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def sanitize_user_input(text: str) -> str:
+    """Remove null bytes and dangerous control characters from user-supplied text."""
+    return _CONTROL_CHAR_RE.sub("", text)
+
+
+def categorize_api_error(exc: Exception) -> str:
+    """Map a caught exception to a structured log event name."""
+    exc_type = type(exc).__name__.lower()
+    exc_str = str(exc).lower()
+    if "resourceexhausted" in exc_type or "quota" in exc_str or "429" in exc_str:
+        return "quota_exceeded"
+    if "deadlineexceeded" in exc_type or "timeout" in exc_type or "timed out" in exc_str:
+        return "timeout"
+    if "unauthenticated" in exc_type or "permissiondenied" in exc_type or "403" in exc_str or "401" in exc_str:
+        return "auth_error"
+    if "serviceunavailable" in exc_type or "connection" in exc_type or "network" in exc_str:
+        return "network_error"
+    return "api_error"
 
 
 def strip_code_fence(raw: str) -> str:

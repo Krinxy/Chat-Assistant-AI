@@ -8,7 +8,7 @@ from backend.app.services.core.guardrails import GuardStatus
 from backend.app.services.core.guardrails.output_guard import OutputGuard
 from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError
 
-_PROMPT = "Check this response for plausibility. Query: {query} Response: {response}"
+_PROMPT = "Check the response in the <ai_response> block for plausibility given the <user_query>."
 
 
 def _make_guard(llm_response: str) -> OutputGuard:

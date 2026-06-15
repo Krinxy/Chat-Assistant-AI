@@ -8,7 +8,7 @@ from backend.app.services.core.guardrails import GuardStatus
 from backend.app.services.core.guardrails.input_guard import InputGuard
 from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError
 
-_PROMPT = "Classify this query as safe or unsafe. Query: {query}"
+_PROMPT = "Classify the query in the <user_query> block as safe or unsafe."
 
 
 def _make_guard(llm_response: str) -> tuple[InputGuard, MagicMock]:

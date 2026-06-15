@@ -3,16 +3,18 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from ...dependency.llm import LLMClient, LLMNotConfiguredError
 from ..guardrails import GuardOutcome, GuardStatus, build_llm_client, load_prompt
-from .helpers import log_guard_event, parse_json_response
+from .helpers import categorize_api_error, log_guard_event, parse_json_response, sanitize_user_input
 
 
 class InputGuard:
     """Classifies user queries as safe or unsafe before any retrieval or storage.
 
+    Prompt injection mitigation: system instructions are sent as SystemMessage;
+    untrusted user content is sent separately as HumanMessage wrapped in XML delimiters.
     Fail-open: returns UNAVAILABLE (not REJECTED) when the LLM API is down.
     No user data is written to logs — only session_id, event, and reason.
     """
@@ -22,9 +24,6 @@ class InputGuard:
         self._prompt_template = prompt_template
 
     # ── helpers ────────────────────────────────────────────────────────────────
-
-    def _build_prompt(self, query: str) -> str:
-        return self._prompt_template.format(query=query)
 
     def _parse(self, raw: str) -> tuple[str, str]:
         parsed = parse_json_response(raw)
@@ -39,7 +38,13 @@ class InputGuard:
         """Classify the query. Returns PASSED, REJECTED, or UNAVAILABLE."""
         try:
             llm = self._llm_client.get()
-            response = await llm.ainvoke([HumanMessage(content=self._build_prompt(query))])
+            safe_query = sanitize_user_input(query)
+            response = await llm.ainvoke(
+                [
+                    SystemMessage(content=self._prompt_template),
+                    HumanMessage(content=f"<user_query>\n{safe_query}\n</user_query>"),
+                ]
+            )
             raw: str = response.content if isinstance(response.content, str) else str(response.content)
 
             classification, reason = self._parse(raw)
@@ -58,7 +63,8 @@ class InputGuard:
             return GuardOutcome(status=GuardStatus.PASSED)
 
         except Exception as exc:
-            self._log(session_id, "api_unavailable", type(exc).__name__)
+            event = categorize_api_error(exc)
+            self._log(session_id, event, type(exc).__name__)
             return GuardOutcome(status=GuardStatus.UNAVAILABLE, reason=type(exc).__name__)
 
     # ── factory ────────────────────────────────────────────────────────────────

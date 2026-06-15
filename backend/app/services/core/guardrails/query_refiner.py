@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from ...dependency.llm import LLMClient, LLMNotConfiguredError
 from ..guardrails import build_llm_client, load_prompt
-from .helpers import log_guard_event
+from .helpers import categorize_api_error, log_guard_event, sanitize_user_input
 
 
 class QueryRefiner:
     """Rewrites user queries for better semantic retrieval.
 
+    Prompt injection mitigation: system instructions are sent as SystemMessage;
+    untrusted user content is sent separately as HumanMessage wrapped in XML delimiters.
     Fail-open: returns the original query if the LLM API is unavailable.
     """
 
@@ -20,9 +22,6 @@ class QueryRefiner:
         self._prompt_template = prompt_template
 
     # ── helpers ────────────────────────────────────────────────────────────────
-
-    def _build_prompt(self, query: str) -> str:
-        return self._prompt_template.format(query=query)
 
     def _log(self, session_id: str, event: str) -> None:
         log_guard_event("query_refiner", session_id, event, None)
@@ -33,7 +32,13 @@ class QueryRefiner:
         """Return a refined query, or the original on API failure."""
         try:
             llm = self._llm_client.get()
-            response = await llm.ainvoke([HumanMessage(content=self._build_prompt(query))])
+            safe_query = sanitize_user_input(query)
+            response = await llm.ainvoke(
+                [
+                    SystemMessage(content=self._prompt_template),
+                    HumanMessage(content=f"<user_query>\n{safe_query}\n</user_query>"),
+                ]
+            )
             refined: str = response.content if isinstance(response.content, str) else str(response.content)
             refined = refined.strip()
 
@@ -43,8 +48,13 @@ class QueryRefiner:
             self._log(session_id, "refined")
             return refined
 
-        except (LLMNotConfiguredError, Exception):
+        except LLMNotConfiguredError:
             self._log(session_id, "api_unavailable_passthrough")
+            return query
+
+        except Exception as exc:
+            event = categorize_api_error(exc)
+            log_guard_event("query_refiner", session_id, event, type(exc).__name__)
             return query
 
     # ── factory ────────────────────────────────────────────────────────────────

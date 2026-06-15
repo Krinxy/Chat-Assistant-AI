@@ -29,10 +29,10 @@ interface UseChatSessionResult {
 
 export function useChatSession({
   selectedModelId,
-  selectedModelLabel,
+  selectedModelLabel: _selectedModelLabel,
   language,
-  isBrainrotEnabled = false,
-  brainrotStyle = "meme67",
+  isBrainrotEnabled: _isBrainrotEnabled = false,
+  brainrotStyle: _brainrotStyle = "meme67",
   actionStartedPrefix,
   reasoningText,
   onFirstUserMessage,
@@ -118,7 +118,7 @@ export function useChatSession({
 
       intervalIdsRef.current.push(streamIntervalId);
     }, 620);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const showErrorReply = useCallback((thinkingId: number, errorText: string): void => {
     setMessages((previous) =>

@@ -7,6 +7,15 @@ export interface ChatApiResponse {
   user: string;
 }
 
+interface ChatErrorDetail {
+  reason?: string;
+  error?: string;
+}
+
+interface ChatErrorBody {
+  detail?: string | ChatErrorDetail;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -30,9 +39,9 @@ export async function sendChatMessage(message: string, sessionId: string): Promi
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
-    const detail = errorBody?.detail;
-    const reason = typeof detail === "object" && detail !== null ? (detail as Record<string, string>).reason : undefined;
+    const errorBody = (await response.json().catch(() => ({ detail: response.statusText }))) as ChatErrorBody;
+    const detail = errorBody.detail;
+    const reason = typeof detail === "object" && detail !== null ? detail.reason : undefined;
     const errorMsg = reason ?? (typeof detail === "string" ? detail : response.statusText);
     throw new ApiError(response.status, errorMsg);
   }

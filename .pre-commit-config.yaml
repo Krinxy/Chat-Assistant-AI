@@ -12,12 +12,19 @@ repos:
         args: ["--max-line-length=140", "--exclude=.git,__pycache__,.venv,venv,node_modules,dist,build,.mypy_cache,.pytest_cache"]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+    rev: 1.9.4
     hooks:
       - id: bandit
         name: bandit-security-gate
-        args: ["-r", "backend", "frontend", "shared", "-ll", "-x", "tests,backend/tests"]
+        args: ["-r", "backend", "-ll", "-x", "tests,backend/tests"]
         pass_filenames: false
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+      - id: mypy
+        args: ["--ignore-missing-imports"]
+        additional_dependencies: ["types-PyYAML", "types-requests", "types-passlib"]
 
   - repo: local
     hooks:

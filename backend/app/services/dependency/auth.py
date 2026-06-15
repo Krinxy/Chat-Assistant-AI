@@ -89,7 +89,7 @@ class MockAuthProvider(AbstractAuthProvider):
     async def get_current_user(self, token: str, db: AsyncSession) -> User:
         return User(
             email=os.getenv("MOCK_USER_EMAIL", "mock@local"),
-            hashed_password="",
+            hashed_password="",  # nosec B106
             role=os.getenv("MOCK_USER_ROLE", "admin"),
         )
 

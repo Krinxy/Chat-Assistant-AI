@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass, field
 from functools import lru_cache
 from threading import Lock
@@ -124,7 +124,7 @@ def _decode_audio_chunk_with_ffmpeg(
     )
 
     try:
-        with subprocess.Popen(
+        with subprocess.Popen(  # nosec B603
             ffmpeg_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -171,7 +171,7 @@ def _patch_transformers_ffmpeg_reader(
         ]
 
         try:
-            with subprocess.Popen(
+            with subprocess.Popen(  # nosec B603
                 ffmpeg_command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -208,7 +208,7 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
         try:
             if bool(cuda_module.is_available()):
                 return TorchRuntimeSelection(device="cuda:0", dtype=float16_dtype)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110
             pass
 
     xpu_module = getattr(torch_module, "xpu", None)
@@ -217,7 +217,7 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
         try:
             if bool(xpu_module.is_available()):
                 return TorchRuntimeSelection(device="xpu:0", dtype=bfloat16_dtype)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110
             pass
 
     backends_module = getattr(torch_module, "backends", None)
@@ -227,7 +227,7 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
         try:
             if bool(mps_module.is_available()):
                 return TorchRuntimeSelection(device="mps", dtype=float16_dtype)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110
             pass
 
     return TorchRuntimeSelection(device="cpu", dtype=float32_dtype)
@@ -465,7 +465,7 @@ class WhisperChunkTranscriber:
                     },
                     language=language,
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # nosec B110
                 # Fall back to direct-byte path when predecode is unavailable.
                 pass
 

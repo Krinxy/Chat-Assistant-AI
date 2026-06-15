@@ -106,25 +106,22 @@ const normalizeSpeechLanguage = (speechLocale: string): "de" | "en" => {
   return "en";
 };
 
-const resolveTranscriptionWsUrl = (token?: string): string => {
+const resolveTranscriptionWsUrl = (): string => {
   const configuredUrl = import.meta.env.VITE_TRANSCRIPTION_WS_URL?.trim();
-  let base: string;
 
   if (configuredUrl !== undefined && configuredUrl.length > 0) {
     if (configuredUrl.startsWith("https://")) {
-      base = `wss://${configuredUrl.slice("https://".length)}`;
-    } else if (configuredUrl.startsWith("http://")) {
-      base = `ws://${configuredUrl.slice("http://".length)}`;
-    } else {
-      base = configuredUrl;
+      return `wss://${configuredUrl.slice("https://".length)}`;
     }
-  } else {
-    const protocol = globalThis.location?.protocol === "https:" ? "wss" : "ws";
-    const host = globalThis.location?.hostname ?? "localhost";
-    base = `${protocol}://${host}:8000/ws/transcribe`;
+    if (configuredUrl.startsWith("http://")) {
+      return `ws://${configuredUrl.slice("http://".length)}`;
+    }
+    return configuredUrl;
   }
 
-  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  const protocol = globalThis.location?.protocol === "https:" ? "wss" : "ws";
+  const host = globalThis.location?.hostname ?? "localhost";
+  return `${protocol}://${host}:8000/ws/transcribe`;
 };
 
 const getSupportedAudioMimeType = (): string | undefined => {
@@ -544,7 +541,7 @@ export function ChatPanel({
 
     let transcriptionSocket: WebSocket;
     try {
-      transcriptionSocket = new WebSocket(resolveTranscriptionWsUrl(authToken));
+      transcriptionSocket = new WebSocket(resolveTranscriptionWsUrl());
     } catch {
       mediaStream.getTracks().forEach((track) => {
         track.stop();
@@ -565,6 +562,10 @@ export function ChatPanel({
     transcriptionSocket.onopen = () => {
       if (transcriptionSocketRef.current !== transcriptionSocket) {
         return;
+      }
+
+      if (authToken !== undefined && authToken.length > 0) {
+        transcriptionSocket.send(JSON.stringify({ type: "auth", token: authToken }));
       }
 
       const preferredMimeType = getSupportedAudioMimeType();
@@ -707,6 +708,7 @@ export function ChatPanel({
     };
   }, [
     applyTranscriptChunk,
+    authToken,
     copy.speechBackendUnavailable,
     copy.speechListening,
     copy.speechLocale,

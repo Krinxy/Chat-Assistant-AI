@@ -103,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env(\..+)?$' || true)"
+          TRACKED_ENV_FILES="$(git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -vE '(^|/)\.env\.example$' || true)"
           if [ -n "$TRACKED_ENV_FILES" ]; then
             echo "Tracked .env files detected. Remove them from git and use local .env + CI secrets instead:"
             echo "$TRACKED_ENV_FILES"

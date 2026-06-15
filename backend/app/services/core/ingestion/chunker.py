@@ -53,7 +53,4 @@ class DocumentChunker:
 
     def chunk_document(self, source: str, text: str) -> list[Chunk]:
         """Split a document into indexed :class:`Chunk` records carrying their source name."""
-        return [
-            Chunk(source=source, chunk_index=index, text=fragment)
-            for index, fragment in enumerate(self.split(text))
-        ]
+        return [Chunk(source=source, chunk_index=index, text=fragment) for index, fragment in enumerate(self.split(text))]

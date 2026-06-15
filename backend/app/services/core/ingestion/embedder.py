@@ -16,8 +16,7 @@ DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 class SupportsEncode(Protocol):
     """Structural type for sentence-transformers-like models used for embedding text."""
 
-    def encode(self, sentences: Sequence[str], normalize_embeddings: bool = ...) -> object:
-        ...
+    def encode(self, sentences: Sequence[str], normalize_embeddings: bool = ...) -> object: ...
 
 
 class EmbeddingService:

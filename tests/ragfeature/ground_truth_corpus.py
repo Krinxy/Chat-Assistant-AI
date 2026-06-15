@@ -4,6 +4,7 @@ Twenty topically distinct documents, each paired with a natural-language query w
 best answer lives in exactly that document. Used to measure top-1 hit-rate and the
 cosine-similarity of the best match for the real embedding pipeline.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

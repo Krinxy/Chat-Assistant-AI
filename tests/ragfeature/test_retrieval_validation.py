@@ -7,6 +7,7 @@ top-1 hit-rate >= 80 % and a minimum cosine similarity for the best match.
 The test skips cleanly when the heavy embedding stack is not installed or the model weights
 cannot be loaded (e.g. offline CI), so the mocked unit tests remain the coverage baseline.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -79,7 +80,7 @@ def test_top1_hit_rate_meets_threshold(populated_collection, embedding_service: 
     mean_similarity = sum(best_similarities) / len(best_similarities)
 
     assert hit_rate >= HIT_RATE_THRESHOLD, f"top-1 hit-rate {hit_rate:.2f} below {HIT_RATE_THRESHOLD}"
-    assert min(best_similarities) >= MIN_TOP1_SIMILARITY, (
-        f"weakest top-1 cosine similarity {min(best_similarities):.2f} below {MIN_TOP1_SIMILARITY}"
-    )
+    assert (
+        min(best_similarities) >= MIN_TOP1_SIMILARITY
+    ), f"weakest top-1 cosine similarity {min(best_similarities):.2f} below {MIN_TOP1_SIMILARITY}"
     assert mean_similarity >= MIN_TOP1_SIMILARITY

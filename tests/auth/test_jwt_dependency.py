@@ -11,8 +11,11 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-minimum-32-chars-long!")
 
+from backend.app.api.documents import _get_document_embedder  # noqa: E402
 from backend.app.db.session import Base, get_db  # noqa: E402
 from backend.app.main import create_app  # noqa: E402
+from backend.app.services.core.ingestion.embedder import DocumentEmbedder, EmbeddingService  # noqa: E402
+from tests.ragfeature.conftest import FakeChromaCollection, HashingEmbeddingModel  # noqa: E402
 
 _SECRET = os.environ["JWT_SECRET"]
 _engine = create_async_engine("sqlite+aiosqlite:///:memory:")
@@ -36,8 +39,10 @@ async def jwt_client():
 
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    fake_embedder = DocumentEmbedder(FakeChromaCollection(), EmbeddingService(model=HashingEmbeddingModel()))
     app = create_app()
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[_get_document_embedder] = lambda: fake_embedder
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     async with _engine.begin() as conn:

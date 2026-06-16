@@ -88,6 +88,10 @@ class DocumentEmbedder:
         )
         return UpsertResult(chunk_ids=ids, embedded_count=len(ids))
 
+    def delete_by_source(self, source: str) -> None:
+        """Remove all chunks whose ``source`` metadata field equals *source*."""
+        self._collection.delete(where={"source": source})  # type: ignore[call-arg]
+
     @staticmethod
     def build_chunk_id(chunk: Chunk) -> str:
         content_hash = hashlib.sha256(chunk.text.encode("utf-8")).hexdigest()[:16]

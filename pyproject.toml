@@ -55,7 +55,8 @@ backend = [
   "passlib[bcrypt]>=1.7.4",
   "sqlalchemy>=2.0.0",
   "aiosqlite>=0.20.0",
-  "langchain-google-genai>=2.0"
+  "langchain-google-genai>=2.0",
+  "python-multipart>=0.0.9"
 ]
 
 frontend = [
@@ -109,7 +110,8 @@ development = [
   "passlib[bcrypt]>=1.7.4",
   "sqlalchemy>=2.0.0",
   "aiosqlite>=0.20.0",
-  "langchain-google-genai>=2.0"
+  "langchain-google-genai>=2.0",
+  "python-multipart>=0.0.9"
 ]
 
 all = [

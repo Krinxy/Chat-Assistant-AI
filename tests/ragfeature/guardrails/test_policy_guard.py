@@ -44,12 +44,7 @@ class TestPolicyGuardCheckLocal:
     def test_from_file_loads_yaml(self, tmp_path: Path) -> None:
         policy_yaml = tmp_path / "policy.yaml"
         policy_yaml.write_text(
-            "version: '1.0'\n"
-            "disallowed_categories:\n"
-            "  test_cat:\n"
-            "    enabled: true\n"
-            "    keywords:\n"
-            "      - badword\n",
+            "version: '1.0'\n" "disallowed_categories:\n" "  test_cat:\n" "    enabled: true\n" "    keywords:\n" "      - badword\n",
             encoding="utf-8",
         )
         guard = PolicyGuard.from_file(policy_yaml)
@@ -59,12 +54,7 @@ class TestPolicyGuardCheckLocal:
     def test_from_file_disabled_category_not_enforced(self, tmp_path: Path) -> None:
         policy_yaml = tmp_path / "policy.yaml"
         policy_yaml.write_text(
-            "version: '1.0'\n"
-            "disallowed_categories:\n"
-            "  test_cat:\n"
-            "    enabled: false\n"
-            "    keywords:\n"
-            "      - badword\n",
+            "version: '1.0'\n" "disallowed_categories:\n" "  test_cat:\n" "    enabled: false\n" "    keywords:\n" "      - badword\n",
             encoding="utf-8",
         )
         guard = PolicyGuard.from_file(policy_yaml)

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_db
@@ -215,18 +216,23 @@ async def chat(
     message = ChatPipeline.validate_message(body.message, pipeline._max_message_length)
 
     # Resolve session: validate existing or auto-create for first message
-    if body.session_id:
-        session = await db.get(ChatSession, body.session_id)
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found.")
-        session_id = body.session_id
-        # Restore buffer from DB summary if not already in memory
-        memory.get_or_create(session_id, summary=session.summary or "")
-    else:
-        session_id = str(uuid.uuid4())
-        db.add(ChatSession(id=session_id))
-        await db.commit()
-        memory.create(session_id)
+    try:
+        if body.session_id:
+            session = await db.get(ChatSession, body.session_id)
+            if session is None:
+                raise HTTPException(status_code=404, detail="Session not found.")
+            session_id = body.session_id
+            # Restore buffer from DB summary if not already in memory
+            memory.get_or_create(session_id, summary=session.summary or "")
+        else:
+            session_id = str(uuid.uuid4())
+            db.add(ChatSession(id=session_id))
+            await db.commit()
+            memory.create(session_id)
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable.") from exc
 
     context = memory.get_context(session_id)
     response_message, status = await pipeline.run(message, session_id, context)

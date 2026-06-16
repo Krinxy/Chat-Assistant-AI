@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Optional
@@ -8,6 +9,8 @@ import yaml
 
 from ..guardrails import GuardOutcome, GuardStatus
 from .helpers import GuardLogger
+
+_logger = logging.getLogger(__name__)
 
 _POLICY_FILE = Path(__file__).parent.parent.parent.parent.parent / "config" / "guardrail_policy.yaml"
 
@@ -35,7 +38,11 @@ class PolicyGuard:
     def from_file(cls, path: Optional[Path] = None) -> "PolicyGuard":
         """Load policy config from a YAML file and compile all active patterns."""
         policy_path = path or _POLICY_FILE
-        policy: dict = yaml.safe_load(policy_path.read_text(encoding="utf-8")) or {}
+        try:
+            policy: dict = yaml.safe_load(policy_path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            _logger.warning("Could not load guardrail policy from %s: %s — using empty pattern set", policy_path, exc)
+            return cls(patterns=[])
 
         compiled: list[re.Pattern[str]] = []
         for _category, cfg in policy.get("disallowed_categories", {}).items():

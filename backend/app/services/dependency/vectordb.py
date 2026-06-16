@@ -44,10 +44,13 @@ class VectorDBClient:
 
     def get_collection(self) -> Collection:
         """Return the cosine-similarity document collection, creating it if necessary."""
-        return self._client.get_or_create_collection(
-            name=self._config.collection_name,
-            metadata={"hnsw:space": _COSINE_SPACE},
-        )
+        try:
+            return self._client.get_or_create_collection(
+                name=self._config.collection_name,
+                metadata={"hnsw:space": _COSINE_SPACE},
+            )
+        except Exception as exc:
+            raise RuntimeError(f"ChromaDB collection '{self._config.collection_name}' unavailable: {exc}") from exc
 
     def reset_collection(self) -> Collection:
         """Drop and recreate the document collection (used for ingestion resets and tests)."""
@@ -75,10 +78,13 @@ def _create_persistent_client(persist_path: str) -> ClientAPI:
     import chromadb
     from chromadb.config import Settings
 
-    return chromadb.PersistentClient(
-        path=persist_path,
-        settings=Settings(anonymized_telemetry=False),
-    )
+    try:
+        return chromadb.PersistentClient(
+            path=persist_path,
+            settings=Settings(anonymized_telemetry=False),
+        )
+    except Exception as exc:
+        raise RuntimeError(f"ChromaDB client could not be created at '{persist_path}': {exc}") from exc
 
 
 def _resolve_persist_path_from_env() -> str:

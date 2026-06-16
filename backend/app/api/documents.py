@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from datetime import datetime
 
@@ -20,6 +21,7 @@ from ..services.dependency.authtoken import authtoken
 from ..services.dependency.vectordb import get_vector_db_client
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+_logger = logging.getLogger(__name__)
 
 
 class DocumentResponse(BaseModel):
@@ -32,7 +34,13 @@ class DocumentResponse(BaseModel):
 
 
 def _get_document_embedder() -> DocumentEmbedder:
-    collection = get_vector_db_client().get_collection()
+    try:
+        collection = get_vector_db_client().get_collection()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Vector database is temporarily unavailable.",
+        ) from exc
     return DocumentEmbedder(collection, EmbeddingService())
 
 
@@ -69,7 +77,13 @@ async def upload_document(
     doc_id = str(uuid.uuid4())
 
     chunks = DocumentChunker().chunk_document(doc_id, text)
-    result = embedder.upsert_chunks(chunks)
+    try:
+        result = embedder.upsert_chunks(chunks)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Embedding service unavailable — please retry.",
+        ) from exc
 
     doc = Document(
         id=doc_id,
@@ -105,6 +119,9 @@ async def delete_document(
     if doc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
 
-    embedder.delete_by_source(doc_id)
+    try:
+        embedder.delete_by_source(doc_id)
+    except Exception:
+        _logger.warning("ChromaDB delete_by_source failed for doc %s — orphaned chunks may remain", doc_id)
     await db.delete(doc)
     await db.commit()

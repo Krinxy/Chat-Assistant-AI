@@ -37,11 +37,14 @@ class LLMClient:
         if not api_key:
             raise LLMNotConfiguredError("GEMINI_API_KEY not set")
 
-        return ChatGoogleGenerativeAI(
-            model=self._model,
-            google_api_key=api_key,
-            temperature=self._temperature,
-        )
+        try:
+            return ChatGoogleGenerativeAI(
+                model=self._model,
+                google_api_key=api_key,
+                temperature=self._temperature,
+            )
+        except Exception as exc:
+            raise LLMNotConfiguredError(f"Failed to initialise Gemini LLM: {exc}") from exc
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> "LLMClient":

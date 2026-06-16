@@ -3,7 +3,6 @@ from __future__ import annotations
 from io import BytesIO
 from pathlib import Path
 
-import pypdf
 import pytest
 from docx import Document
 

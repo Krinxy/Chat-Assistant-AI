@@ -3,8 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
-
 from backend.app.services.core.guardrails import GuardStatus
 from backend.app.services.core.guardrails.policy_guard import PolicyGuard
 

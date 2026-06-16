@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from backend.app.services.core.chat.memory import ConversationBuffer, SessionMemoryManager
 
 

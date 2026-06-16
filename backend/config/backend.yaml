@@ -30,6 +30,7 @@ api:
     max_message_length: 4000
   session:
     max_context_turns: 10
+    persist_token_in_browser: true
   messages:
     input_rejected: "Request rejected by content policy."
     output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."

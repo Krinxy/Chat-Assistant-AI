@@ -1,5 +1,9 @@
 const API_BASE = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:8000";
 
+export interface AppConfig {
+  persist_token_in_browser: boolean;
+}
+
 export interface MeResult {
   email: string;
   role: string;
@@ -40,6 +44,18 @@ export async function apiMe(token: string): Promise<MeResult> {
   }
 
   return res.json() as Promise<MeResult>;
+}
+
+export async function apiFetchConfig(): Promise<AppConfig> {
+  try {
+    const res = await fetch(`${API_BASE}/api/config`);
+    if (!res.ok) {
+      return { persist_token_in_browser: false };
+    }
+    return res.json() as Promise<AppConfig>;
+  } catch {
+    return { persist_token_in_browser: false };
+  }
 }
 
 export async function apiRegister(

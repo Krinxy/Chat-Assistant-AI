@@ -4,6 +4,7 @@ import uuid
 from dataclasses import dataclass, field
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_db
@@ -45,8 +46,11 @@ async def create_session(
 ) -> SessionCreateResponse:
     """Create a new chat session. Returns the session_id to use in POST /api/chat."""
     session_id = str(uuid.uuid4())
-    db.add(ChatSession(id=session_id))
-    await db.commit()
+    try:
+        db.add(ChatSession(id=session_id))
+        await db.commit()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable.") from exc
     memory.create(session_id)
     return SessionCreateResponse(session_id=session_id)
 
@@ -58,7 +62,10 @@ async def get_session_history(
     memory: SessionMemoryManager = Depends(_memory_dep),
 ) -> SessionHistoryResponse:
     """Return the compressed summary and recent in-memory turns for a session."""
-    session = await db.get(ChatSession, session_id)
+    try:
+        session = await db.get(ChatSession, session_id)
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable.") from exc
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found.")
     buf = memory.get(session_id)

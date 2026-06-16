@@ -45,9 +45,12 @@ class EmbeddingService:
 
     def _ensure_model(self) -> SupportsEncode:
         if self._model is None:
-            from sentence_transformers import SentenceTransformer
+            try:
+                from sentence_transformers import SentenceTransformer
 
-            self._model = SentenceTransformer(self._model_name)
+                self._model = SentenceTransformer(self._model_name)
+            except Exception as exc:
+                raise RuntimeError(f"Failed to load embedding model '{self._model_name}': {exc}") from exc
         return self._model
 
     @staticmethod

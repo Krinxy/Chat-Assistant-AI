@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Optional
 
 import yaml
 
 _BACKEND_CONFIG_PATH = Path(__file__).parents[3] / "config" / "backend.yaml"
+_logger = logging.getLogger(__name__)
 
 
 class ConfigLoader:
@@ -31,6 +33,10 @@ class ConfigLoader:
 
     @staticmethod
     def _load(path: Path) -> dict[str, Any]:
-        with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-        return data if isinstance(data, dict) else {}
+        try:
+            with open(path, encoding="utf-8") as fh:
+                data = yaml.safe_load(fh)
+            return data if isinstance(data, dict) else {}
+        except (OSError, yaml.YAMLError) as exc:
+            _logger.warning("Failed to load config from %s: %s — using empty defaults", path, exc)
+            return {}

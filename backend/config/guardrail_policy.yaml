@@ -5,6 +5,9 @@
 version: "1.0"
 
 disallowed_categories:
+
+  # ── Content safety ────────────────────────────────────────────────────────────
+
   sexual_content:
     enabled: true
     description: "Explicit or implicit sexual content of any kind"
@@ -13,6 +16,11 @@ disallowed_categories:
       - nude
       - erotic
       - explicit sexual
+      - onlyfans
+      - sexting
+    patterns:
+      - "sexual (content|material|fantasy|act)"
+      - "naked (photo|image|picture|video)"
 
   harassment:
     enabled: true
@@ -22,15 +30,53 @@ disallowed_categories:
       - bully
       - intimidate
       - stalk
+      - doxx
+      - swat
+    patterns:
+      - "find (out |)(where|home address|phone number) (of|for) .{3,50}"
+      - "track (down|location of) .{3,40}"
 
   violence:
     enabled: true
-    description: "Instructions for violence, weapons, or harm"
+    description: "Instructions for violence, weapons, harm, or CBRN threats"
     keywords:
       - how to kill
+      - how to hurt
       - make a bomb
+      - build a bomb
       - synthesize poison
       - build a weapon
+      - mass shooting
+      - suicide vest
+    patterns:
+      - "how (to |do I |can I )?(make|build|create|synthesize|produce) (a |)(explosive|bomb|grenade|weapon|poison|nerve agent|sarin|anthrax|ricin|fentanyl)"
+      - "step[- ]by[- ]step (instructions? for |guide (to |for |on ))(killing|murdering|poisoning|attacking)"
+      - "(acquire|obtain|buy) (illegal |unregistered |untraceable )?(weapon|gun|firearm|explosive|drug)"
+      - "bioweapon|chemical weapon|dirty bomb|radiological (device|weapon)"
+
+  self_harm:
+    enabled: true
+    description: "Instructions or encouragement for self-harm or suicide"
+    keywords:
+      - how to commit suicide
+      - how to self harm
+      - kill myself
+    patterns:
+      - "how (to |do I |can I )?(commit suicide|end my life|kill myself|overdose on)"
+      - "method[s]? (for|of) suicide"
+      - "painless way to die"
+      - "lethal dose of .{3,40}"
+
+  hate_speech:
+    enabled: true
+    description: "Content that demeans people based on protected characteristics"
+    patterns:
+      - "(all |those |these )?(jews?|muslims?|blacks?|whites?|gays?|women|men) (are|deserve|should)"
+      - "white (supremacy|power|genocide)"
+      - "(racial|ethnic) (cleansing|purity|superiority)"
+      - "replace(ment)? theory"
+
+  # ── Security threats ──────────────────────────────────────────────────────────
 
   jailbreak_attempts:
     enabled: true
@@ -45,3 +91,84 @@ disallowed_categories:
       - "act as (if |though )?(you have no|you are)"
       - "DAN mode"
       - "developer mode"
+      - "jailbreak mode"
+      - "no restrictions? mode"
+      - "unrestricted (mode|version|ai)"
+      - "without (any |)(filters?|restrictions?|guardrails?|safety)"
+      - "bypass (your |all )?(safety|filters?|restrictions?|guardrails?)"
+      - "sudo (mode|access|override)"
+      - "override (all |your )?(safety|policy|rules?|guidelines?)"
+
+  prompt_injection:
+    enabled: true
+    description: "Attempts to extract system prompts or inject instructions via input"
+    patterns:
+      - "repeat (the |your )?(above|previous|system) (prompt|instructions?|message)"
+      - "what (is|are|were) your (system |initial |original )?(prompt|instructions?)"
+      - "print (the |your )?(system prompt|instructions? above|system message)"
+      - "output (the |your )?(system prompt|system message|instructions? above)"
+      - "translate (the |your )?(above|previous|system) (prompt|instruction)"
+      - "summarize (your |the )?(system prompt|instructions? above)"
+      - "show me (the |your )?(full |complete |original )?(system prompt|instructions?)"
+      - "respond only in (base64|hex|rot13|morse code)"
+      - "encode (your |the )?(response|answer|reply) in (base64|hex)"
+      - "<!-- ?inject"
+      - "\\{\\{.*\\}\\}"
+
+  cyberattacks:
+    enabled: true
+    description: "Tools or instructions for hacking, malware, phishing, or social engineering"
+    keywords:
+      - write a keylogger
+      - write malware
+      - write ransomware
+      - write a trojan
+      - write a rootkit
+    patterns:
+      - "how (to |do I |can I )?(hack|break into|gain (unauthorized )?access to) (a |)(server|database|account|system|network|website)"
+      - "(create|write|generate|build) (a |)(phishing|spear.phishing) (email|page|site|campaign)"
+      - "(create|write|generate) (a |)(keylogger|ransomware|malware|trojan|rootkit|spyware|worm|virus)"
+      - "sql injection (payload|attack|for)"
+      - "(xss|cross.site scripting) (payload|attack|bypass)"
+      - "reverse shell (command|payload|one.liner)"
+      - "exploit (code|payload|for|CVE-)"
+      - "(bypass|evade|defeat) (antivirus|av|edr|firewall|ids|ips|waf)"
+      - "lateral movement (technique|strategy|tool)"
+      - "credential (stuffing|spraying|harvesting)"
+      - "(c2|command and control|c&c) (server|infrastructure|framework)"
+
+  credential_theft:
+    enabled: true
+    description: "Attempts to extract credentials, secrets, or tokens from the system or users"
+    patterns:
+      - "what (is|are) (the |your |our )?(api key|secret key|jwt secret|password|token|credential)"
+      - "show (me |)(the |all )?(api keys?|secrets?|passwords?|tokens?|credentials?)"
+      - "dump (the |all )?(api keys?|secrets?|passwords?|tokens?|credentials?|database)"
+      - "list (all |)(user(s)?|password(s)?|credentials?|account(s)?)"
+      - "how (to |do I |can I )?steal (api keys?|passwords?|tokens?|credentials?|session)"
+      - "(get|extract|harvest) (api keys?|passwords?|tokens?|credentials?) from"
+
+  # ── Legal and financial risks ─────────────────────────────────────────────────
+
+  financial_fraud:
+    enabled: true
+    description: "Scripts or instructions for financial fraud, scams, or money laundering"
+    keywords:
+      - money laundering
+      - pump and dump
+      - ponzi scheme
+    patterns:
+      - "(write|create|generate|draft) (a |)(scam|phishing|fraud) (email|message|script|letter)"
+      - "how (to |do I |can I )?(launder money|evade tax|commit fraud|commit wire fraud)"
+      - "(fake|forged?) (invoice|check|wire transfer|bank statement|tax return)"
+      - "advance.fee (fraud|scam)"
+      - "crypto (rug pull|pump.and.dump|wash trading)"
+
+  pii_extraction:
+    enabled: true
+    description: "Requests targeting personal data of specific real individuals"
+    patterns:
+      - "find (the |)(home |personal |private )?(address|phone number|email|SSN|social security) of .{3,60}"
+      - "what is .{3,40}('s| their) (phone number|home address|SSN|passport number|bank account)"
+      - "get (me |)(personal|private|sensitive) (information|data|details) (about|on|for) .{3,60}"
+      - "locate .{3,40} (real (name|identity)|personal information|home address)"

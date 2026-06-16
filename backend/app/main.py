@@ -21,6 +21,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from .api.auth import router as auth_router  # noqa: E402
 from .api.chat import initialize as initialize_chat  # noqa: E402
 from .api.chat import router as chat_router  # noqa: E402
+from .api.config import router as config_router  # noqa: E402
 from .api.documents import router as documents_router  # noqa: E402
 from .api.sessions import router as sessions_router  # noqa: E402
 from .db.session import init_db  # noqa: E402
@@ -145,6 +146,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router, prefix="/api")
     app.include_router(sessions_router, prefix="/api")
     app.include_router(documents_router, prefix="/api")
+    app.include_router(config_router, prefix="/api")
     return app
 
 

@@ -134,7 +134,7 @@ const getInitialBrainrotStyle = (): BrainrotStyleKey => {
 };
 
 export default function App() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
 
   const initialLanguageRef = useRef<Language>(getInitialLanguage());
   const initialLanguage = initialLanguageRef.current;
@@ -556,6 +556,10 @@ export default function App() {
 
     return null;
   }, [activeView, language]);
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <LoginPanel language={language} onLoginSuccess={login} />;

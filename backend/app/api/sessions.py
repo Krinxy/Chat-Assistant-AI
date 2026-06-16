@@ -39,7 +39,7 @@ def _memory_dep(request: Request) -> SessionMemoryManager:
 # ── endpoints ──────────────────────────────────────────────────────────────────
 
 
-@router.post("", response_model=SessionCreateResponse)
+@router.post("", response_model=SessionCreateResponse, responses={503: {"description": "Database temporarily unavailable"}})
 async def create_session(
     db: AsyncSession = Depends(get_db),
     memory: SessionMemoryManager = Depends(_memory_dep),
@@ -55,7 +55,14 @@ async def create_session(
     return SessionCreateResponse(session_id=session_id)
 
 
-@router.get("/{session_id}/history", response_model=SessionHistoryResponse)
+@router.get(
+    "/{session_id}/history",
+    response_model=SessionHistoryResponse,
+    responses={
+        404: {"description": "Session not found"},
+        503: {"description": "Database temporarily unavailable"},
+    },
+)
 async def get_session_history(
     session_id: str,
     db: AsyncSession = Depends(get_db),

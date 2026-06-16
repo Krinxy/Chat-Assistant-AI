@@ -219,7 +219,7 @@ function DrumWheel({ centreHour, onCentreHourChange, pxPerHour, viewportHeightPx
     const candidates = [d, d + TOTAL_HOURS, d + TOTAL_HOURS * 2];
     const vHour = candidates.reduce((best, c) =>
       Math.abs(c - centreHour) < Math.abs(best - centreHour) ? c : best
-    );
+    , candidates[0]);
     const offset = vHour - centreHour;
     if (Math.abs(offset) <= DRUM_HALF_SPAN + 1) {
       drumItems.push({ displayHour: d, offset });

@@ -200,7 +200,17 @@ def _memory_dep(request: Request) -> SessionMemoryManager:
 # ── endpoint ───────────────────────────────────────────────────────────────────
 
 
-@router.post("", response_model=ChatResponse)
+@router.post(
+    "",
+    response_model=ChatResponse,
+    responses={
+        400: {"description": "Guardrail policy violation"},
+        404: {"description": "Session not found"},
+        422: {"description": "Message validation failed"},
+        429: {"description": "Rate limit exceeded"},
+        503: {"description": "Database temporarily unavailable"},
+    },
+)
 @authtoken
 async def chat(
     body: ChatRequest,

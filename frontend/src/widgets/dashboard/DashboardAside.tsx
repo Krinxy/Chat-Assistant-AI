@@ -1362,7 +1362,7 @@ export function DashboardAside({
             const statLabels = [copy.statTemperature, copy.statFeelsLike, copy.statHumidity, copy.statWind];
             const label = statLabels[index] ?? item.label;
             return (
-              <span key={index} className="weather-stat-item">
+              <span key={item.label} className="weather-stat-item">
                 {index > 0 && <span className="weather-stat-sep" aria-hidden="true">|</span>}
                 <span className="weather-stat-label">{label}</span>
                 <strong className="weather-stat-value">{item.value}</strong>

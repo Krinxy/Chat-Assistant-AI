@@ -91,7 +91,7 @@ def create_app() -> FastAPI:
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         if _IS_PRODUCTION and os.getenv("AUTH_MODE", "").lower() == "mock":
             raise RuntimeError(
-                "AUTH_MODE=mock must not run in production (ENVIRONMENT=production). " "Set AUTH_MODE=jwt and provide a real JWT_SECRET."
+                "AUTH_MODE=mock must not run in production (ENVIRONMENT=production). Set AUTH_MODE=jwt and provide a real JWT_SECRET."
             )
         _ensure_jwt_secret()
         await init_db()

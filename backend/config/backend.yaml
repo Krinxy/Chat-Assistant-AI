@@ -28,6 +28,8 @@ api:
     auth_forgot_per_600s: 3
   input_validation:
     max_message_length: 4000
+  session:
+    max_context_turns: 10
   messages:
     input_rejected: "Request rejected by content policy."
     output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."

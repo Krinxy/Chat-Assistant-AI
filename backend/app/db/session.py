@@ -11,16 +11,22 @@ class Base(DeclarativeBase):
     pass
 
 
-_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./auth.db")
-_engine = create_async_engine(_DATABASE_URL, echo=False)
-AsyncSessionLocal = async_sessionmaker(_engine, expire_on_commit=False)
+class DatabaseManager:
+    _engine = create_async_engine(os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./auth.db"), echo=False)
+    _session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(_engine, expire_on_commit=False)
+
+    @staticmethod
+    async def init_db() -> None:
+        async with DatabaseManager._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    @staticmethod
+    async def get_db() -> AsyncIterator[AsyncSession]:
+        async with DatabaseManager._session_factory() as session:
+            yield session
 
 
-async def init_db() -> None:
-    async with _engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def get_db() -> AsyncIterator[AsyncSession]:
-    async with AsyncSessionLocal() as session:
-        yield session
+# module-level aliases — FastAPI Depends and dependency_overrides use object identity
+AsyncSessionLocal = DatabaseManager._session_factory
+init_db = DatabaseManager.init_db
+get_db = DatabaseManager.get_db

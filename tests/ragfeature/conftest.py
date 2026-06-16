@@ -72,9 +72,14 @@ class FakeChromaCollection:
             "metadatas": [self._records[record_id].metadata for record_id in selected],
         }
 
-    def delete(self, *, ids: Sequence[str]) -> None:
-        for record_id in ids:
-            self._records.pop(record_id, None)
+    def delete(self, *, ids: Sequence[str] | None = None, where: dict[str, Any] | None = None) -> None:
+        if where is not None:
+            to_delete = [rid for rid, r in self._records.items() if all(r.metadata.get(k) == v for k, v in where.items())]
+            for rid in to_delete:
+                self._records.pop(rid, None)
+        elif ids is not None:
+            for record_id in ids:
+                self._records.pop(record_id, None)
 
     def count(self) -> int:
         return len(self._records)

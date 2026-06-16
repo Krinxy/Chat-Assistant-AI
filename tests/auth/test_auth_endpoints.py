@@ -47,13 +47,14 @@ async def test_protected_route_accessible_in_mock_mode(client: AsyncClient) -> N
 
 @pytest.mark.asyncio
 async def test_admin_delete_allowed_in_mock_admin_mode(client: AsyncClient) -> None:
+    # Admin reaches the handler; non-existent doc returns 404 (not auth-blocked 403)
     resp = await client.delete("/api/documents/123")
-    assert resp.status_code == 200
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_admin_only_upload_blocked_for_user_role(user_client: AsyncClient) -> None:
-    resp = await user_client.post("/api/documents")
+    resp = await user_client.post("/api/documents/upload", files={"file": ("test.txt", b"content", "text/plain")})
     assert resp.status_code == 403
 
 

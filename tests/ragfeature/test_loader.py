@@ -49,7 +49,9 @@ def test_extract_text_reads_pdf_pages(monkeypatch: pytest.MonkeyPatch) -> None:
         def __init__(self, _stream: object) -> None:
             self.pages = [_FakePage("Page one"), _FakePage("   "), _FakePage("Page two")]
 
-    monkeypatch.setattr(pypdf, "PdfReader", _FakeReader)
+    import backend.app.services.core.ingestion.loader as _loader_mod
+
+    monkeypatch.setattr(_loader_mod, "PdfReader", _FakeReader)
 
     assert extract_text("manual.pdf", b"%PDF-fake") == "Page one\n\nPage two"
 

@@ -261,12 +261,12 @@ function main() {
 
   let candidateIndex = 0;
   const tryNext = () => {
-    const candidate = candidates[candidateIndex];
-    if (candidate === undefined) {
+    if (candidateIndex >= candidates.length) {
       console.error("[dev] No working Python environment found for backend startup.");
       process.exit(1);
       return;
     }
+    const candidate = candidates[candidateIndex];
 
     candidateIndex += 1;
 

@@ -11,6 +11,8 @@ from typing import Any, Callable
 
 import numpy as np
 
+_FFMPEG_MISSING_MSG = "ffmpeg binary was not found and is required for audio decoding"
+
 
 class WhisperDependenciesMissingError(RuntimeError):
     """Raised when optional Whisper runtime dependencies are unavailable."""
@@ -99,7 +101,7 @@ def _decode_audio_chunk_with_ffmpeg(
 ) -> np.ndarray:
     ffmpeg_binary_path = _resolve_ffmpeg_binary_path()
     if ffmpeg_binary_path is None:
-        raise ValueError("ffmpeg binary was not found and is required for audio decoding")
+        raise ValueError(_FFMPEG_MISSING_MSG)
 
     ffmpeg_command = [ffmpeg_binary_path]
     input_format = _resolve_ffmpeg_input_format(mime_type)
@@ -135,7 +137,7 @@ def _decode_audio_chunk_with_ffmpeg(
             out_bytes, err_bytes = ffmpeg_process.communicate(audio_chunk)
             return_code = ffmpeg_process.returncode
     except FileNotFoundError as error:
-        raise ValueError("ffmpeg binary was not found and is required for audio decoding") from error
+        raise ValueError(_FFMPEG_MISSING_MSG) from error
 
     if return_code not in (0, None):
         stderr_text = err_bytes.decode("utf-8", errors="ignore").strip()
@@ -180,7 +182,7 @@ def _patch_transformers_ffmpeg_reader(
             ) as ffmpeg_process:
                 output_stream = ffmpeg_process.communicate(bpayload)
         except FileNotFoundError as error:
-            raise ValueError("ffmpeg binary was not found and is required for audio decoding") from error
+            raise ValueError(_FFMPEG_MISSING_MSG) from error
 
         out_bytes = output_stream[0]
         audio = np.frombuffer(out_bytes, np.float32)

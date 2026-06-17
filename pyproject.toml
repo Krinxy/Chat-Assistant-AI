@@ -51,7 +51,8 @@ backend = [
   "passlib[bcrypt]>=1.7.4",
   "sqlalchemy>=2.0.0",
   "aiosqlite>=0.20.0",
-  "langchain-google-genai>=2.0",
+  "langchain-openai>=0.2.0",
+  "openai>=1.40.0",
   "python-multipart>=0.0.9"
 ]
 
@@ -96,7 +97,8 @@ development = [
   "passlib[bcrypt]>=1.7.4",
   "sqlalchemy>=2.0.0",
   "aiosqlite>=0.20.0",
-  "langchain-google-genai>=2.0",
+  "langchain-openai>=0.2.0",
+  "openai>=1.40.0",
   "python-multipart>=0.0.9"
 ]
 

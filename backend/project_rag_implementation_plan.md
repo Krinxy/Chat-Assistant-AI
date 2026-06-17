@@ -92,7 +92,7 @@ Legende: Custom Component | Platform Component | Hybrid Component
 
 | Baustein | Tool | Entscheidung |
 |---|---|---|
-| LLM | **Gemini** (Google) via `langchain-google-genai` | User-Anforderung |
+| LLM | **OpenAI-kompatibles Gateway** (institutionell/on-prem) via `langchain-openai` `ChatOpenAI` — **Default: `qwen3.5-think`** (Thinking/Reasoning); Guardrails: `Qwen3.5-397B-A17B_No_Thinking` | User-Anforderung, **ersetzt Gemini** |
 | Chain-Orchestration | **LangChain LCEL** | User-Anforderung, modern, streaming-nativ |
 | Embeddings | **sentence-transformers** (lokal, HuggingFace) | Dokumente on-prem halten |
 | VectorDB | **ChromaDB** | Paper-Empfehlung, Python-nativ |
@@ -103,12 +103,20 @@ Legende: Custom Component | Platform Component | Hybrid Component
 | Monitoring | **OpenTelemetry Python SDK** | Paper-Empfehlung |
 
 ### Wichtiger Trade-off
-Gemini ist ein Cloud-Service → **Query + Chunks + History verlassen das Netzwerk**.
-Dokumente selbst bleiben on-prem (ChromaDB + lokale Embeddings). Bewusste Entscheidung.
+Das LLM läuft **nicht** bei Google, sondern hinter einem **OpenAI-kompatiblen Gateway**
+(institutionell bzw. on-prem gehostet, Zugang siehe
+https://github.com/dias-digitial-assistant/llm_access). Angebunden wird es generisch
+über `base_url` + `api_key` mit `langchain-openai` (`ChatOpenAI`) bzw. dem `openai`-SDK.
+Damit ist die On-Premises-Anforderung des Papers deutlich besser erfüllt als mit einem
+Cloud-LLM: **Query + Chunks + History verlassen das Institutionsnetz nicht**, sofern das
+Gateway intern betrieben wird. Dokumente + Embeddings bleiben ohnehin vollständig lokal
+(ChromaDB + sentence-transformers). Bewusste Entscheidung — der konkrete Hosting-Ort des
+Gateways ist datenschutzrechtlich zu prüfen.
 
 ### Guardrails-Strategie
-- **3 separate LLM-Calls** (alle via Gemini): Input Guard, Query Refinement, Output Guard
-- Guardrail-Calls können schnelleres Modell nutzen (z.B. `gemini-flash`)
+- **3 separate LLM-Calls** (alle über das OpenAI-kompatible Gateway): Input Guard, Query Refinement, Output Guard
+- Guardrails nutzen das **No-Thinking-Modell** (`Qwen3.5-397B-A17B_No_Thinking`, `temperature=0`) → schnell, deterministisch, kein Token-Budget fürs Reasoning
+- Hauptantwort (RAG Chain): **`qwen3.5-think`** (Thinking) → bessere Antwortqualität bei komplexen Dokumentfragen
 - Output-Guardrail: **blocking** (Client wartet, höhere Qualitätssicherung)
 
 ### pyproject.toml Dependencies (backend-Gruppe)
@@ -116,7 +124,8 @@ Dokumente selbst bleiben on-prem (ChromaDB + lokale Embeddings). Bewusste Entsch
 ```toml
 # RAG Core
 "langchain>=0.3"
-"langchain-google-genai>=2.0"
+"langchain-openai>=0.2"
+"openai>=1.0"
 "langchain-community>=0.3"
 "chromadb>=0.5"
 "sentence-transformers>=3.0"
@@ -183,7 +192,7 @@ backend/app/
 │   │   ├── transcription/           # BESTEHEND
 │   │   ├── __init__.py
 │   │   ├── vectordb.py              # NEU: ChromaDB Client (Singleton)
-│   │   ├── llm.py                   # NEU: Gemini LangChain Client
+│   │   ├── llm.py                   # NEU: ChatOpenAI Client (OpenAI-komp. Gateway)
 │   │   └── auth.py                  # NEU: JWT FastAPI Dependency
 │   │
 │   └── utils/
@@ -201,13 +210,13 @@ Client POST /api/chat  (Bearer JWT)
 Auth Middleware ─── ungültig ──► 401
   │
   ▼
-Input Guardrail (gemini-2.0-flash)
+Input Guardrail (No-Thinking-Modell)
   "Ist diese Anfrage angemessen?"
   │
   unangemessen ──► 400 + Rejection-Nachricht
   │
   ▼
-Query Refinement (gemini-2.0-flash)
+Query Refinement (No-Thinking-Modell)
   "Verbessere diese Query für semantisches Retrieval"
   │ → refined_query
   ▼
@@ -219,13 +228,13 @@ Prompt Assembly
   [System Prompt] + [Retrieved Chunks] + [SQLite History] + [User Query]
   │
   ▼
-Gemini Stream (LCEL chain.astream())
+LLM Stream (ChatOpenAI, LCEL chain.astream())
   │ token by token
   ▼
 SSE StreamingResponse → Client
   │
   ▼
-Output Guardrail (gemini-2.0-flash, blocking)
+Output Guardrail (No-Thinking-Modell, blocking)
   "Ist die Antwort plausibel und safe?"
   │
   ▼
@@ -246,7 +255,7 @@ AP 0  – Projektfundament & CI/CD          [beide · blocking]
   │
   ├── Spur A ──────────────────────────────────────────────────────────
   │   AP 1A  #19  ChromaDB Integration & Retrieval Validation
-  │   AP 2A  #20  Gemini Integration via LangChain & Streaming Chat
+  │   AP 2A  #20  LLM-Integration via LangChain (OpenAI-komp. Gateway) & Streaming Chat
   │   AP 3A        Basis-Chat & Session Memory
   │
   └── Spur B ──────────────────────────────────────────────────────────
@@ -271,7 +280,7 @@ AP 0  – Projektfundament & CI/CD          [beide · blocking]
 - GitHub Actions Pipeline: alle 5 Guards aus Section 7 Qualität
 - `pytest`-Config mit `--cov-fail-under=80`
 - `docker-compose.yml` für lokales Dev-Setup
-- `.env.example` mit `GEMINI_API_KEY`, `JWT_SECRET`, `CHROMA_PATH`
+- `.env.example` mit `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `LLM_MODEL` (default: `qwen3.5-think`), `LLM_GUARD_MODEL` (default: `Qwen3.5-397B-A17B_No_Thinking`), `JWT_SECRET`, `CHROMA_PATH`
 
 **Definition of Done:**
 - [ ] Pipeline läuft durch auf leerem Repo
@@ -301,21 +310,21 @@ AP 0  – Projektfundament & CI/CD          [beide · blocking]
 
 ---
 
-#### AP 2A – Gemini Integration via LangChain & Streaming Chat
+#### AP 2A – LLM-Integration via LangChain (OpenAI-kompatibles Gateway) & Streaming Chat
 **GitHub:** `#20` · **Blocked by:** `#19`
 
 **Tasks:**
-- `langchain-google-genai` zu `pyproject.toml`
-- `services/dependency/llm.py`: `ChatGoogleGenerativeAI` Singleton Factory (Flash + Pro)
-- `utils/streaming.py`: SSE-Generator-Helper
-- `api/chat.py`: `POST /api/chat` mit `{message, session_id}`, streamt Gemini-Antwort
+- `langchain-openai` (+ `openai`) zu `pyproject.toml`
+- `services/dependency/llm.py`: `ChatOpenAI` Singleton Factory gegen OpenAI-kompatibles Gateway (`base_url` + `api_key` aus ENV), Default-Modell `Qwen3.5-397B-A17B_No_Thinking`, optional `qwen3.5-think`
+- `utils/streaming.py`: SSE-Generator-Helper (`delta.content` kann `None` sein → überspringen)
+- `api/chat.py`: `POST /api/chat` mit `{message, session_id}`, streamt LLM-Antwort
 - `/health`: LLM-Status ohne echten Inference-Call
 - `main.py`: Router einbinden
 
 **Definition of Done:**
 - [ ] `POST /api/chat` liefert Token-by-Token SSE-Stream
-- [ ] `GEMINI_API_KEY` ausschließlich aus ENV, nie geloggt
-- [ ] `convert_system_message_to_human=True` gesetzt
+- [ ] `OPENAI_API_KEY` **und** `OPENAI_BASE_URL` ausschließlich aus ENV, nie geloggt
+- [ ] `ChatOpenAI`/Client mit `timeout` gesetzt (hängender Server blockiert nicht ewig)
 - [ ] Unit-Tests mit gemockten API-Calls, kein echter Call in CI
 - [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
 
@@ -364,20 +373,20 @@ AP 0  – Projektfundament & CI/CD          [beide · blocking]
 ---
 
 #### AP 2B – Guardrails – Input Guard, Query Refiner & Output Guard
-**GitHub:** `#22` · **Blocked by:** `#20` (Gemini muss stehen)
+**GitHub:** `#22` · **Blocked by:** `#20` (LLM-Anbindung muss stehen)
 
 **Tasks:**
 - `services/core/guardrails/input_guard.py`: Query klassifizieren (`safe`/`unsafe`)
 - `services/core/guardrails/query_refiner.py`: Query für Retrieval umformulieren
 - `services/core/guardrails/output_guard.py`: Plausibilitätsprüfung der Antwort (blocking)
-- Eigenes Prompt-Template pro Guardrail, alle auf `gemini-2.0-flash`
+- Eigenes Prompt-Template pro Guardrail, alle auf dem No-Thinking-Modell (`Qwen3.5-397B-A17B_No_Thinking`, `temperature=0`)
 - Guardrail-Rejections loggen mit `session_id`, `reason`, `timestamp`
 
 **Definition of Done:**
 - [ ] Unsafe Query → `400` + Reason, nichts in ChromaDB oder SQLite geschrieben
 - [ ] Refined Query messbar besser auf 5 manuellen Test-Queries
 - [ ] Output-Guardrail blocking — kein fire-and-forget
-- [ ] Unit-Tests für alle drei mit gemocktem Gemini
+- [ ] Unit-Tests für alle drei mit gemocktem LLM
 - [ ] Kein User-Datum oder Chunk-Inhalt in Logs
 - [ ] `flake8`, `mypy`, `bandit` clean · Coverage ≥ 80 %
 
@@ -425,7 +434,7 @@ Vor dem Merge müssen alle folgenden Issues auf `closed` stehen: `#19`, `#20`, `
 - `services/core/rag/retriever.py`: ChromaDB Similarity Search, Chunks + Metadaten
 - `services/core/rag/chain.py`: LCEL: `retriever | prompt_template | llm | output_parser`
 - `chain.astream()` in SSE-Generator einbinden
-- `/api/chat` auf RAG-Chain umstellen (ersetzt nackten Gemini-Call)
+- `/api/chat` auf RAG-Chain umstellen (ersetzt nackten LLM-Call)
 - Guardrails in Flow integrieren: Input Guard → Query Refiner → Chain → Output Guard
 - Response enthält `sources`-Feld (Dokument-Name, Chunk-Index)
 - Fallback: "Keine Informationen gefunden" wenn kein relevanter Chunk
@@ -556,25 +565,38 @@ Embedding-Modell-Vergleich (2026):
 
 ---
 
-### LLM Factory (Gemini)
+### LLM Factory (OpenAI-kompatibles Gateway)
 
 ```python
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 import os
 
 # services/dependency/llm.py
-def get_llm(model: str = "gemini-2.0-flash") -> ChatGoogleGenerativeAI:
-    return ChatGoogleGenerativeAI(
+# Das LLM laeuft hinter einem OpenAI-kompatiblen Gateway (base_url + api_key).
+# langchain-openai liest OPENAI_API_KEY automatisch aus der ENV; base_url
+# wird hier explizit gesetzt.
+CHAT_MODEL = os.getenv("LLM_MODEL", "qwen3.5-think")           # Hauptantwort
+GUARD_MODEL = os.getenv("LLM_GUARD_MODEL", "Qwen3.5-397B-A17B_No_Thinking")  # Guardrails
+
+def get_llm(model: str = CHAT_MODEL, *, temperature: float = 0.7) -> ChatOpenAI:
+    return ChatOpenAI(
         model=model,
-        google_api_key=os.environ["GEMINI_API_KEY"],
-        temperature=0.1,
+        base_url=os.environ["OPENAI_BASE_URL"],
+        api_key=os.environ["OPENAI_API_KEY"],
+        temperature=temperature,
         streaming=True,
-        convert_system_message_to_human=True  # Gemini-Quirk
+        timeout=30.0,  # haengender Server blockiert uns nicht ewig
     )
 
 # Modell-Strategie im Projekt:
-# - Guardrails (Input/Output Guard, Query Refinement): "gemini-2.0-flash"  → schnell, günstig
-# - Hauptantwort (RAG Chain): "gemini-2.0-flash" oder "gemini-1.5-pro"    → Qualität vs. Kosten
+# - Hauptantwort (RAG Chain): "qwen3.5-think" (Thinking) → bessere Qualitaet bei
+#   komplexen Dokumentfragen; Reasoning erscheint NICHT im SSE-Stream (nur Antwort-Text)
+# - Guardrails (Input/Output Guard, Query Refinement): "Qwen3.5-397B-A17B_No_Thinking",
+#   temperature=0 → schnell, deterministisch, kein Token-Budget fuers Reasoning
+#
+# Achtung Thinking-Modelle: verbrauchen Tokens fuer internes Reasoning, bevor Antwort-
+# Text entsteht. Ist max_tokens zu klein, geht das ganze Budget ins Denken und content
+# bleibt leer. Beim Streaming koennen einzelne delta.content-Werte None sein.
 ```
 
 ---
@@ -723,4 +745,4 @@ rag_graph = builder.compile()
 
 - [ ] **Output-Guardrail blocking oder fire-and-forget?** (bisher: blocking geplant)
 - [ ] **Dokument-Zugriffskontrolle:** geteilte Wissensbasis für alle User ODER per-user Collections in ChromaDB?
-- [ ] **Guardrail-Modell:** `gemini-flash` für alle Guards, oder `gemini-pro` für Output-Guard?
+- [x] **Guardrail-Modell:** No-Thinking (`Qwen3.5-397B-A17B_No_Thinking`) für alle Guards — schnell + deterministisch; Hauptantwort auf `qwen3.5-think` (Thinking). Entschieden.

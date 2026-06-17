@@ -294,9 +294,9 @@ async def test_create_session_returns_503_on_db_error() -> None:
 
 def test_llm_client_remaps_init_error_to_not_configured() -> None:
     client = LLMClient()
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"}):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "fake-key", "OPENAI_BASE_URL": "https://gw.example/v1"}):
         with patch(
-            "backend.app.services.dependency.llm.ChatGoogleGenerativeAI",
+            "backend.app.services.dependency.llm.ChatOpenAI",
             side_effect=RuntimeError("quota exceeded"),
         ):
             with pytest.raises(LLMNotConfiguredError, match="Failed to initialise"):

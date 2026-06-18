@@ -26,6 +26,14 @@ class LLMNotConfiguredError(Exception):
     """Raised when the gateway credentials are missing or the client fails to initialise."""
 
 
+class LLMUnavailableError(Exception):
+    """Raised when the gateway is reachable-in-principle but the call fails transiently.
+
+    Wraps upstream failures (5xx / 502 Bad Gateway, connection errors, timeouts, rate
+    limits) so callers can return a clean 503 instead of leaking a raw stack trace.
+    """
+
+
 class LLMClient:
     """Factory for chat-model instances backed by an OpenAI-compatible gateway.
 

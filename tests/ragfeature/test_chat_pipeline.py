@@ -5,10 +5,11 @@ from typing import Any, AsyncIterator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from openai import OpenAIError
 
 from backend.app.api.chat import ChatPipeline
 from backend.app.services.core.guardrails import GuardOutcome, GuardStatus
-from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError
+from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError, LLMUnavailableError
 
 
 async def _aiter(items: list[Any]) -> AsyncIterator[Any]:
@@ -108,6 +109,48 @@ async def test_run_stream_emits_error_when_llm_unconfigured() -> None:
     assert len(events) == 1
     assert events[0].kind == "error"
     assert events[0].status == "llm_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_generate_raises_unavailable_on_upstream_error() -> None:
+    llm = MagicMock()
+    llm.ainvoke = AsyncMock(side_effect=OpenAIError("502 Bad Gateway"))
+    pipeline = _make_pipeline(chat_llm=_chat_llm_returning(llm))
+
+    with pytest.raises(LLMUnavailableError):
+        await pipeline._generate("hi", "")
+
+
+@pytest.mark.asyncio
+async def test_run_stream_emits_error_on_upstream_failure_before_first_token() -> None:
+    llm = MagicMock()
+    llm.astream = MagicMock(side_effect=OpenAIError("502 Bad Gateway"))
+    pipeline = _make_pipeline(chat_llm=_chat_llm_returning(llm))
+
+    events = [ev async for ev in pipeline.run_stream("hi", "sess")]
+
+    assert len(events) == 1
+    assert events[0].kind == "error"
+    assert events[0].status == "llm_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_run_stream_emits_error_when_upstream_fails_mid_stream() -> None:
+    async def _fail_after_one() -> AsyncIterator[Any]:
+        yield SimpleNamespace(content="Hel")
+        raise OpenAIError("connection reset")
+
+    llm = MagicMock()
+    llm.astream = MagicMock(return_value=_fail_after_one())
+    pipeline = _make_pipeline(chat_llm=_chat_llm_returning(llm))
+
+    events = [ev async for ev in pipeline.run_stream("hi", "sess")]
+
+    # The already-streamed delta is preserved; the stream ends with an error (no done).
+    assert [e.kind for e in events] == ["delta", "error"]
+    assert events[0].text == "Hel"
+    assert events[1].status == "llm_unavailable"
+    assert not any(e.kind == "done" for e in events)
 
 
 @pytest.mark.asyncio

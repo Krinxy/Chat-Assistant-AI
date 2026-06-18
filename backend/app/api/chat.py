@@ -7,6 +7,7 @@ from typing import Any, AsyncIterator, Optional
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from openai import OpenAIError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +23,7 @@ from ..services.core.guardrails.output_guard import OutputGuard
 from ..services.core.guardrails.policy_guard import PolicyGuard
 from ..services.core.guardrails.query_refiner import QueryRefiner
 from ..services.dependency.authtoken import authtoken
-from ..services.dependency.llm import LLMClient, LLMNotConfiguredError
+from ..services.dependency.llm import LLMClient, LLMNotConfiguredError, LLMUnavailableError
 from ..services.utils.config import ConfigLoader
 from ..services.utils.rate_limit import RateLimiter
 from ..services.utils.streaming import ThinkBlockFilter, format_sse, strip_think_blocks
@@ -155,9 +156,13 @@ class ChatPipeline:
 
         Raises:
             LLMNotConfiguredError: if the gateway credentials are missing.
+            LLMUnavailableError: if the gateway call fails transiently (5xx, timeout, …).
         """
         llm = self._chat_llm.get()
-        response = await llm.ainvoke(self._build_messages(refined_query, context))
+        try:
+            response = await llm.ainvoke(self._build_messages(refined_query, context))
+        except OpenAIError as exc:
+            raise LLMUnavailableError(str(exc)) from exc
         raw = response.content if isinstance(response.content, str) else str(response.content)
         return strip_think_blocks(raw).strip()
 
@@ -220,6 +225,11 @@ class ChatPipeline:
                 yield StreamEvent(kind="delta", text=tail)
         except LLMNotConfiguredError:
             yield StreamEvent(kind="error", status="llm_unavailable", detail="The language model is not configured.")
+            return
+        except OpenAIError:
+            # Upstream failure (502 Bad Gateway, timeout, connection error, …). May fire
+            # before or mid-stream; either way the client gets a clean terminal error.
+            yield StreamEvent(kind="error", status="llm_unavailable", detail="The language model is temporarily unavailable.")
             return
 
         full_answer = "".join(collected).strip()
@@ -349,6 +359,8 @@ async def chat(
         response_message, status = await pipeline.run(message, session_id, context)
     except LLMNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail="The language model is not configured.") from exc
+    except LLMUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="The language model is temporarily unavailable. Please try again shortly.") from exc
 
     # Record turns in the in-memory buffer
     memory.add_turn(session_id, "user", message)

@@ -1,3 +1,7 @@
+# ── Frontend Hyperparameters ───────────────────────────────────────────────────
+# Central configuration for all frontend behaviour.
+# Runtime overrides (VITE_API_URL etc.) live in .env — never here.
+
 # ── Speech / Transcription ────────────────────────────────────────────────────
 speech:
   monitor_poll_ms: 180           # how often the audio monitor checks RMS
@@ -10,6 +14,35 @@ speech:
 # ── Auth / Login UI ───────────────────────────────────────────────────────────
 auth:
   max_error_message_length: 200  # truncate backend error messages in the UI
+
+# ── API ───────────────────────────────────────────────────────────────────────
+api:
+  base_url: http://localhost:8000
+  timeout_ms: 30000
+
+# ── Chat ──────────────────────────────────────────────────────────────────────
+chat:
+  # Simulated token-streaming UX timings (ms)
+  thinking_delay_ms: 80
+  response_start_delay_ms: 620
+  token_interval_ms: 68
+
+  models:
+    - id: gemini-2.0-flash
+      label: Gemini 2.0 Flash
+      enabled: true
+    - id: gemini-2.5-pro
+      label: Gemini 2.5 Pro
+      enabled: true
+
+  brainrot:
+    default_style: meme67
+    enabled_by_default: false
+
+# ── Storage ────────────────────────────────────────────────────────────────────
+storage:
+  auth_token_key: auth_token
+  session_id_key: chat_session_id
 
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 feature_flags:

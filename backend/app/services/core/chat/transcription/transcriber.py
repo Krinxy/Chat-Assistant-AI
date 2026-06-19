@@ -3,13 +3,15 @@ from __future__ import annotations
 import inspect
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass, field
 from functools import lru_cache
 from threading import Lock
 from typing import Any, Callable
 
 import numpy as np
+
+_FFMPEG_MISSING_MSG = "ffmpeg binary was not found and is required for audio decoding"
 
 
 class WhisperDependenciesMissingError(RuntimeError):
@@ -99,7 +101,7 @@ def _decode_audio_chunk_with_ffmpeg(
 ) -> np.ndarray:
     ffmpeg_binary_path = _resolve_ffmpeg_binary_path()
     if ffmpeg_binary_path is None:
-        raise ValueError("ffmpeg binary was not found and is required for audio decoding")
+        raise ValueError(_FFMPEG_MISSING_MSG)
 
     ffmpeg_command = [ffmpeg_binary_path]
     input_format = _resolve_ffmpeg_input_format(mime_type)
@@ -124,7 +126,9 @@ def _decode_audio_chunk_with_ffmpeg(
     )
 
     try:
-        with subprocess.Popen(
+        # mime_type is user-supplied but passes through a closed allowlist in
+        # _resolve_ffmpeg_input_format before entering the argv — no injection path.
+        with subprocess.Popen(  # nosec B603
             ffmpeg_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -133,7 +137,7 @@ def _decode_audio_chunk_with_ffmpeg(
             out_bytes, err_bytes = ffmpeg_process.communicate(audio_chunk)
             return_code = ffmpeg_process.returncode
     except FileNotFoundError as error:
-        raise ValueError("ffmpeg binary was not found and is required for audio decoding") from error
+        raise ValueError(_FFMPEG_MISSING_MSG) from error
 
     if return_code not in (0, None):
         stderr_text = err_bytes.decode("utf-8", errors="ignore").strip()
@@ -171,14 +175,14 @@ def _patch_transformers_ffmpeg_reader(
         ]
 
         try:
-            with subprocess.Popen(
+            with subprocess.Popen(  # nosec B603
                 ffmpeg_command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
             ) as ffmpeg_process:
                 output_stream = ffmpeg_process.communicate(bpayload)
         except FileNotFoundError as error:
-            raise ValueError("ffmpeg binary was not found and is required for audio decoding") from error
+            raise ValueError(_FFMPEG_MISSING_MSG) from error
 
         out_bytes = output_stream[0]
         audio = np.frombuffer(out_bytes, np.float32)
@@ -206,18 +210,18 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
     cuda_available = callable(getattr(cuda_module, "is_available", None))
     if cuda_available:
         try:
-            if bool(cuda_module.is_available()):
+            if bool(cuda_module.is_available()):  # type: ignore[union-attr]
                 return TorchRuntimeSelection(device="cuda:0", dtype=float16_dtype)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110
             pass
 
     xpu_module = getattr(torch_module, "xpu", None)
     xpu_available = callable(getattr(xpu_module, "is_available", None))
     if xpu_available:
         try:
-            if bool(xpu_module.is_available()):
+            if bool(xpu_module.is_available()):  # type: ignore[union-attr]
                 return TorchRuntimeSelection(device="xpu:0", dtype=bfloat16_dtype)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110
             pass
 
     backends_module = getattr(torch_module, "backends", None)
@@ -225,9 +229,9 @@ def _resolve_torch_runtime(torch_module: Any) -> TorchRuntimeSelection:
     mps_available = callable(getattr(mps_module, "is_available", None))
     if mps_available:
         try:
-            if bool(mps_module.is_available()):
+            if bool(mps_module.is_available()):  # type: ignore[union-attr]
                 return TorchRuntimeSelection(device="mps", dtype=float16_dtype)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # nosec B110
             pass
 
     return TorchRuntimeSelection(device="cpu", dtype=float32_dtype)
@@ -465,7 +469,7 @@ class WhisperChunkTranscriber:
                     },
                     language=language,
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # nosec B110
                 # Fall back to direct-byte path when predecode is unavailable.
                 pass
 

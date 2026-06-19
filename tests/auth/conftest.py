@@ -8,8 +8,16 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-minimum-32-chars-long!")
 
+from backend.app.api.documents import _get_document_embedder  # noqa: E402
 from backend.app.db.session import Base, get_db  # noqa: E402
 from backend.app.main import create_app  # noqa: E402
+from backend.app.services.core.ingestion.embedder import DocumentEmbedder, EmbeddingService  # noqa: E402
+from tests.ragfeature.conftest import FakeChromaCollection, HashingEmbeddingModel  # noqa: E402
+
+
+def _fake_embedder() -> DocumentEmbedder:
+    return DocumentEmbedder(FakeChromaCollection(), EmbeddingService(model=HashingEmbeddingModel()))
+
 
 _TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 _engine = create_async_engine(_TEST_DB_URL)
@@ -24,9 +32,9 @@ async def _override_get_db():
 @pytest_asyncio.fixture()
 async def client():
     """Admin mock client — AUTH_MODE=mock, role=admin."""
-    from backend.app.services.dependency.ratelimit import _hits
+    from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    _hits.clear()
+    IpRateLimiter._hits.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "mock"
@@ -37,6 +45,7 @@ async def client():
         await conn.run_sync(Base.metadata.create_all)
     app = create_app()
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[_get_document_embedder] = _fake_embedder
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     async with _engine.begin() as conn:
@@ -51,9 +60,9 @@ async def client():
 @pytest_asyncio.fixture()
 async def jwt_auth_client():
     """Real JWT client for /api/auth/me and role-enforcement tests — AUTH_MODE=jwt."""
-    from backend.app.services.dependency.ratelimit import _hits
+    from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    _hits.clear()
+    IpRateLimiter._hits.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "jwt"
@@ -62,6 +71,7 @@ async def jwt_auth_client():
         await conn.run_sync(Base.metadata.create_all)
     app = create_app()
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[_get_document_embedder] = _fake_embedder
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     async with _engine.begin() as conn:
@@ -85,6 +95,7 @@ async def user_client():
         await conn.run_sync(Base.metadata.create_all)
     app = create_app()
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[_get_document_embedder] = _fake_embedder
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     async with _engine.begin() as conn:

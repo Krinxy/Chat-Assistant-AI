@@ -1,7 +1,8 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import type { BrainrotStyleKey, ChatAttachment, ChatMessage, Language } from "../types/chat";
-import { composeAssistantReply, timeFormatter } from "../utils/chat";
+import { ApiError, sendChatMessage } from "../api/chatApi";
+import { timeFormatter } from "../utils/chat";
 
 interface UseChatSessionOptions {
   selectedModelId: string;
@@ -28,10 +29,7 @@ interface UseChatSessionResult {
 
 export function useChatSession({
   selectedModelId,
-  selectedModelLabel,
   language,
-  isBrainrotEnabled = false,
-  brainrotStyle = "meme67",
   actionStartedPrefix,
   reasoningText,
   onFirstUserMessage,
@@ -41,12 +39,9 @@ export function useChatSession({
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const messagesRef = useRef<ChatMessage[]>([]);
   const hasSentFirstMessageRef = useRef<boolean>(false);
-  const timeoutIdsRef = useRef<Array<ReturnType<typeof globalThis.setTimeout>>>(
-    [],
-  );
-  const intervalIdsRef = useRef<Array<ReturnType<typeof globalThis.setInterval>>>(
-    [],
-  );
+  const sessionIdRef = useRef<string>("");
+  const timeoutIdsRef = useRef<Array<ReturnType<typeof globalThis.setTimeout>>>([]);
+  const intervalIdsRef = useRef<Array<ReturnType<typeof globalThis.setInterval>>>([]);
 
   const clearScheduledWork = useCallback(() => {
     timeoutIdsRef.current.forEach((timeoutId) => {
@@ -83,14 +78,53 @@ export function useChatSession({
 
   const scheduleTimeout = (callback: () => void, delayMs: number): void => {
     const timeoutId = globalThis.setTimeout(() => {
-      timeoutIdsRef.current = timeoutIdsRef.current.filter(
-        (existingId) => existingId !== timeoutId,
-      );
+      timeoutIdsRef.current = timeoutIdsRef.current.filter((id) => id !== timeoutId);
       callback();
     }, delayMs);
-
     timeoutIdsRef.current.push(timeoutId);
   };
+
+  const streamReply = useCallback((thinkingId: number, fullReply: string): void => {
+    const tokens = fullReply.split(" ");
+
+    scheduleTimeout(() => {
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.id !== thinkingId ? message : { ...message, isThinking: false, isStreaming: true, text: "" },
+        ),
+      );
+
+      let tokenIndex = 0;
+      const streamIntervalId = globalThis.setInterval(() => {
+        tokenIndex += 1;
+        const isDone = tokenIndex >= tokens.length;
+        const nextText = tokens.slice(0, tokenIndex).join(" ");
+
+        setMessages((previous) =>
+          previous.map((message) =>
+            message.id !== thinkingId ? message : { ...message, text: nextText, isStreaming: !isDone },
+          ),
+        );
+
+        if (isDone) {
+          globalThis.clearInterval(streamIntervalId);
+          intervalIdsRef.current = intervalIdsRef.current.filter((id) => id !== streamIntervalId);
+          setIsTyping(false);
+        }
+      }, 68);
+
+      intervalIdsRef.current.push(streamIntervalId);
+    }, 620);
+  }, []);
+
+  const showErrorReply = useCallback((thinkingId: number, errorText: string): void => {
+    setMessages((previous) =>
+      previous.map((message) =>
+        message.id !== thinkingId ? message : { ...message, isThinking: false, isStreaming: false, text: errorText },
+      ),
+    );
+    setIsTyping(false);
+  }, []);
 
   const sendMessage = useCallback(
     (event: FormEvent<HTMLFormElement>): boolean => {
@@ -132,70 +166,67 @@ export function useChatSession({
         reasoning: reasoningText,
       };
 
-      scheduleTimeout(() => {
-        setMessages((previous) => [...previous, thinkingMessage]);
-      }, 80);
-
       const isGeminiModel = selectedModelId.toLowerCase().includes("gemini");
-      const fullReply = isGeminiModel
-        ? composeAssistantReply(trimmed, selectedModelLabel, language, {
-          brainrotTone: isBrainrotEnabled,
-          brainrotStyle,
-        })
-        : language === "de"
-          ? "Dieses LLM ist noch nicht angelegt. Kontaktiere den Admin. Aktuell arbeiten wir nur mit Google Gemini."
-          : "This LLM is not set up yet. Please contact the admin. For now, only Google Gemini is available.";
-      const tokens = fullReply.split(" ");
 
-      scheduleTimeout(() => {
-        setMessages((previous) => {
-          return previous.map((message) => {
-            if (message.id !== thinkingId) {
-              return message;
-            }
-
-            return {
-              ...message,
-              isThinking: false,
-              isStreaming: true,
-              text: "",
-            };
-          });
-        });
-
-        let tokenIndex = 0;
-
-        const streamIntervalId = globalThis.setInterval(() => {
-          tokenIndex += 1;
-
-          const isDone = tokenIndex >= tokens.length;
-          const nextText = tokens.slice(0, tokenIndex).join(" ");
-
-          setMessages((previous) => {
-            return previous.map((message) => {
-              if (message.id !== thinkingId) {
-                return message;
-              }
-
-              return {
-                ...message,
-                text: nextText,
-                isStreaming: !isDone,
-              };
+      if (isGeminiModel) {
+        scheduleTimeout(() => {
+          setMessages((previous) => [...previous, thinkingMessage]);
+          void sendChatMessage(trimmed, sessionIdRef.current)
+            .then((response) => {
+              sessionIdRef.current = response.session_id;
+              streamReply(thinkingId, response.message);
+            })
+            .catch((err: unknown) => {
+              const rejected = err instanceof ApiError && err.statusCode === 400;
+              const noAuth = err instanceof ApiError && err.statusCode === 401;
+              const errorText = rejected
+                ? (language === "de" ? `Anfrage abgelehnt: ${err.message}` : `Request rejected: ${err.message}`)
+                : noAuth
+                  ? (language === "de" ? "Bitte einloggen, um den Chat zu nutzen." : "Please log in to use the chat.")
+                  : (language === "de" ? "Verbindung zum Server fehlgeschlagen." : "Failed to connect to the server.");
+              showErrorReply(thinkingId, errorText);
             });
-          });
+        }, 80);
+      } else {
+        scheduleTimeout(() => {
+          setMessages((previous) => [...previous, thinkingMessage]);
+        }, 80);
+        const fullReply =
+          language === "de"
+            ? "Dieses LLM ist noch nicht angelegt. Kontaktiere den Admin. Aktuell arbeiten wir nur mit Google Gemini."
+            : "This LLM is not set up yet. Please contact the admin. For now, only Google Gemini is available.";
 
-          if (isDone) {
-            globalThis.clearInterval(streamIntervalId);
-            intervalIdsRef.current = intervalIdsRef.current.filter(
-              (id) => id !== streamIntervalId,
+        scheduleTimeout(() => {
+          setMessages((previous) =>
+            previous.map((message) =>
+              message.id !== thinkingId ? message : { ...message, isThinking: false, isStreaming: true, text: "" },
+            ),
+          );
+
+          const tokens = fullReply.split(" ");
+          let tokenIndex = 0;
+
+          const streamIntervalId = globalThis.setInterval(() => {
+            tokenIndex += 1;
+            const isDone = tokenIndex >= tokens.length;
+            const nextText = tokens.slice(0, tokenIndex).join(" ");
+
+            setMessages((previous) =>
+              previous.map((message) =>
+                message.id !== thinkingId ? message : { ...message, text: nextText, isStreaming: !isDone },
+              ),
             );
-            setIsTyping(false);
-          }
-        }, 68);
 
-        intervalIdsRef.current.push(streamIntervalId);
-      }, 620);
+            if (isDone) {
+              globalThis.clearInterval(streamIntervalId);
+              intervalIdsRef.current = intervalIdsRef.current.filter((id) => id !== streamIntervalId);
+              setIsTyping(false);
+            }
+          }, 68);
+
+          intervalIdsRef.current.push(streamIntervalId);
+        }, 620);
+      }
 
       return true;
     },
@@ -204,67 +235,73 @@ export function useChatSession({
       isTyping,
       language,
       selectedModelId,
-      isBrainrotEnabled,
-      brainrotStyle,
       onFirstUserMessage,
       reasoningText,
-      selectedModelLabel,
+      streamReply,
+      showErrorReply,
     ],
   );
 
-  const addAttachmentActionMessage = useCallback((label: string): void => {
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: Date.now(),
-        role: "assistant",
-        text: `${actionStartedPrefix}: ${label}.`,
-        time: timeFormatter.format(new Date()),
-      },
-    ]);
-  }, [actionStartedPrefix]);
+  const addAttachmentActionMessage = useCallback(
+    (label: string): void => {
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: Date.now(),
+          role: "assistant",
+          text: `${actionStartedPrefix}: ${label}.`,
+          time: timeFormatter.format(new Date()),
+        },
+      ]);
+    },
+    [actionStartedPrefix],
+  );
 
-  const addUploadedFilesMessage = useCallback((files: File[]): void => {
-    if (files.length === 0) {
-      return;
-    }
+  const addUploadedFilesMessage = useCallback(
+    (files: File[]): void => {
+      if (files.length === 0) {
+        return;
+      }
 
-    const attachments: ChatAttachment[] = files.map((file, index) => {
-      const fileName = file.name.trim().length > 0 ? file.name.trim() : `file-${index + 1}`;
-      const isImage = file.type.toLowerCase().startsWith("image/");
+      const attachments: ChatAttachment[] = files.map((file, index) => {
+        const fileName = file.name.trim().length > 0 ? file.name.trim() : `file-${index + 1}`;
+        const isImage = file.type.toLowerCase().startsWith("image/");
 
-      return {
-        id: `${Date.now()}-${index}`,
-        name: fileName,
-        isImage,
-        previewUrl: isImage ? globalThis.URL.createObjectURL(file) : undefined,
-      };
-    });
+        return {
+          id: `${Date.now()}-${index}`,
+          name: fileName,
+          isImage,
+          previewUrl: isImage ? globalThis.URL.createObjectURL(file) : undefined,
+        };
+      });
 
-    if (attachments.length === 0) {
-      return;
-    }
+      if (attachments.length === 0) {
+        return;
+      }
 
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: Date.now(),
-        role: "user",
-        text: "",
-        time: timeFormatter.format(new Date()),
-        attachments,
-      },
-    ]);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: Date.now(),
+          role: "user",
+          text: "",
+          time: timeFormatter.format(new Date()),
+          attachments,
+        },
+      ]);
 
-    if (!hasSentFirstMessageRef.current) {
-      hasSentFirstMessageRef.current = true;
-      onFirstUserMessage?.();
-    }
-  }, [onFirstUserMessage]);
+      if (!hasSentFirstMessageRef.current) {
+        hasSentFirstMessageRef.current = true;
+        onFirstUserMessage?.();
+      }
+    },
+    [onFirstUserMessage],
+  );
 
   const resetSession = useCallback((): void => {
     clearScheduledWork();
     hasSentFirstMessageRef.current = false;
+    sessionIdRef.current = "";
     setDraft("");
     setMessages((previous) => {
       revokeAttachmentPreviews(previous);
@@ -273,38 +310,38 @@ export function useChatSession({
     setIsTyping(false);
   }, [clearScheduledWork, revokeAttachmentPreviews]);
 
-  const openSessionFromPreview = useCallback((previewText: string, timeLabel?: string): void => {
-    const normalizedPreview = previewText.trim();
+  const openSessionFromPreview = useCallback(
+    (previewText: string, timeLabel?: string): void => {
+      const normalizedPreview = previewText.trim();
 
-    if (normalizedPreview.length === 0) {
-      resetSession();
-      return;
-    }
+      if (normalizedPreview.length === 0) {
+        resetSession();
+        return;
+      }
 
-    clearScheduledWork();
-    hasSentFirstMessageRef.current = true;
-    setDraft("");
-    setIsTyping(false);
+      clearScheduledWork();
+      hasSentFirstMessageRef.current = true;
+      setDraft("");
+      setIsTyping(false);
 
-    const normalizedTimeLabel = typeof timeLabel === "string" ? timeLabel.trim() : "";
-    const messageTime =
-      normalizedTimeLabel.length > 0
-        ? normalizedTimeLabel
-        : timeFormatter.format(new Date());
+      const normalizedTimeLabel = typeof timeLabel === "string" ? timeLabel.trim() : "";
+      const messageTime = normalizedTimeLabel.length > 0 ? normalizedTimeLabel : timeFormatter.format(new Date());
 
-    setMessages((previous) => {
-      revokeAttachmentPreviews(previous);
+      setMessages((previous) => {
+        revokeAttachmentPreviews(previous);
 
-      return [
-        {
-          id: Date.now(),
-          role: "user",
-          text: normalizedPreview,
-          time: messageTime,
-        },
-      ];
-    });
-  }, [clearScheduledWork, resetSession, revokeAttachmentPreviews]);
+        return [
+          {
+            id: Date.now(),
+            role: "user",
+            text: normalizedPreview,
+            time: messageTime,
+          },
+        ];
+      });
+    },
+    [clearScheduledWork, resetSession, revokeAttachmentPreviews],
+  );
 
   return {
     draft,

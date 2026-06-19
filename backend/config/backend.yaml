@@ -1,10 +1,14 @@
+# ── Backend Hyperparameters ────────────────────────────────────────────────────
+# Central configuration for all backend components.
+# Secret values (GEMINI_API_KEY, JWT_SECRET, etc.) live in .env — never here.
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 auth:
   password_min_length: 8
   reset_token_minutes: 15
   access_token_expires_minutes: 15   # also overridable via JWT_EXPIRES_MINUTES env var
 
-# ── Rate Limiting ─────────────────────────────────────────────────────────────
+# ── Rate Limiting (auth endpoints) ────────────────────────────────────────────
 rate_limit:
   login_max_attempts: 5
   login_window_seconds: 60
@@ -12,6 +16,26 @@ rate_limit:
   forgot_password_window_seconds: 600   # 10 minutes
   reset_password_max_attempts: 5
   reset_password_window_seconds: 60
+
+# ── LLM ───────────────────────────────────────────────────────────────────────
+llm:
+  # Shared defaults for all guardrail calls
+  guardrails:
+    model: gemini-2.0-flash
+    temperature: 0.1
+  # Main chat response generation (RAG chain, AP 4)
+  chat:
+    model: gemini-2.0-flash
+    temperature: 0.7
+
+# ── Guardrails ─────────────────────────────────────────────────────────────────
+guardrails:
+  input_guard:
+    enabled: true
+  query_refiner:
+    enabled: true
+  output_guard:
+    enabled: true
 
 # ── API / Server ──────────────────────────────────────────────────────────────
 api:
@@ -22,6 +46,34 @@ api:
     - "http://localhost:5173"
     - "http://localhost:5174"
     - "http://localhost:5175"
+  rate_limit:
+    chat_requests_per_minute: 60
+    window_seconds: 60
+    auth_login_per_60s: 5
+    auth_forgot_per_600s: 3
+  input_validation:
+    max_message_length: 4000
+  session:
+    max_context_turns: 10
+    persist_token_in_browser: true
+  messages:
+    input_rejected: "Request rejected by content policy."
+    output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."
+  cors:
+    # Loaded from ALLOWED_ORIGINS env var at runtime; falls back to allowed_origins above
+    allowed_origins: []
+
+# ── RAG ───────────────────────────────────────────────────────────────────────
+rag:
+  retriever:
+    top_k: 4
+    similarity_threshold: 0.3
+  chunker:
+    chunk_size: 512
+    chunk_overlap: 50
+  embedder:
+    model: all-MiniLM-L6-v2
+    dimensions: 384
 
 # ── Transcription ─────────────────────────────────────────────────────────────
 transcription:

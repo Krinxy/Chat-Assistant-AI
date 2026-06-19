@@ -23,9 +23,9 @@ async def client():
     os.environ["JWT_SECRET"] = "test-secret-key-minimum-32-chars!"
 
     # Clear rate-limit state so tests don't bleed into each other
-    from backend.app.services.dependency.ratelimit import _hits
+    from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    _hits.clear()
+    IpRateLimiter._hits.clear()
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)

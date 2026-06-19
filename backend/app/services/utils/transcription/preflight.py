@@ -74,6 +74,18 @@ def run_transcription_preflight(
     )
 
 
+def _print_preload_status(report: TranscriptionPreflightReport) -> None:
+    if not report.preload_attempted:
+        print("[transcription] model preload: skipped")
+        return
+    if report.preload_success:
+        print(f"[transcription] model preload: ok ({report.runtime_device or 'unknown'})")
+        return
+    print("[transcription] model preload: failed")
+    if report.preload_error is not None:
+        print(f"[transcription] preload error: {report.preload_error}")
+
+
 def print_preflight_report(report: TranscriptionPreflightReport) -> None:
     print("[transcription] startup preflight")
 
@@ -87,16 +99,7 @@ def print_preflight_report(report: TranscriptionPreflightReport) -> None:
     else:
         print(f"[transcription] ffmpeg: {report.ffmpeg_path}")
 
-    if report.preload_attempted:
-        if report.preload_success:
-            device_label = report.runtime_device or "unknown"
-            print(f"[transcription] model preload: ok ({device_label})")
-        else:
-            print("[transcription] model preload: failed")
-            if report.preload_error is not None:
-                print(f"[transcription] preload error: {report.preload_error}")
-    else:
-        print("[transcription] model preload: skipped")
+    _print_preload_status(report)
 
     if report.has_missing_runtime_dependencies and not report.fake_fallback_enabled:
         print("[transcription] critical: fallback disabled and runtime dependencies missing")

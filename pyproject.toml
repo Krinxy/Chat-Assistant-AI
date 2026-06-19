@@ -83,7 +83,6 @@ development = [
   "bandit>=1.7.0",
   "pre-commit>=3.0",
   "numpy>=2.1.0",
-  "numpy>=2.1.0",
   "fakeredis>=2.24.0",
   "python-jose[cryptography]>=3.3.0",
   "passlib[bcrypt]>=1.7.4",

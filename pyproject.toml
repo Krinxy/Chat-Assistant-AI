@@ -98,6 +98,7 @@ all = [
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=. --cov-report=term-missing --cov-report=xml:coverage/coverage-python.xml"
+asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 

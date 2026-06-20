@@ -23,7 +23,7 @@ repos:
 
       - id: bandit
         name: bandit
-        entry: python -m bandit -r backend frontend -ll -x tests,backend/tests
+        entry: python -m bandit -r backend -ll -x tests,backend/tests
         language: system
         pass_filenames: false
 

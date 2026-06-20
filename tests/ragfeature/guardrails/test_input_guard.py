@@ -73,7 +73,7 @@ async def test_check_strips_markdown_code_fence() -> None:
 
 @pytest.mark.asyncio
 async def test_from_config_builds_guard() -> None:
-    llm_cfg = {"model": "gemini-2.0-flash", "temperature": 0.1}
+    llm_cfg = {"model": "Qwen3.5-397B-A17B_No_Thinking", "temperature": 0.1}
     guard = InputGuard.from_config(llm_cfg, {})
     assert isinstance(guard, InputGuard)
-    assert guard._llm_client.model == "gemini-2.0-flash"
+    assert guard._llm_client.model == "Qwen3.5-397B-A17B_No_Thinking"

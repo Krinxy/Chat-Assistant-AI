@@ -58,14 +58,14 @@ jobs:
 
           PYTHON_TARGETS=()
           for target in backend frontend shared tests; do
-            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' -not -path '*/node_modules/*' | grep -q .; then
               PYTHON_TARGETS+=("$target")
             fi
           done
 
           PYTHON_MYPY_TARGETS=()
           for target in backend frontend shared; do
-            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' -not -path '*/node_modules/*' | grep -q .; then
               PYTHON_MYPY_TARGETS+=("$target")
             fi
           done
@@ -123,7 +123,7 @@ jobs:
 
           PYTHON_SECURITY_TARGETS=()
           for target in backend frontend shared; do
-            if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+            if [ -d "$target" ] && find "$target" -type f -name '*.py' -not -path '*/node_modules/*' | grep -q .; then
               PYTHON_SECURITY_TARGETS+=("$target")
             fi
           done
@@ -186,10 +186,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -d tests ] && find tests -type f -name '*.py' | grep -q .; then
+          if [ -d tests ] && find tests -type f -name '*.py' -not -path '*/node_modules/*' | grep -q .; then
             PYTHON_COV_TARGETS=()
             for target in backend frontend shared; do
-              if [ -d "$target" ] && find "$target" -type f -name '*.py' | grep -q .; then
+              if [ -d "$target" ] && find "$target" -type f -name '*.py' -not -path '*/node_modules/*' | grep -q .; then
                 PYTHON_COV_TARGETS+=("--cov=$target")
               fi
             done

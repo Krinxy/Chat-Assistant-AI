@@ -57,7 +57,7 @@ class OutputGuard:
             return GuardOutcome(status=GuardStatus.PASSED)
 
         except LLMNotConfiguredError:
-            self._log(session_id, "api_unavailable", "GEMINI_API_KEY not set")
+            self._log(session_id, "api_unavailable", "LLM credentials not set")
             return GuardOutcome(status=GuardStatus.UNAVAILABLE, reason="LLM not configured")
 
         except (json.JSONDecodeError, KeyError, ValueError):

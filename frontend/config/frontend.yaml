@@ -2,10 +2,25 @@
 # Central configuration for all frontend behaviour.
 # Runtime overrides (VITE_API_URL etc.) live in .env — never here.
 
+# ── Speech / Transcription ────────────────────────────────────────────────────
+speech:
+  monitor_poll_ms: 180           # how often the audio monitor checks RMS
+  rms_threshold: 0.02            # minimum RMS to consider speech activity
+  min_segment_ms: 2400           # shortest valid speech segment
+  silence_flush_ms: 2200         # flush segment after this much silence
+  max_segment_ms: 18000          # hard cap per segment (18 s)
+  transcript_animation_step_ms: 58
+
+# ── Auth / Login UI ───────────────────────────────────────────────────────────
+auth:
+  max_error_message_length: 200  # truncate backend error messages in the UI
+
+# ── API ───────────────────────────────────────────────────────────────────────
 api:
   base_url: http://localhost:8000
   timeout_ms: 30000
 
+# ── Chat ──────────────────────────────────────────────────────────────────────
 chat:
   # Simulated token-streaming UX timings (ms)
   thinking_delay_ms: 80
@@ -24,6 +39,13 @@ chat:
     default_style: meme67
     enabled_by_default: false
 
+# ── Storage ────────────────────────────────────────────────────────────────────
 storage:
   auth_token_key: auth_token
   session_id_key: chat_session_id
+
+# ── Feature Flags ─────────────────────────────────────────────────────────────
+feature_flags:
+  enable_instafeed: false
+  enable_header_story_strip: false
+  enable_workspace_newsfeed: false

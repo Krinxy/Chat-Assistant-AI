@@ -71,3 +71,6 @@ htmlcov/
 *.log
 *.xml
 *.txt
+# Generated / local docs
+docs/security-and-auth.md
+docs/architecture/nav-map.html

@@ -30,6 +30,7 @@ def test_backend_health_endpoint_is_available() -> None:
 
 
 def test_ws_transcription_streams_transcript_payload_and_clears_cache(monkeypatch) -> None:
+    monkeypatch.setenv("AUTH_MODE", "mock")
     cache = SpeechTranscriptionCache(
         redis_cache=FakeRedisCache(),
         config=SpeechCacheConfig(ttl_seconds=20),
@@ -93,6 +94,8 @@ def test_ws_transcription_streams_transcript_payload_and_clears_cache(monkeypatc
 
 
 def test_ws_returns_empty_for_failed_chunk_inference(monkeypatch) -> None:
+    monkeypatch.setenv("AUTH_MODE", "mock")
+
     def _raise_inference(
         _audio: bytes,
         _language: str | None,

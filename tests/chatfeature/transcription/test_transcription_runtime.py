@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.app.services.transcription_runtime import (
+from backend.app.services.core.chat.transcription.runtime import (
     TranscriptionInvokeEvent,
     TranscriptionRuntimeService,
 )

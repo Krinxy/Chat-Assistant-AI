@@ -4,7 +4,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, WebSocketException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy import select
@@ -83,6 +83,24 @@ class MockAuthProvider(AbstractAuthProvider):
             hashed_password="",  # nosec B106
             role=os.getenv("MOCK_USER_ROLE", "admin"),
         )
+
+
+def verify_ws_token(token: str | None) -> None:
+    """Stateless JWT validation for WebSocket auth (no DB lookup). Raises WS_1008 on missing/invalid token."""
+    if not token:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    try:
+        payload = jwt.decode(
+            token,
+            JWTAuthProvider._get_secret(),
+            algorithms=[_ALGORITHM],
+            audience=JWTAuthProvider._get_aud(),
+            issuer=JWTAuthProvider._get_iss(),
+        )
+        if payload.get("sub") is None:
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    except JWTError:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
 
 
 _jwt_provider = JWTAuthProvider()

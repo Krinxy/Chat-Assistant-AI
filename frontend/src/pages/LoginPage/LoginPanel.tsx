@@ -2,8 +2,9 @@ import { type FormEvent, useCallback, useState } from "react";
 
 import { apiRegister } from "../../shared/api/auth_api";
 import type { Language } from "../../features/chat/types/chat";
+import { authUiCfg } from "../../shared/config/appConfig";
 
-const MAX_ERROR_LENGTH = 200;
+const MAX_ERROR_LENGTH = authUiCfg.max_error_message_length;
 
 interface LoginPanelProps {
   language: Language;

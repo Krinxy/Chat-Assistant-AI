@@ -2,6 +2,22 @@
 # Central configuration for all backend components.
 # Secret values (OPENAI_API_KEY, OPENAI_BASE_URL, JWT_SECRET, etc.) live in .env — never here.
 
+# ── Auth ──────────────────────────────────────────────────────────────────────
+auth:
+  password_min_length: 8
+  reset_token_minutes: 15
+  access_token_expires_minutes: 15   # also overridable via JWT_EXPIRES_MINUTES env var
+
+# ── Rate Limiting (auth endpoints) ────────────────────────────────────────────
+rate_limit:
+  login_max_attempts: 5
+  login_window_seconds: 60
+  forgot_password_max_attempts: 3
+  forgot_password_window_seconds: 600   # 10 minutes
+  reset_password_max_attempts: 5
+  reset_password_window_seconds: 60
+
+# ── LLM ───────────────────────────────────────────────────────────────────────
 llm:
   # Guardrail calls — fast, deterministic No-Thinking model, no reasoning token budget.
   guardrails:
@@ -14,6 +30,7 @@ llm:
     temperature: 0.7
     streaming: true
 
+# ── Guardrails ─────────────────────────────────────────────────────────────────
 guardrails:
   input_guard:
     enabled: true
@@ -22,7 +39,15 @@ guardrails:
   output_guard:
     enabled: true
 
+# ── API / Server ──────────────────────────────────────────────────────────────
 api:
+  body_limit_bytes: 1048576        # 1 MB
+  hsts_max_age_seconds: 31536000   # 1 year
+  # allowed_origins: overridden by ALLOWED_ORIGINS env var in production
+  allowed_origins:
+    - "http://localhost:5173"
+    - "http://localhost:5174"
+    - "http://localhost:5175"
   rate_limit:
     chat_requests_per_minute: 60
     window_seconds: 60
@@ -37,9 +62,10 @@ api:
     input_rejected: "Request rejected by content policy."
     output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."
   cors:
-    # Loaded from ALLOWED_ORIGINS env var at runtime
+    # Loaded from ALLOWED_ORIGINS env var at runtime; falls back to allowed_origins above
     allowed_origins: []
 
+# ── RAG ───────────────────────────────────────────────────────────────────────
 rag:
   retriever:
     top_k: 4
@@ -50,3 +76,22 @@ rag:
   embedder:
     model: all-MiniLM-L6-v2
     dimensions: 384
+
+# ── Transcription ─────────────────────────────────────────────────────────────
+transcription:
+  speech_cache_ttl_seconds: 20
+  receive_poll_ms: 120
+  receive_poll_ms_min: 40
+  receive_poll_ms_max: 1000
+  max_inflight_chunks_min: 1
+  max_inflight_chunks_max: 8
+  whisper_model: "openai/whisper-large-v3-turbo"
+  whisper_model_revision: "main"
+  sampling_rate: 16000
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+redis:
+  port: 6379
+  db: 0
+  timeout_seconds: 0.25
+  scan_count: 100

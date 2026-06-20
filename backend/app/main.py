@@ -17,7 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 from starlette.concurrency import run_in_threadpool  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint  # noqa: E402
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # noqa: E402
 
+from .config import cfg  # noqa: E402
 from .api.auth import router as auth_router  # noqa: E402
 from .api.chat import initialize as initialize_chat  # noqa: E402
 from .api.chat import router as chat_router  # noqa: E402
@@ -34,7 +36,7 @@ from .services.utils.transcription.preflight import (  # noqa: E402
 
 _logger = logging.getLogger(__name__)
 
-_BODY_LIMIT_BYTES = 1 * 1024 * 1024  # 1 MB
+_BODY_LIMIT_BYTES = cfg.api.body_limit_bytes
 
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
 
@@ -75,7 +77,7 @@ class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         if _IS_PRODUCTION:
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = f"max-age={cfg.api.hsts_max_age_seconds}; includeSubDomains"
         return response
 
 
@@ -109,7 +111,19 @@ def create_app() -> FastAPI:
         title="Chat Assistant AI Speech Backend",
         version="0.1.0",
         lifespan=lifespan,
+        # Disable API docs in production — avoids endpoint disclosure on public servers.
+        # Set ENVIRONMENT=production to enable this. Override TRUSTED_PROXY_IPS for Hetzner.
+        docs_url=None if _IS_PRODUCTION else "/docs",
+        redoc_url=None if _IS_PRODUCTION else "/redoc",
+        openapi_url=None if _IS_PRODUCTION else "/openapi.json",
     )
+
+    # Trust X-Forwarded-For from the reverse proxy (nginx on Hetzner).
+    # Set TRUSTED_PROXY_IPS env var to the proxy's IP (comma-separated) in production.
+    # Defaults to 127.0.0.1 (nginx on same host). In dev, no proxy headers are present
+    # so this middleware is effectively a no-op.
+    _trusted_proxy_ips = os.getenv("TRUSTED_PROXY_IPS", "127.0.0.1")
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 
     # Unhandled exceptions bypass CORSMiddleware (ServerErrorMiddleware is outermost).
     # This handler re-attaches the CORS header so the browser sees the real status
@@ -118,7 +132,7 @@ def create_app() -> FastAPI:
     async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         _logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         origin = request.headers.get("origin", "")
-        headers = {}
+        headers: dict[str, str] = {}
         if origin in _allowed_origins:
             headers["Access-Control-Allow-Origin"] = origin
             headers["Access-Control-Allow-Credentials"] = "true"
@@ -130,6 +144,7 @@ def create_app() -> FastAPI:
     app.add_middleware(_BodySizeLimitMiddleware)
 
     # CORS: explicit allowlist — wildcard + credentials is a security hole
+    # env var ALLOWED_ORIGINS takes precedence; falls back to dev defaults above
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins,

@@ -5,12 +5,15 @@ import json
 import os
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
 
+from ....dependency.auth import verify_ws_token
 from .handler import LiveTranscriptionHandler
 
 router = APIRouter()
 session_handler = LiveTranscriptionHandler()
+
+_MAX_AUDIO_CHUNK_BYTES = 10 * 1024 * 1024  # 10 MB per chunk — guards against memory exhaustion
 
 
 def _resolve_int_env(
@@ -40,6 +43,41 @@ def _resolve_int_env(
 
 @router.websocket("/ws/transcribe")
 async def transcribe_audio(websocket: WebSocket) -> None:
+    await websocket.accept()
+
+    if os.getenv("AUTH_MODE", "").lower() != "mock":
+        try:
+            auth_frame = await asyncio.wait_for(websocket.receive(), timeout=10.0)
+        except asyncio.TimeoutError:
+            await websocket.close(code=1008)
+            return
+        except WebSocketDisconnect:
+            return
+
+        if auth_frame.get("type") == "websocket.disconnect":
+            return
+
+        auth_text = auth_frame.get("text")
+        if not isinstance(auth_text, str):
+            await websocket.close(code=1008)
+            return
+
+        try:
+            auth_data = json.loads(auth_text)
+        except json.JSONDecodeError:
+            await websocket.close(code=1008)
+            return
+
+        if auth_data.get("type") != "auth":
+            await websocket.close(code=1008)
+            return
+
+        try:
+            verify_ws_token(auth_data.get("token"))
+        except WebSocketException:
+            await websocket.close(code=1008)
+            return
+
     session_id = session_handler.open_session()
 
     receive_poll_ms = _resolve_int_env(
@@ -54,8 +92,6 @@ async def transcribe_audio(websocket: WebSocket) -> None:
         min_value=1,
         max_value=8,
     )
-
-    await websocket.accept()
 
     disconnected = False
     chunk_index = 0
@@ -194,6 +230,10 @@ async def transcribe_audio(websocket: WebSocket) -> None:
 
             audio_chunk = bytes(bytes_data)
             if len(audio_chunk) == 0:
+                continue
+
+            if len(audio_chunk) > _MAX_AUDIO_CHUNK_BYTES:
+                await _send_payload({"type": "error", "message": "Audio chunk too large"})
                 continue
 
             current_chunk_index = chunk_index

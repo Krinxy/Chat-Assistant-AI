@@ -15,6 +15,7 @@ from ..services.core.auth.user_service import (
     request_password_reset,
     reset_password,
 )
+from ..config import cfg as _cfg
 from ..services.dependency.auth import get_current_user
 from ..services.dependency.ratelimit import check_rate_limit
 
@@ -89,8 +90,7 @@ async def login(
     body: LoginRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
-    # 5 attempts per IP per 60 seconds
-    check_rate_limit(request, limit=5, window=60)
+    check_rate_limit(request, limit=_cfg.rate_limit.login_max_attempts, window=_cfg.rate_limit.login_window_seconds)
     user = await authenticate_user(body.email, body.password, db)
     token = create_access_token(user.email)
     return TokenResponse(access_token=token)
@@ -102,8 +102,7 @@ async def forgot_password(
     body: ForgotPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ForgotPasswordResponse:
-    # 3 reset requests per IP per 10 minutes
-    check_rate_limit(request, limit=3, window=600)
+    check_rate_limit(request, limit=_cfg.rate_limit.forgot_password_max_attempts, window=_cfg.rate_limit.forgot_password_window_seconds)
     token = await request_password_reset(body.email, db)
     return ForgotPasswordResponse(reset_token=token)
 
@@ -123,6 +122,6 @@ async def reset_password_endpoint(
     body: ResetPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ResetPasswordResponse:
-    check_rate_limit(request, limit=5, window=60)
+    check_rate_limit(request, limit=_cfg.rate_limit.reset_password_max_attempts, window=_cfg.rate_limit.reset_password_window_seconds)
     await reset_password(body.reset_token, body.new_password, db)
     return ResetPasswordResponse()

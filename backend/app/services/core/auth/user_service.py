@@ -13,9 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....models.user import User
 
 _pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+from ....config import cfg as _cfg  # noqa: E402
+
 _ALGORITHM = "HS256"
-_PASSWORD_MIN_LENGTH = 8
-_RESET_TOKEN_MINUTES = 15
+_PASSWORD_MIN_LENGTH = _cfg.auth.password_min_length
+_RESET_TOKEN_MINUTES = _cfg.auth.reset_token_minutes
 
 
 class AuthService:
@@ -52,7 +54,7 @@ class AuthService:
 
     @staticmethod
     def create_access_token(email: str) -> str:
-        expires_minutes = int(os.getenv("JWT_EXPIRES_MINUTES", "15"))
+        expires_minutes = int(os.getenv("JWT_EXPIRES_MINUTES", str(_cfg.auth.access_token_expires_minutes)))
         now = datetime.now(timezone.utc)
         expire = now + timedelta(minutes=expires_minutes)
         payload = {

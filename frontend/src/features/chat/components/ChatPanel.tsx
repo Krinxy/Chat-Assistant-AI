@@ -13,6 +13,7 @@ import { ChatSkeletonMessage } from "../../../shared/components/feedback/ChatSke
 import { useOutsideClick } from "../../../shared/hooks/useOutsideClick";
 import type { UiText } from "../../../shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "../../../shared/constants/devProfiles";
+import { speechCfg } from "../../../shared/config/appConfig";
 import type {
   AttachmentAction,
   BrainrotStyleKey,
@@ -48,6 +49,7 @@ interface ChatPanelProps {
   onReturnToDashboard: () => void;
   onOpenProfile: () => void;
   copy: UiText["chat"];
+  authToken?: string;
 }
 
 type PersonaFieldKey = keyof PersonaQuestionnaireAnswers;
@@ -86,12 +88,12 @@ type TranscriptionServerMessage =
   | TranscriptionStoppedMessage
   | { type: "ready" | "started" };
 
-const SPEECH_MONITOR_POLL_MS = 180;
-const SPEECH_ACTIVITY_RMS_THRESHOLD = 0.02;
-const SPEECH_MIN_SEGMENT_MS = 2400;
-const SPEECH_SILENCE_FLUSH_MS = 2200;
-const SPEECH_MAX_SEGMENT_MS = 18000;
-const TRANSCRIPT_ANIMATION_STEP_MS = 58;
+const SPEECH_MONITOR_POLL_MS = speechCfg.monitor_poll_ms;
+const SPEECH_ACTIVITY_RMS_THRESHOLD = speechCfg.rms_threshold;
+const SPEECH_MIN_SEGMENT_MS = speechCfg.min_segment_ms;
+const SPEECH_SILENCE_FLUSH_MS = speechCfg.silence_flush_ms;
+const SPEECH_MAX_SEGMENT_MS = speechCfg.max_segment_ms;
+const TRANSCRIPT_ANIMATION_STEP_MS = speechCfg.transcript_animation_step_ms;
 
 const normalizeSpeechLanguage = (speechLocale: string): "de" | "en" => {
   const [languageCode] = speechLocale.split("-");
@@ -111,11 +113,9 @@ const resolveTranscriptionWsUrl = (): string => {
     if (configuredUrl.startsWith("https://")) {
       return `wss://${configuredUrl.slice("https://".length)}`;
     }
-
     if (configuredUrl.startsWith("http://")) {
       return `ws://${configuredUrl.slice("http://".length)}`;
     }
-
     return configuredUrl;
   }
 
@@ -164,6 +164,7 @@ export function ChatPanel({
   onReturnToDashboard,
   onOpenProfile,
   copy,
+  authToken,
 }: ChatPanelProps) {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState<boolean>(false);
   const [isServicesMenuOpen, setIsServicesMenuOpen] = useState<boolean>(false);
@@ -367,14 +368,9 @@ export function ChatPanel({
     if (recorder !== null && recorder.state === "recording") {
       isStoppingRecordingRef.current = true;
       clearSpeechChunkMonitor();
-
-      // Flush the final in-memory audio segment before the recorder stops.
-      try {
-        recorder.requestData();
-      } catch {
-        // Ignore recorder flush errors and continue shutdown.
-      }
-
+      // stop() fires ondataavailable with all audio since the last start() — no
+      // prior requestData() needed. requestData() before stop() would emit a
+      // complete chunk followed by a headerless trailing fragment on stop().
       recorder.stop();
       return;
     }
@@ -422,10 +418,14 @@ export function ChatPanel({
           return;
         }
 
-        recorder.requestData();
+        // Reset timing before stop so the next segment starts fresh
         const flushNow = Date.now();
         segmentStartedAtRef.current = flushNow;
         lastVoiceActivityAtRef.current = flushNow;
+        // Stop instead of requestData — stop produces a self-contained WebM file per
+        // segment (no EBML header missing on second+ flushes). onstop restarts the
+        // recorder for the next segment.
+        recorder.stop();
       };
 
       type AudioContextConstructor = typeof AudioContext;
@@ -564,6 +564,10 @@ export function ChatPanel({
         return;
       }
 
+      if (authToken !== undefined && authToken.length > 0) {
+        transcriptionSocket.send(JSON.stringify({ type: "auth", token: authToken }));
+      }
+
       const preferredMimeType = getSupportedAudioMimeType();
       let recorder: MediaRecorder;
 
@@ -598,6 +602,18 @@ export function ChatPanel({
 
       recorder.onstop = () => {
         if (!isStoppingRecordingRef.current) {
+          // Mid-session segment flush: restart recorder so the next segment is also
+          // a self-contained WebM (complete EBML header, decodable independently).
+          globalThis.setTimeout(() => {
+            if (transcriptionSocketRef.current !== transcriptionSocket) {
+              return;
+            }
+            try {
+              recorder.start();
+            } catch {
+              teardownLiveTranscription(copy.speechUnsupported);
+            }
+          }, 0);
           return;
         }
 
@@ -692,6 +708,7 @@ export function ChatPanel({
     };
   }, [
     applyTranscriptChunk,
+    authToken,
     copy.speechBackendUnavailable,
     copy.speechListening,
     copy.speechLocale,

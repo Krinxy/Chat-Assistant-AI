@@ -26,7 +26,11 @@ export class ApiError extends Error {
   }
 }
 
-export async function sendChatMessage(message: string, sessionId: string): Promise<ChatApiResponse> {
+export async function sendChatMessage(
+  message: string,
+  sessionId: string,
+  provider: string,
+): Promise<ChatApiResponse> {
   const token = globalThis.localStorage?.getItem("auth_token");
 
   const response = await fetch(`${BASE_URL}/api/chat`, {
@@ -35,7 +39,7 @@ export async function sendChatMessage(message: string, sessionId: string): Promi
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({ message, session_id: sessionId, provider }),
   });
 
   if (!response.ok) {

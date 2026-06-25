@@ -46,9 +46,9 @@ export const modelProviders: ModelProvider[] = [
     id: "recent",
     label: "Recently used",
     models: [
-      { id: "gpt-5-5", label: "GPT-5.5" },
-      { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
-      { id: "gemini-3-1-pro", label: "Gemini 3.1 Pro" },
+      // The two providers actually wired to the backend (see resolveBackendProvider).
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { id: "local-qwen3.5-think", label: "qwen3.5-think" },
     ],
   },
   {
@@ -71,18 +71,18 @@ export const modelProviders: ModelProvider[] = [
   },
   {
     id: "google",
-    label: "Google",
+    label: "Google Gemini",
     models: [
-      { id: "gemini-3-1-pro", label: "Gemini 3.1 Pro" },
-      { id: "gemini-3-flash", label: "Gemini 3 Flash" },
+      // Label = the real model id; the backend model lives in backend.yaml (llm.providers.gemini).
+      { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
     ],
   },
   {
     id: "local-self-hosted",
     label: "Local / Self-Hosted",
     models: [
-      { id: "local-vllm-openai", label: "vLLM (OpenAI-compatible)" },
-      { id: "local-llama-3.3-70b", label: "Llama 3.3 70B (Local)" },
+      // Thinking model on the self-hosted gateway. Label = the gateway's model id.
+      { id: "local-qwen3.5-think", label: "qwen3.5-think" },
     ],
   },
 ];

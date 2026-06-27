@@ -17,6 +17,7 @@ from ..models.session import ChatSession
 from ..models.user import User
 from ..services.core.agents.persona_loader import PersonaLoader
 from ..services.core.chat.memory import SessionMemoryManager
+from ..services.core.chat.message_store import MessageStore
 from ..services.core.guardrails import GuardStatus
 from ..services.core.guardrails.helpers import InputSanitizer
 from ..services.core.guardrails.input_guard import InputGuard
@@ -342,24 +343,44 @@ def _memory_dep(request: Request) -> SessionMemoryManager:
 # ── shared helpers ───────────────────────────────────────────────────────────────
 
 
-async def _resolve_session(body: ChatRequest, memory: SessionMemoryManager, db: AsyncSession) -> str:
+async def _persist_turn(db: AsyncSession, session_id: str, user_message: str, assistant_message: str) -> None:
+    """Append the exchange to the durable message log.
+
+    Persistence is best-effort: the answer has already been produced, so a transient DB
+    failure is logged and swallowed rather than failing the request or breaking the stream.
+    """
+    try:
+        await MessageStore.append_turn(db, session_id, user_message, assistant_message)
+    except SQLAlchemyError as exc:
+        _logger.warning("failed to persist conversation turn for session %s: %s", session_id, exc)
+
+
+async def _resolve_session(body: ChatRequest, memory: SessionMemoryManager, db: AsyncSession, user_id: int) -> str:
     """Validate the requested session or auto-create one for the first message.
 
+    The session is scoped to ``user_id``: a session owned by another user is treated as
+    non-existent so a caller cannot read or continue a foreign conversation by its id.
+
     Raises:
-        HTTPException 404: if a provided session_id does not exist.
+        HTTPException 404: if a provided session_id does not exist or is not owned by the caller.
         HTTPException 503: if the database is unavailable.
     """
     try:
         if body.session_id:
             session = await db.get(ChatSession, body.session_id)
-            if session is None:
+            if session is None or session.user_id != user_id:
                 raise HTTPException(status_code=404, detail="Session not found.")
-            # Restore buffer from DB summary if not already in memory
-            memory.get_or_create(body.session_id, summary=session.summary or "")
+            # Rehydrate a cold buffer from the durable message log + summary. When the
+            # buffer is already hot (same process) this is skipped — DB stays the source
+            # of truth, the buffer is just the fast prompt-assembly cache on top.
+            if memory.get(body.session_id) is None:
+                buffer = memory.create(body.session_id, summary=session.summary or "")
+                for turn in await MessageStore.load_recent(db, body.session_id, memory.max_turns):
+                    buffer.add(turn["role"], turn["content"])
             return body.session_id
 
         session_id = str(uuid.uuid4())
-        db.add(ChatSession(id=session_id))
+        db.add(ChatSession(id=session_id, user_id=user_id))
         await db.commit()
         memory.create(session_id)
         return session_id
@@ -396,7 +417,7 @@ async def chat(
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait before sending another message.")
 
     message = ChatPipeline.validate_message(body.message, pipeline._max_message_length)
-    session_id = await _resolve_session(body, memory, db)
+    session_id = await _resolve_session(body, memory, db, current_user.id)
     context = memory.get_context(session_id)
 
     try:
@@ -408,9 +429,10 @@ async def chat(
         _logger.warning("chat generation unavailable (provider=%r): %s", body.provider or DEFAULT_PROVIDER, exc)
         raise HTTPException(status_code=503, detail="The language model is temporarily unavailable. Please try again shortly.") from exc
 
-    # Record turns in the in-memory buffer
+    # Record turns in the in-memory buffer (fast cache) and the durable message log.
     memory.add_turn(session_id, "user", message)
     memory.add_turn(session_id, "assistant", response_message)
+    await _persist_turn(db, session_id, message, response_message)
 
     return ChatResponse(status=status, user=current_user.email, message=response_message, session_id=session_id)
 
@@ -445,7 +467,7 @@ async def chat_stream(
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait before sending another message.")
 
     message = ChatPipeline.validate_message(body.message, pipeline._max_message_length)
-    session_id = await _resolve_session(body, memory, db)
+    session_id = await _resolve_session(body, memory, db, current_user.id)
 
     if await pipeline.screen_input(message, session_id):
         raise HTTPException(status_code=400, detail=pipeline._input_rejected_msg)
@@ -462,6 +484,7 @@ async def chat_stream(
             elif ev.kind == "done":
                 memory.add_turn(session_id, "user", message)
                 memory.add_turn(session_id, "assistant", ev.text)
+                await _persist_turn(db, session_id, message, ev.text)
                 yield format_sse(
                     {"status": ev.status, "session_id": session_id, "message": ev.text},
                     event="done",

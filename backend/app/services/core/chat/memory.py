@@ -81,6 +81,10 @@ class SessionMemoryManager:
         buf = self._buffers.get(session_id)
         return buf.get_context() if buf and not buf.is_empty else ""
 
+    @property
+    def max_turns(self) -> int:
+        return self._max_turns
+
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> "SessionMemoryManager":
         max_turns = int(config.get("api", {}).get("session", {}).get("max_context_turns", 10))

@@ -26,7 +26,7 @@ from .api.chat import router as chat_router  # noqa: E402
 from .api.config import router as config_router  # noqa: E402
 from .api.documents import router as documents_router  # noqa: E402
 from .api.sessions import router as sessions_router  # noqa: E402
-from .db.session import init_db  # noqa: E402
+from .db.session import run_migrations  # noqa: E402
 from .services.core.chat.transcription.websocket import router as transcription_router  # noqa: E402
 from .services.dependency.llm import LLMClient  # noqa: E402
 from .services.utils.transcription.preflight import (  # noqa: E402
@@ -99,7 +99,9 @@ def create_app() -> FastAPI:
                 "AUTH_MODE=mock must not run in production (ENVIRONMENT=production). Set AUTH_MODE=jwt and provide a real JWT_SECRET."
             )
         _ensure_jwt_secret()
-        await init_db()
+        # Schema is owned by Alembic. Run in a worker thread because the migration
+        # environment drives the async engine via asyncio.run (no running loop allowed).
+        await run_in_threadpool(run_migrations)
         initialize_chat(_app)
         preload_on_startup = _parse_bool_env("TRANSCRIPTION_PRELOAD_ON_STARTUP", True)
         report = await run_in_threadpool(lambda: run_transcription_preflight(preload_runtime=preload_on_startup))

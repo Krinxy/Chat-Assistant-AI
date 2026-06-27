@@ -7,13 +7,12 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
 
+from .....config import cfg as _cfg
 from ....dependency.auth import verify_ws_token
 from .handler import LiveTranscriptionHandler
 
 router = APIRouter()
 session_handler = LiveTranscriptionHandler()
-
-_MAX_AUDIO_CHUNK_BYTES = 10 * 1024 * 1024  # 10 MB per chunk — guards against memory exhaustion
 
 
 def _resolve_int_env(
@@ -47,7 +46,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
 
     if os.getenv("AUTH_MODE", "").lower() != "mock":
         try:
-            auth_frame = await asyncio.wait_for(websocket.receive(), timeout=10.0)
+            auth_frame = await asyncio.wait_for(websocket.receive(), timeout=_cfg.api.ws_auth_timeout_seconds)
         except asyncio.TimeoutError:
             await websocket.close(code=1008)
             return
@@ -232,7 +231,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
             if len(audio_chunk) == 0:
                 continue
 
-            if len(audio_chunk) > _MAX_AUDIO_CHUNK_BYTES:
+            if len(audio_chunk) > _cfg.api.max_audio_chunk_bytes:
                 await _send_payload({"type": "error", "message": "Audio chunk too large"})
                 continue
 

@@ -39,6 +39,8 @@ class RateLimitConfig:
 class ApiConfig:
     body_limit_bytes: int = 1_048_576
     hsts_max_age_seconds: int = 31_536_000
+    max_audio_chunk_bytes: int = 10 * 1024 * 1024
+    ws_auth_timeout_seconds: float = 10.0
     allowed_origins: List[str] = field(
         default_factory=lambda: [
             "http://localhost:5173",
@@ -62,6 +64,13 @@ class TranscriptionConfig:
 
 
 @dataclass
+class VectorDbConfig:
+    persist_path: str = "./chroma_db"
+    collection_name: str = "documents"
+    distance_metric: str = "cosine"
+
+
+@dataclass
 class RedisConfig:
     port: int = 6379
     db: int = 0
@@ -75,6 +84,7 @@ class AppConfig:
     rate_limit: RateLimitConfig = field(default_factory=RateLimitConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     transcription: TranscriptionConfig = field(default_factory=TranscriptionConfig)
+    vector_db: VectorDbConfig = field(default_factory=VectorDbConfig)
     redis: RedisConfig = field(default_factory=RedisConfig)
 
 
@@ -97,6 +107,7 @@ def _load() -> AppConfig:
         rate_limit=_section(RateLimitConfig, raw, "rate_limit"),
         api=ApiConfig(**api_kwargs) if api_kwargs else ApiConfig(),
         transcription=_section(TranscriptionConfig, raw, "transcription"),
+        vector_db=_section(VectorDbConfig, raw, "vectordb"),
         redis=_section(RedisConfig, raw, "redis"),
     )
 

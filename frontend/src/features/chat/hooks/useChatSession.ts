@@ -13,6 +13,7 @@ interface UseChatSessionOptions {
   actionStartedPrefix: string;
   reasoningText: string;
   onFirstUserMessage?: () => void;
+  token: string | null;
 }
 
 interface UseChatSessionResult {
@@ -33,6 +34,7 @@ export function useChatSession({
   actionStartedPrefix,
   reasoningText,
   onFirstUserMessage,
+  token,
 }: UseChatSessionOptions): UseChatSessionResult {
   const [draft, setDraft] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -171,7 +173,7 @@ export function useChatSession({
       if (isGeminiModel) {
         scheduleTimeout(() => {
           setMessages((previous) => [...previous, thinkingMessage]);
-          void sendChatMessage(trimmed, sessionIdRef.current)
+          void sendChatMessage(trimmed, sessionIdRef.current, token)
             .then((response) => {
               sessionIdRef.current = response.session_id;
               streamReply(thinkingId, response.message);

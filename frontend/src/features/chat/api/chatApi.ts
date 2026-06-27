@@ -1,5 +1,4 @@
 import { API_BASE } from "../../../shared/api/auth_api";
-import { TOKEN_KEY } from "../../../shared/constants/auth";
 
 export interface ChatApiResponse {
   status: string;
@@ -27,9 +26,11 @@ export class ApiError extends Error {
   }
 }
 
-export async function sendChatMessage(message: string, sessionId: string): Promise<ChatApiResponse> {
-  const token = globalThis.localStorage?.getItem(TOKEN_KEY);
-
+export async function sendChatMessage(
+  message: string,
+  sessionId: string,
+  token: string | null,
+): Promise<ChatApiResponse> {
   const response = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
     headers: {

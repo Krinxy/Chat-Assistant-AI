@@ -22,6 +22,7 @@ describe("useChatSession", () => {
         language: "de",
         actionStartedPrefix: "Aktion gestartet",
         reasoningText: "Denke nach...",
+        token: null,
       }),
     );
 
@@ -61,6 +62,7 @@ describe("useChatSession", () => {
         language: "de",
         actionStartedPrefix: "Aktion gestartet",
         reasoningText: "Denke nach...",
+        token: null,
       }),
     );
 
@@ -103,6 +105,7 @@ describe("useChatSession", () => {
         language: "de",
         actionStartedPrefix: "Aktion gestartet",
         reasoningText: "Denke nach...",
+        token: null,
       }),
     );
 
@@ -137,6 +140,7 @@ describe("useChatSession", () => {
         language: "de",
         actionStartedPrefix: "Aktion gestartet",
         reasoningText: "Denke nach...",
+        token: null,
         onFirstUserMessage,
       }),
     );

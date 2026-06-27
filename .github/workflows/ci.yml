@@ -195,9 +195,9 @@ jobs:
             done
 
             if [ "${#PYTHON_COV_TARGETS[@]}" -gt 0 ]; then
-              pytest tests -v --asyncio-mode=auto --tb=short "${PYTHON_COV_TARGETS[@]}" --cov-report=term-missing --cov-report=xml --cov-fail-under="${PYTHON_COVERAGE_MIN}"
+              pytest tests -v --tb=short "${PYTHON_COV_TARGETS[@]}" --cov-report=term-missing --cov-report=xml --cov-fail-under="${PYTHON_COVERAGE_MIN}"
             else
-              pytest tests -v --asyncio-mode=auto --tb=short
+              pytest tests -v --tb=short
             fi
           fi
 

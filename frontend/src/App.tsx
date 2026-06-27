@@ -320,6 +320,7 @@ export default function App() {
     brainrotStyle,
     actionStartedPrefix: ui.chat.actionStartedPrefix,
     reasoningText: ui.chat.reasoningText,
+    token: user?.token ?? null,
     onFirstUserMessage: () => {
       setActiveView("chat");
       setIsSidebarOpen(false);

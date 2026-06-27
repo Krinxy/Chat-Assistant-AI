@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint  # noqa: E402
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware  # noqa: E402
 
-from .config import cfg  # noqa: E402
+from .config import cfg, IS_PRODUCTION  # noqa: E402
 from .api.auth import router as auth_router  # noqa: E402
 from .api.chat import initialize as initialize_chat  # noqa: E402
 from .api.chat import router as chat_router  # noqa: E402
@@ -37,15 +37,15 @@ from .services.utils.transcription.preflight import (  # noqa: E402
 _logger = logging.getLogger(__name__)
 
 _BODY_LIMIT_BYTES = cfg.api.body_limit_bytes
-
-_IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
+# Document uploads are allowed up to max_upload_bytes; the global limit is enforced in-endpoint.
+_BODY_LIMIT_EXEMPT_PATHS = {"/api/documents/upload"}
 
 
 def _ensure_jwt_secret() -> None:
     """Validate JWT_SECRET is present; in dev generate a temporary one with a loud warning."""
     if os.getenv("JWT_SECRET", "").strip():
         return
-    if _IS_PRODUCTION:
+    if IS_PRODUCTION:
         raise RuntimeError("JWT_SECRET environment variable is not set. Set a strong random secret before deploying.")
     tmp = secrets.token_hex(64)
     os.environ["JWT_SECRET"] = tmp
@@ -58,6 +58,8 @@ def _ensure_jwt_secret() -> None:
 
 class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.url.path in _BODY_LIMIT_EXEMPT_PATHS:
+            return await call_next(request)
         cl = request.headers.get("content-length")
         if cl and int(cl) > _BODY_LIMIT_BYTES:
             return Response(
@@ -76,7 +78,7 @@ class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        if _IS_PRODUCTION:
+        if IS_PRODUCTION:
             response.headers["Strict-Transport-Security"] = f"max-age={cfg.api.hsts_max_age_seconds}; includeSubDomains"
         return response
 
@@ -92,7 +94,7 @@ def _parse_bool_env(name: str, default_value: bool) -> bool:
 def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        if _IS_PRODUCTION and os.getenv("AUTH_MODE", "").lower() == "mock":
+        if IS_PRODUCTION and os.getenv("AUTH_MODE", "").lower() == "mock":
             raise RuntimeError(
                 "AUTH_MODE=mock must not run in production (ENVIRONMENT=production). Set AUTH_MODE=jwt and provide a real JWT_SECRET."
             )
@@ -104,18 +106,15 @@ def create_app() -> FastAPI:
         print_preflight_report(report)
         yield
 
-    _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5175")
-    _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
-
     app = FastAPI(
         title="Chat Assistant AI Speech Backend",
         version="0.1.0",
         lifespan=lifespan,
         # Disable API docs in production — avoids endpoint disclosure on public servers.
         # Set ENVIRONMENT=production to enable this. Override TRUSTED_PROXY_IPS for Hetzner.
-        docs_url=None if _IS_PRODUCTION else "/docs",
-        redoc_url=None if _IS_PRODUCTION else "/redoc",
-        openapi_url=None if _IS_PRODUCTION else "/openapi.json",
+        docs_url=None if IS_PRODUCTION else "/docs",
+        redoc_url=None if IS_PRODUCTION else "/redoc",
+        openapi_url=None if IS_PRODUCTION else "/openapi.json",
     )
 
     # Trust X-Forwarded-For from the reverse proxy (nginx on Hetzner).
@@ -133,7 +132,7 @@ def create_app() -> FastAPI:
         _logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         origin = request.headers.get("origin", "")
         headers: dict[str, str] = {}
-        if origin in _allowed_origins:
+        if origin in cfg.api.allowed_origins:
             headers["Access-Control-Allow-Origin"] = origin
             headers["Access-Control-Allow-Credentials"] = "true"
         return JSONResponse(status_code=500, content={"detail": "Internal server error"}, headers=headers)
@@ -144,10 +143,10 @@ def create_app() -> FastAPI:
     app.add_middleware(_BodySizeLimitMiddleware)
 
     # CORS: explicit allowlist — wildcard + credentials is a security hole
-    # env var ALLOWED_ORIGINS takes precedence; falls back to dev defaults above
+    # env var ALLOWED_ORIGINS takes precedence over YAML defaults (see config.py)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_allowed_origins,
+        allow_origins=cfg.api.allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],

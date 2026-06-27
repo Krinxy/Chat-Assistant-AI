@@ -55,8 +55,11 @@ guardrails:
 
 # ── API / Server ──────────────────────────────────────────────────────────────
 api:
-  body_limit_bytes: 1048576        # 1 MB
+  body_limit_bytes: 1048576        # 1 MB — global limit (upload route is exempt, see main.py)
+  max_upload_bytes: 20971520       # 20 MB — per-file cap for POST /api/documents/upload
   hsts_max_age_seconds: 31536000   # 1 year
+  max_audio_chunk_bytes: 10485760  # 10 MB — guards against memory exhaustion on WS receive
+  ws_auth_timeout_seconds: 10.0    # seconds to wait for auth frame after WS accept
   # allowed_origins: overridden by ALLOWED_ORIGINS env var in production
   allowed_origins:
     - "http://localhost:5173"
@@ -102,6 +105,12 @@ transcription:
   whisper_model: "openai/whisper-large-v3-turbo"
   whisper_model_revision: "main"
   sampling_rate: 16000
+
+# ── Vector DB ─────────────────────────────────────────────────────────────────
+vectordb:
+  persist_path: "./chroma_db"
+  collection_name: "documents"
+  distance_metric: "cosine"
 
 # ── Redis ─────────────────────────────────────────────────────────────────────
 redis:

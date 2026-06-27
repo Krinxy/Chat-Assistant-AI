@@ -7,13 +7,12 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
 
+from .....config import cfg as _cfg
 from ....dependency.auth import verify_ws_token
 from .handler import LiveTranscriptionHandler
 
 router = APIRouter()
 session_handler = LiveTranscriptionHandler()
-
-_MAX_AUDIO_CHUNK_BYTES = 10 * 1024 * 1024  # 10 MB per chunk — guards against memory exhaustion
 
 
 def _resolve_int_env(
@@ -47,7 +46,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
 
     if os.getenv("AUTH_MODE", "").lower() != "mock":
         try:
-            auth_frame = await asyncio.wait_for(websocket.receive(), timeout=10.0)
+            auth_frame = await asyncio.wait_for(websocket.receive(), timeout=_cfg.api.ws_auth_timeout_seconds)
         except asyncio.TimeoutError:
             await websocket.close(code=1008)
             return
@@ -82,17 +81,18 @@ async def transcribe_audio(websocket: WebSocket) -> None:
 
     receive_poll_ms = _resolve_int_env(
         "TRANSCRIPTION_RECEIVE_POLL_MS",
-        120,
-        min_value=40,
-        max_value=1000,
+        _cfg.transcription.receive_poll_ms,
+        min_value=_cfg.transcription.receive_poll_ms_min,
+        max_value=_cfg.transcription.receive_poll_ms_max,
     )
     max_inflight_chunks = _resolve_int_env(
         "TRANSCRIPTION_MAX_INFLIGHT_CHUNKS",
         session_handler.recommended_max_inflight_chunks(),
-        min_value=1,
-        max_value=8,
+        min_value=_cfg.transcription.max_inflight_chunks_min,
+        max_value=_cfg.transcription.max_inflight_chunks_max,
     )
 
+    max_chunk_bytes = _cfg.api.max_audio_chunk_bytes
     disconnected = False
     chunk_index = 0
     next_emit_index = 0
@@ -232,7 +232,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
             if len(audio_chunk) == 0:
                 continue
 
-            if len(audio_chunk) > _MAX_AUDIO_CHUNK_BYTES:
+            if len(audio_chunk) > max_chunk_bytes:
                 await _send_payload({"type": "error", "message": "Audio chunk too large"})
                 continue
 

@@ -13,6 +13,7 @@ interface UseChatSessionOptions {
   actionStartedPrefix: string;
   reasoningText: string;
   onFirstUserMessage?: () => void;
+  token: string | null;
 }
 
 interface UseChatSessionResult {
@@ -33,6 +34,7 @@ export function useChatSession({
   actionStartedPrefix,
   reasoningText,
   onFirstUserMessage,
+  token,
 }: UseChatSessionOptions): UseChatSessionResult {
   const [draft, setDraft] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -171,7 +173,7 @@ export function useChatSession({
       if (backendProvider !== null) {
         scheduleTimeout(() => {
           setMessages((previous) => [...previous, thinkingMessage]);
-          void sendChatMessage(trimmed, sessionIdRef.current, backendProvider)
+          void sendChatMessage(trimmed, sessionIdRef.current, backendProvider, token)
             .then((response) => {
               sessionIdRef.current = response.session_id;
               streamReply(thinkingId, response.message);
@@ -196,36 +198,7 @@ export function useChatSession({
             ? "Dieses LLM ist noch nicht angebunden. Kontaktiere den Admin. Aktuell verfügbar: Google Gemini und das lokal gehostete LLM."
             : "This LLM is not connected yet. Please contact the admin. Currently available: Google Gemini and the locally hosted LLM.";
 
-        scheduleTimeout(() => {
-          setMessages((previous) =>
-            previous.map((message) =>
-              message.id !== thinkingId ? message : { ...message, isThinking: false, isStreaming: true, text: "" },
-            ),
-          );
-
-          const tokens = fullReply.split(" ");
-          let tokenIndex = 0;
-
-          const streamIntervalId = globalThis.setInterval(() => {
-            tokenIndex += 1;
-            const isDone = tokenIndex >= tokens.length;
-            const nextText = tokens.slice(0, tokenIndex).join(" ");
-
-            setMessages((previous) =>
-              previous.map((message) =>
-                message.id !== thinkingId ? message : { ...message, text: nextText, isStreaming: !isDone },
-              ),
-            );
-
-            if (isDone) {
-              globalThis.clearInterval(streamIntervalId);
-              intervalIdsRef.current = intervalIdsRef.current.filter((id) => id !== streamIntervalId);
-              setIsTyping(false);
-            }
-          }, 68);
-
-          intervalIdsRef.current.push(streamIntervalId);
-        }, 620);
+        streamReply(thinkingId, fullReply);
       }
 
       return true;
@@ -235,6 +208,7 @@ export function useChatSession({
       isTyping,
       language,
       selectedModelId,
+      token,
       onFirstUserMessage,
       reasoningText,
       streamReply,
@@ -274,10 +248,6 @@ export function useChatSession({
           previewUrl: isImage ? globalThis.URL.createObjectURL(file) : undefined,
         };
       });
-
-      if (attachments.length === 0) {
-        return;
-      }
 
       setMessages((previous) => [
         ...previous,

@@ -17,11 +17,13 @@ from ..models.user import User
 from ..services.core.ingestion.chunker import DocumentChunker
 from ..services.core.ingestion.embedder import DocumentEmbedder, EmbeddingService
 from ..services.core.ingestion.loader import DocumentLoader, UnsupportedDocumentError
+from ..config import cfg as _cfg
 from ..services.dependency.authtoken import authtoken
 from ..services.dependency.vectordb import get_vector_db_client
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 _logger = logging.getLogger(__name__)
+_chunker = DocumentChunker()
 
 
 class DocumentResponse(BaseModel):
@@ -63,6 +65,11 @@ async def upload_document(
     embedder: DocumentEmbedder = Depends(_get_document_embedder),
 ) -> Document:
     data = await file.read()
+    if len(data) > _cfg.api.max_upload_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large (max {_cfg.api.max_upload_bytes // (1024 * 1024)} MB).",
+        )
     filename = file.filename or "upload"
 
     try:
@@ -76,7 +83,7 @@ async def upload_document(
     content_hash = hashlib.sha256(data).hexdigest()
     doc_id = str(uuid.uuid4())
 
-    chunks = DocumentChunker().chunk_document(doc_id, text)
+    chunks = _chunker.chunk_document(doc_id, text)
     try:
         result = embedder.upsert_chunks(chunks)
     except Exception as exc:

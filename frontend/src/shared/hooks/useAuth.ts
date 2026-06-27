@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiFetchConfig, apiLogin, apiMe } from "../api/auth_api";
+import { TOKEN_KEY } from "../constants/auth";
 
 export interface AuthUser {
   email: string;
   token: string;
 }
-
-const TOKEN_KEY = "auth_token";
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);

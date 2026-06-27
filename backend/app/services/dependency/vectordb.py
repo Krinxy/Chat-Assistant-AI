@@ -33,6 +33,7 @@ class VectorDBClient:
     ) -> None:
         self._config = config or VectorDBConfig(persist_path=_resolve_persist_path_from_env())
         self._client = client if client is not None else _create_persistent_client(self._config.persist_path)
+        self._collection: Collection | None = None
 
     @property
     def collection_name(self) -> str:
@@ -44,13 +45,15 @@ class VectorDBClient:
 
     def get_collection(self) -> Collection:
         """Return the cosine-similarity document collection, creating it if necessary."""
-        try:
-            return self._client.get_or_create_collection(
-                name=self._config.collection_name,
-                metadata={"hnsw:space": _COSINE_SPACE},
-            )
-        except Exception as exc:
-            raise RuntimeError(f"ChromaDB collection '{self._config.collection_name}' unavailable: {exc}") from exc
+        if self._collection is None:
+            try:
+                self._collection = self._client.get_or_create_collection(
+                    name=self._config.collection_name,
+                    metadata={"hnsw:space": _COSINE_SPACE},
+                )
+            except Exception as exc:
+                raise RuntimeError(f"ChromaDB collection '{self._config.collection_name}' unavailable: {exc}") from exc
+        return self._collection
 
     def reset_collection(self) -> Collection:
         """Drop and recreate the document collection (used for ingestion resets and tests)."""
@@ -59,6 +62,7 @@ class VectorDBClient:
         except _collection_not_found_errors():
             # ChromaDB raises when the collection does not exist yet; recreating is still safe.
             pass
+        self._collection = None
         return self.get_collection()
 
 

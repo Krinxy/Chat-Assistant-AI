@@ -114,3 +114,4 @@ def _load() -> AppConfig:
 
 
 cfg = _load()
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"

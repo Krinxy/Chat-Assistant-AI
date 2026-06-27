@@ -1,4 +1,4 @@
-const API_BASE = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:8000";
+export const API_BASE = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:8000";
 
 export interface AppConfig {
   persist_token_in_browser: boolean;

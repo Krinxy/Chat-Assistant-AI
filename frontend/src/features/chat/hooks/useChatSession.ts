@@ -196,36 +196,7 @@ export function useChatSession({
             ? "Dieses LLM ist noch nicht angelegt. Kontaktiere den Admin. Aktuell arbeiten wir nur mit Google Gemini."
             : "This LLM is not set up yet. Please contact the admin. For now, only Google Gemini is available.";
 
-        scheduleTimeout(() => {
-          setMessages((previous) =>
-            previous.map((message) =>
-              message.id !== thinkingId ? message : { ...message, isThinking: false, isStreaming: true, text: "" },
-            ),
-          );
-
-          const tokens = fullReply.split(" ");
-          let tokenIndex = 0;
-
-          const streamIntervalId = globalThis.setInterval(() => {
-            tokenIndex += 1;
-            const isDone = tokenIndex >= tokens.length;
-            const nextText = tokens.slice(0, tokenIndex).join(" ");
-
-            setMessages((previous) =>
-              previous.map((message) =>
-                message.id !== thinkingId ? message : { ...message, text: nextText, isStreaming: !isDone },
-              ),
-            );
-
-            if (isDone) {
-              globalThis.clearInterval(streamIntervalId);
-              intervalIdsRef.current = intervalIdsRef.current.filter((id) => id !== streamIntervalId);
-              setIsTyping(false);
-            }
-          }, 68);
-
-          intervalIdsRef.current.push(streamIntervalId);
-        }, 620);
+        streamReply(thinkingId, fullReply);
       }
 
       return true;
@@ -274,10 +245,6 @@ export function useChatSession({
           previewUrl: isImage ? globalThis.URL.createObjectURL(file) : undefined,
         };
       });
-
-      if (attachments.length === 0) {
-        return;
-      }
 
       setMessages((previous) => [
         ...previous,

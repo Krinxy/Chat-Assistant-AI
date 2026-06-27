@@ -23,6 +23,7 @@ from ..services.dependency.vectordb import get_vector_db_client
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 _logger = logging.getLogger(__name__)
+_chunker = DocumentChunker()
 
 
 class DocumentResponse(BaseModel):
@@ -82,7 +83,7 @@ async def upload_document(
     content_hash = hashlib.sha256(data).hexdigest()
     doc_id = str(uuid.uuid4())
 
-    chunks = DocumentChunker().chunk_document(doc_id, text)
+    chunks = _chunker.chunk_document(doc_id, text)
     try:
         result = embedder.upsert_chunks(chunks)
     except Exception as exc:

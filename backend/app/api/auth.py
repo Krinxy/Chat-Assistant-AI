@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from typing import Annotated
 
@@ -16,13 +15,11 @@ from ..services.core.auth.user_service import (
     request_password_reset,
     reset_password,
 )
-from ..config import cfg as _cfg
+from ..config import cfg as _cfg, IS_PRODUCTION
 from ..services.dependency.auth import get_current_user
 from ..services.dependency.ratelimit import check_rate_limit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-_IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
 
 
 @dataclass
@@ -108,7 +105,7 @@ async def forgot_password(
 ) -> ForgotPasswordResponse:
     check_rate_limit(request, limit=_cfg.rate_limit.forgot_password_max_attempts, window=_cfg.rate_limit.forgot_password_window_seconds)
     token = await request_password_reset(body.email, db)
-    return ForgotPasswordResponse(reset_token=None if _IS_PRODUCTION else token)
+    return ForgotPasswordResponse(reset_token=None if IS_PRODUCTION else token)
 
 
 @router.get("/me", response_model=MeResponse)

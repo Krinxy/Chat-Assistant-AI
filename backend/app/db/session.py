@@ -2,13 +2,30 @@ from __future__ import annotations
 
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
+# Repo root holds alembic.ini and the migrations/ tree (this file is backend/app/db/session.py).
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 class Base(DeclarativeBase):
     pass
+
+
+def run_migrations() -> None:
+    """Bring the configured database up to the latest schema revision.
+
+    Synchronous by design: Alembic's env.py drives the async engine via ``asyncio.run``,
+    so this must be invoked from a worker thread (never inside a running event loop).
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    config = Config(str(_REPO_ROOT / "alembic.ini"))
+    command.upgrade(config, "head")
 
 
 class DatabaseManager:

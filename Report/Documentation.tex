@@ -1,0 +1,275 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% Deutsche Bezeichner ohne Abhängigkeit von einer Babel-Sprachinstallation.
+\renewcommand{\tablename}{Tabelle}
+\renewcommand{\figurename}{Abbildung}
+\renewcommand{\partname}{Teil}
+\renewcommand{\contentsname}{Inhaltsverzeichnis}
+
+% Moderate Seitenränder ohne das geometry-Paket.
+\setlength{\textwidth}{15.5cm}
+\setlength{\textheight}{23.5cm}
+\setlength{\oddsidemargin}{0.5cm}
+\setlength{\evensidemargin}{0.5cm}
+\setlength{\topmargin}{-0.5cm}
+
+\title{Technische Dokumentation\\\large Chat-Assistant-AI -- Backend}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\noindent
+Diese Dokumentation gliedert sich in zwei Teile. \textbf{Teil~I} beschreibt die
+geplanten Arbeitspakete -- den verbindlichen Funktionsumfang des Systems. \textbf{Teil~II}
+dokumentiert begleitende Maßnahmen, die nicht zum geplanten Arbeitspaket-Umfang gehören,
+im Zuge der Umsetzung jedoch notwendig wurden: Fehlerbehebungen und Verbesserungen der
+zugrunde liegenden Infrastruktur.
+
+\tableofcontents
+
+% ======================================================================================
+\part{Arbeitspakete (geplanter Funktionsumfang)}
+% ======================================================================================
+
+\section{Session Memory: Persistente Konversationsspeicherung (AP~3A)}
+
+\subsection{Zielsetzung}
+
+Der Konversationsverlauf einer Chat-Sitzung muss dauerhaft und unabhängig von der
+Laufzeit des Anwendungsprozesses verfügbar sein. Anforderung ist, dass jeder
+Gesprächsbeitrag pro Sitzung verlustfrei persistiert wird, der Verlauf einen
+Prozessneustart übersteht und über eine Schnittstelle abrufbar bleibt.
+
+\subsection{Architektur: Zweischichtiges Speichermodell}
+
+Die Konversationsspeicherung ist in zwei klar getrennte Schichten mit
+unterschiedlicher Lebensdauer aufgeteilt:
+
+\begin{itemize}
+  \item \textbf{Persistente Schicht (SQLite):} Eine relationale Tabelle hält jeden
+        Gesprächsbeitrag dauerhaft und bildet die maßgebliche Datenquelle
+        (\emph{Single Source of Truth}).
+  \item \textbf{Flüchtige Schicht (In-Memory-Puffer):} Ein prozessgebundener
+        Ringpuffer hält die jüngsten Beiträge einer Sitzung für den schnellen
+        Aufbau des Modell-Prompts vor.
+\end{itemize}
+
+Die Entscheidung für eine durable Persistenzschicht unterhalb des In-Memory-Puffers
+begründet sich durch mehrere technische Vorteile. Die relationale Ablage gewährleistet
+die Dauerhaftigkeit des Verlaufs über Prozessneustarts hinweg und stellt eine eindeutige,
+konsistente Datenquelle für alle abhängigen Komponenten bereit. Der vorgelagerte
+In-Memory-Puffer vermeidet zugleich, dass für den Aufbau jedes Prompts ein
+Datenbankzugriff erforderlich ist, und entkoppelt damit die latenzkritische
+Antwortgenerierung von der persistenten Ablage. Beide Schichten ergänzen sich additiv:
+Der Puffer fungiert als Lese-Cache über der Datenbank, während die Datenbank die
+Verbindlichkeit der Daten sicherstellt.
+
+\subsection{Datenmodell}
+
+Die persistente Schicht wird durch die Tabelle \texttt{chat\_messages} realisiert.
+Jeder Datensatz repräsentiert genau einen Gesprächsbeitrag und ist über einen
+Fremdschlüssel der zugehörigen Sitzung zugeordnet.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{Spalte} & \textbf{Typ} & \textbf{Beschreibung} \\
+\hline
+\texttt{id}          & INTEGER (PK) & Fortlaufender Primärschlüssel \\
+\texttt{session\_id} & TEXT (FK)    & Verweis auf \texttt{chat\_sessions.id}, indiziert \\
+\texttt{role}        & TEXT         & Rolle des Beitrags (\texttt{user} / \texttt{assistant}) \\
+\texttt{content}     & TEXT         & Inhalt des Beitrags \\
+\texttt{created\_at} & TIMESTAMP    & Erstellungszeitpunkt \\
+\hline
+\end{tabular}
+\caption{Schema der Tabelle \texttt{chat\_messages}.}
+\end{table}
+
+Der Index auf \texttt{session\_id} ermöglicht das effiziente Auslesen des Verlaufs
+einer einzelnen Sitzung. Die monoton steigende \texttt{id} dient zugleich als
+verlässliches Sortierkriterium für die chronologische Reihenfolge der Beiträge.
+
+\subsection{Persistenzschicht}
+
+Der Datenbankzugriff ist in einer dedizierten Persistenzkomponente
+(\texttt{MessageStore}) gekapselt. Diese Trennung von der Anwendungslogik wurde
+gewählt, um die Datenzugriffslogik isoliert testbar zu halten und die Endpunkte von
+Datenbankdetails zu entlasten. Die Komponente stellt zwei Operationen bereit:
+
+\begin{itemize}
+  \item \texttt{append\_turn} -- persistiert einen vollständigen Austausch
+        (Nutzer- und Assistentenbeitrag) in einer einzelnen Transaktion.
+  \item \texttt{load\_recent} -- liest die jüngsten Beiträge einer Sitzung,
+        begrenzt durch ein Limit und in chronologischer Reihenfolge
+        (ältester zuerst), sodass das Ergebnis unmittelbar zum Wiederaufbau des
+        Puffers oder Prompts geeignet ist.
+\end{itemize}
+
+\begin{verbatim}
+class MessageStore:
+    @staticmethod
+    async def append_turn(db, session_id, user_message, assistant_message):
+        db.add(ChatMessage(session_id=session_id, role="user", content=user_message))
+        db.add(ChatMessage(session_id=session_id, role="assistant",
+                           content=assistant_message))
+        await db.commit()
+
+    @staticmethod
+    async def load_recent(db, session_id, limit):
+        stmt = (
+            select(ChatMessage)
+            .where(ChatMessage.session_id == session_id)
+            .order_by(ChatMessage.id.desc())
+            .limit(limit)
+        )
+        rows = (await db.execute(stmt)).scalars().all()
+        return [{"role": r.role, "content": r.content} for r in reversed(rows)]
+\end{verbatim}
+
+Die Begrenzung der gelesenen Beiträge über ein Limit hält die Antwortgröße auch bei
+langlaufenden Sitzungen beschränkt und vermeidet unbegrenzte Datenbankabfragen.
+
+\subsection{Integration in den Anfrageablauf}
+
+Die Persistenzschicht ist an drei Stellen des Anfrageablaufs eingebunden:
+
+\paragraph{Persistierung der Beiträge.} Beide Chat-Endpunkte -- die
+Sofortantwort sowie der tokenweise Stream -- schreiben nach erfolgreicher
+Antwortgenerierung den Austausch sowohl in den In-Memory-Puffer als auch in die
+Datenbank. Der Schreibvorgang in die Datenbank ist bewusst fehlertolerant
+ausgelegt: Da die Antwort zu diesem Zeitpunkt bereits erzeugt wurde, wird ein
+transienter Datenbankfehler protokolliert und unterdrückt, statt die Anfrage
+oder den laufenden Stream abzubrechen. Diese Auslegung priorisiert die
+Verfügbarkeit der Antwort gegenüber der Verbindlichkeit eines einzelnen
+Schreibvorgangs.
+
+\paragraph{Wiederherstellung des Puffers (Rehydrierung).} Trifft eine Anfrage auf
+eine bestehende Sitzung, deren Puffer im aktuellen Prozess nicht vorliegt -- etwa
+nach einem Neustart -- wird der Puffer aus den zuletzt persistierten Beiträgen der
+Sitzung rekonstruiert. Dadurch steht der Konversationskontext auch nach einem
+Prozesswechsel unmittelbar für den Prompt-Aufbau zur Verfügung. Liegt der Puffer
+bereits im Speicher vor, entfällt dieser Schritt, sodass die Datenbank die
+maßgebliche Datenquelle bleibt und der Puffer als Cache wirkt.
+
+\paragraph{Abruf des Verlaufs.} Der Endpunkt zum Abruf des Sitzungsverlaufs liest
+die Beiträge ausschließlich aus der Datenbank. Damit ist der zurückgelieferte
+Verlauf unabhängig vom Zustand des flüchtigen Puffers und auch nach einem
+Prozessneustart korrekt.
+
+\subsection{Qualitätssicherung}
+
+Die Funktionalität ist durch automatisierte Tests abgesichert. Diese umfassen die
+isolierte Prüfung der Persistenzschicht (Schreib-/Lese-Zyklus, chronologische
+Reihenfolge, Begrenzung und Sitzungsbezug der Ergebnisse) sowie Integrationstests
+auf Endpunktebene. Letztere verifizieren insbesondere die Persistierung eines
+Beitrags und seinen anschließenden Abruf, die Rekonstruktion des Puffers nach einem
+simulierten Prozessneustart sowie die Beständigkeit des Verlaufs bei Verlust des
+flüchtigen Puffers.
+
+% ======================================================================================
+\part{Begleitende Maßnahmen: Bugfixes \& Infrastruktur-Upgrades}
+% ======================================================================================
+
+\noindent
+Die folgenden Maßnahmen gehören nicht zum geplanten Arbeitspaket-Umfang. Sie wurden im
+Zuge der Umsetzung erforderlich -- als Behebung einer Sicherheitslücke beziehungsweise
+als Verbesserung der zugrunde liegenden Datenbank-Infrastruktur -- und sind daher
+gesondert dokumentiert.
+
+\section{Datenbank-Migrationen mit Alembic (Infrastruktur-Upgrade)}
+
+\subsection{Ausgangslage}
+
+Das Datenbankschema wurde ursprünglich beim Anwendungsstart über die
+SQLAlchemy-Funktion \texttt{create\_all()} erzeugt. Dieses Verfahren legt
+ausschließlich \emph{fehlende} Tabellen an; bestehende Tabellen werden nie verändert.
+Strukturänderungen an einer bereits befüllten Datenbank -- etwa das Hinzufügen einer
+Spalte -- sind damit nicht ohne Datenverlust möglich.
+
+\subsection{Entscheidung und Begründung}
+
+Es wurde entschieden, die Schemaverwaltung auf das Migrationswerkzeug \emph{Alembic}
+umzustellen. Diese Entscheidung begründet sich durch mehrere strukturelle Vorteile:
+
+\begin{itemize}
+  \item \textbf{Versionierung:} Jede Schemaänderung wird als nummeriertes,
+        nachvollziehbares Migrationsskript festgehalten.
+  \item \textbf{Reversibilität:} Migrationen besitzen eine Vorwärts- und eine
+        Rückwärtsrichtung und können kontrolliert zurückgenommen werden.
+  \item \textbf{Reproduzierbarkeit:} Aus demselben Migrationsstand entsteht in jeder
+        Umgebung dasselbe Schema.
+  \item \textbf{Sichere Evolution:} Bestehende, befüllte Datenbanken lassen sich
+        strukturell weiterentwickeln, ohne Daten zu verlieren.
+\end{itemize}
+
+\subsection{Umsetzung}
+
+Alembic übernimmt die Rolle der maßgeblichen Schema-Autorität. Da die Anwendung eine
+asynchrone Datenbank-Engine verwendet, ist die Migrationsumgebung entsprechend
+asynchron ausgelegt. Eine Besonderheit von SQLite ist die stark eingeschränkte
+Unterstützung von \texttt{ALTER TABLE}: Spalten- oder Constraint-Änderungen sind nicht
+direkt möglich. Dies wird über den sogenannten \emph{Batch-Modus} gelöst, in dem die
+betroffene Tabelle intern neu aufgebaut und der Datenbestand umkopiert wird.
+
+Die Migrationen sind als geordnete Kette organisiert: Eine Basis-Migration bildet das
+vollständige bestehende Schema ab, darauf folgen inkrementelle Migrationen für jede
+weitere Änderung (siehe Abschnitt~\ref{sec:ownership}).
+
+\subsection{Integration in Anwendung und Tests}
+
+Beim Start der Anwendung wird das Schema automatisch auf den neuesten Migrationsstand
+gebracht. Dieser Vorgang läuft in einem separaten Arbeits-Thread, da die
+Migrationsumgebung die asynchrone Engine über einen eigenen Ereignis-Loop steuert.
+
+Die Testsuite ist von diesem Mechanismus bewusst entkoppelt: Tests erzeugen ihr Schema
+unmittelbar aus den Modellen auf flüchtigen In-Memory-Datenbanken. Die Migrationen
+betreffen somit ausschließlich die persistente Datei-Datenbank, während die Tests
+schnell und unabhängig bleiben. Ein zusätzlicher Test stellt sicher, dass die
+Migrationskette eine leere Datenbank vollständig bis zum aktuellen Stand aufbaut.
+
+\section{Session-Autorisierung: Ownership-Scoping (Sicherheits-Bugfix)}
+\label{sec:ownership}
+
+\subsection{Problembeschreibung}
+
+Das Sitzungsmodell besaß keine Zuordnung zu einem Benutzer. Die Sitzungs-Endpunkte
+verlangten zwar eine gültige Authentifizierung, prüften jedoch keine Eigentümerschaft
+an der angefragten Sitzung. Dadurch konnte jeder authentifizierte Benutzer den Verlauf
+einer beliebigen Sitzung abrufen, sofern ihm deren Bezeichner bekannt war.
+
+Da dieser Bezeichner kein Geheimnis ist -- er erscheint in Antworten und im
+clientseitigen Zustand -- handelt es sich um eine Autorisierungslücke: eine fehlende
+Zugriffskontrolle auf Objektebene. Das Risiko wurde als hoch eingestuft, da kein
+weiterer Schutz zwischen einem gültigen Benutzerkonto und fremden Sitzungsdaten lag.
+
+\subsection{Lösung}
+
+Das Sitzungsmodell wurde um eine Eigentümer-Referenz erweitert (Fremdschlüssel auf den
+Benutzer). Beim Anlegen einer Sitzung wird der aufrufende Benutzer als Eigentümer
+hinterlegt; bei jedem Zugriff wird die Sitzung auf den jeweiligen Eigentümer
+eingeschränkt.
+
+Ein Zugriff auf eine fremde Sitzung wird als \emph{nicht gefunden} (HTTP~404)
+beantwortet, nicht als \emph{verboten} (HTTP~403). Diese Wahl ist bewusst getroffen:
+Sie verhindert, dass der Endpunkt die Existenz fremder Sitzungen offenlegt. Die
+Einschränkung gilt einheitlich für den Abruf des Verlaufs und für das Fortsetzen einer
+Sitzung im Chat.
+
+Die zugehörige Schemaänderung -- das Hinzufügen der Eigentümer-Spalte -- wurde über
+eine Alembic-Migration eingespielt und ist damit versioniert und reproduzierbar.
+
+\subsection{Qualitätssicherung}
+
+Das Verhalten ist durch Tests abgesichert, die insbesondere den Zugriff durch einen
+anderen Benutzer prüfen: Sowohl der Abruf des Verlaufs als auch das Fortsetzen einer
+fremden Sitzung müssen mit der Antwort \emph{nicht gefunden} abgewiesen werden, während
+der rechtmäßige Eigentümer regulären Zugriff erhält.
+
+\end{document}

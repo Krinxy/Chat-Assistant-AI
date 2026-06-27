@@ -78,7 +78,10 @@ class MockAuthProvider(AbstractAuthProvider):
     """Development / test provider — AUTH_MODE=mock. Never use in production."""
 
     async def get_current_user(self, token: str, db: AsyncSession) -> User:
+        # A stable id is required so user-scoped resources (e.g. chat sessions) can be
+        # attributed and ownership checks resolve. Configurable to simulate distinct users.
         return User(
+            id=int(os.getenv("MOCK_USER_ID", "1")),
             email=os.getenv("MOCK_USER_EMAIL", "mock@local"),
             hashed_password="",  # nosec B106
             role=os.getenv("MOCK_USER_ROLE", "admin"),

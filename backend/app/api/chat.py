@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Optional
@@ -23,12 +24,14 @@ from ..services.core.guardrails.output_guard import OutputGuard
 from ..services.core.guardrails.policy_guard import PolicyGuard
 from ..services.core.guardrails.query_refiner import QueryRefiner
 from ..services.dependency.authtoken import authtoken
-from ..services.dependency.llm import LLMClient, LLMNotConfiguredError, LLMUnavailableError
+from ..services.dependency.llm import DEFAULT_PROVIDER, LLMClient, LLMNotConfiguredError, LLMUnavailableError
 from ..services.utils.config import ConfigLoader
 from ..services.utils.rate_limit import RateLimiter
 from ..services.utils.streaming import ThinkBlockFilter, format_sse, strip_think_blocks
 
 _DEFAULT_SYSTEM_PROMPT = "You are a helpful, concise assistant."
+
+_logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -40,6 +43,9 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 class ChatRequest:
     message: str
     session_id: str = field(default="")
+    # Which configured chat provider to route this message to ("local", "gemini", …).
+    # Empty → the backend default. Guardrails always run on their own configured provider.
+    provider: str = field(default="")
 
 
 @dataclass
@@ -89,12 +95,19 @@ class ChatPipeline:
         input_guard_enabled: bool = True,
         query_refiner_enabled: bool = True,
         output_guard_enabled: bool = True,
+        providers: Optional[dict[str, dict[str, Any]]] = None,
+        default_provider: str = DEFAULT_PROVIDER,
     ) -> None:
         self._input_guard = input_guard
         self._query_refiner = query_refiner
         self._output_guard = output_guard
         self._policy_guard = policy_guard
         self._chat_llm = chat_llm
+        # Per-request provider switch: the default chat client is reused unless the
+        # caller selects another configured provider. Guardrails are deliberately
+        # unaffected — they keep their own provider/model.
+        self._providers = providers or {}
+        self._default_provider = default_provider
         self._system_prompt = system_prompt or _DEFAULT_SYSTEM_PROMPT
         self._max_message_length = max_message_length
         self._input_rejected_msg = input_rejected_msg
@@ -116,6 +129,25 @@ class ChatPipeline:
         return sanitized
 
     # ── private steps ──────────────────────────────────────────────────────────
+
+    def _resolve_chat_llm(self, provider: Optional[str]) -> LLMClient:
+        """Return the chat client for the requested provider.
+
+        Falls back to the default client when no provider is given, the requested one
+        matches the default, or it is not in the configured ``llm.providers`` map. The
+        per-provider model is taken from config; temperature/streaming are inherited
+        from the default chat client.
+        """
+        name = (provider or "").strip().lower()
+        if not name or name == self._default_provider or name not in self._providers:
+            return self._chat_llm
+        provider_cfg = self._providers[name]
+        return LLMClient(
+            model=str(provider_cfg["model"]) if provider_cfg.get("model") else None,
+            temperature=self._chat_llm._temperature,
+            streaming=self._chat_llm._streaming,
+            provider=name,
+        )
 
     async def _apply_input_guard(self, message: str, session_id: str) -> bool:
         """Return True if the message should be rejected.
@@ -142,23 +174,26 @@ class ChatPipeline:
     def _build_messages(self, query: str, context: str) -> list[BaseMessage]:
         """Assemble the prompt: persona system prompt + conversation history + user query.
 
-        In AP 4 this is replaced by the full RAG prompt (retrieved chunks injected
-        as context). For now the naked LLM call uses only the conversation history.
-        """
-        messages: list[BaseMessage] = [SystemMessage(content=self._system_prompt)]
-        if context:
-            messages.append(SystemMessage(content=f"Conversation so far:\n{context}"))
-        messages.append(HumanMessage(content=query))
-        return messages
+        The conversation history is folded into the single leading SystemMessage rather
+        than sent as a second one: strict gateways (e.g. the Qwen/litellm gateway) reject
+        a second system message with "System message must be at the beginning." One system
+        message followed by the human turn is accepted by every provider.
 
-    async def _generate(self, refined_query: str, context: str = "") -> str:
+        In AP 4 this is replaced by the full RAG prompt (retrieved chunks injected as context).
+        """
+        system_content = self._system_prompt
+        if context:
+            system_content = f"{system_content}\n\nConversation so far:\n{context}"
+        return [SystemMessage(content=system_content), HumanMessage(content=query)]
+
+    async def _generate(self, refined_query: str, context: str = "", chat_llm: Optional[LLMClient] = None) -> str:
         """Generate the answer via a single (non-streamed) gateway call.
 
         Raises:
             LLMNotConfiguredError: if the gateway credentials are missing.
             LLMUnavailableError: if the gateway call fails transiently (5xx, timeout, …).
         """
-        llm = self._chat_llm.get()
+        llm = (chat_llm or self._chat_llm).get()
         try:
             response = await llm.ainvoke(self._build_messages(refined_query, context))
         except OpenAIError as exc:
@@ -177,7 +212,7 @@ class ChatPipeline:
 
     # ── main entry point ───────────────────────────────────────────────────────
 
-    async def run(self, message: str, session_id: str, context: str = "") -> tuple[str, str]:
+    async def run(self, message: str, session_id: str, context: str = "", provider: Optional[str] = None) -> tuple[str, str]:
         """Execute the full pipeline. Returns (response_message, status).
 
         Raises:
@@ -187,14 +222,16 @@ class ChatPipeline:
             raise HTTPException(status_code=400, detail=self._input_rejected_msg)
 
         refined_query = await self._refine_query(message, session_id)
-        generated = await self._generate(refined_query, context)
+        generated = await self._generate(refined_query, context, self._resolve_chat_llm(provider))
         return await self._apply_output_guard(message, generated, session_id)
 
     async def screen_input(self, message: str, session_id: str) -> bool:
         """Return True if the input guard (with local policy fallback) rejects the message."""
         return await self._apply_input_guard(message, session_id)
 
-    async def run_stream(self, message: str, session_id: str, context: str = "") -> AsyncIterator[StreamEvent]:
+    async def run_stream(
+        self, message: str, session_id: str, context: str = "", provider: Optional[str] = None
+    ) -> AsyncIterator[StreamEvent]:
         """Stream the answer token-by-token.
 
         The input guard is expected to have run already (via ``screen_input``) so a
@@ -207,7 +244,7 @@ class ChatPipeline:
         collected: list[str] = []
 
         try:
-            llm = self._chat_llm.get()
+            llm = self._resolve_chat_llm(provider).get()
             async for chunk in llm.astream(self._build_messages(refined_query, context)):
                 content = chunk.content
                 if content is None:
@@ -223,12 +260,14 @@ class ChatPipeline:
             if tail:
                 collected.append(tail)
                 yield StreamEvent(kind="delta", text=tail)
-        except LLMNotConfiguredError:
+        except LLMNotConfiguredError as exc:
+            _logger.warning("chat stream not configured (provider=%r): %s", provider or DEFAULT_PROVIDER, exc)
             yield StreamEvent(kind="error", status="llm_unavailable", detail="The language model is not configured.")
             return
-        except OpenAIError:
+        except OpenAIError as exc:
             # Upstream failure (502 Bad Gateway, timeout, connection error, …). May fire
             # before or mid-stream; either way the client gets a clean terminal error.
+            _logger.warning("chat stream upstream failure (provider=%r): %s", provider or DEFAULT_PROVIDER, exc)
             yield StreamEvent(kind="error", status="llm_unavailable", detail="The language model is temporarily unavailable.")
             return
 
@@ -241,8 +280,11 @@ class ChatPipeline:
     @classmethod
     def from_config(cls, config: Optional[dict[str, Any]] = None) -> "ChatPipeline":
         cfg = config or ConfigLoader.get_backend()
-        llm_cfg = cfg.get("llm", {}).get("guardrails", {})
-        chat_llm_cfg = cfg.get("llm", {}).get("chat", {})
+        llm_root = cfg.get("llm", {})
+        llm_cfg = llm_root.get("guardrails", {})
+        chat_llm_cfg = llm_root.get("chat", {})
+        providers_cfg = llm_root.get("providers", {})
+        default_provider = str(chat_llm_cfg.get("provider", DEFAULT_PROVIDER))
         guard_cfg = cfg.get("guardrails", {})
         api_cfg = cfg.get("api", {})
         max_len = int(api_cfg.get("input_validation", {}).get("max_message_length", 4000))
@@ -266,6 +308,8 @@ class ChatPipeline:
             input_guard_enabled=bool(guard_cfg.get("input_guard", {}).get("enabled", True)),
             query_refiner_enabled=bool(guard_cfg.get("query_refiner", {}).get("enabled", True)),
             output_guard_enabled=bool(guard_cfg.get("output_guard", {}).get("enabled", True)),
+            providers=providers_cfg,
+            default_provider=default_provider,
         )
 
 
@@ -356,10 +400,12 @@ async def chat(
     context = memory.get_context(session_id)
 
     try:
-        response_message, status = await pipeline.run(message, session_id, context)
+        response_message, status = await pipeline.run(message, session_id, context, provider=body.provider)
     except LLMNotConfiguredError as exc:
+        _logger.warning("chat generation not configured (provider=%r): %s", body.provider or DEFAULT_PROVIDER, exc)
         raise HTTPException(status_code=503, detail="The language model is not configured.") from exc
     except LLMUnavailableError as exc:
+        _logger.warning("chat generation unavailable (provider=%r): %s", body.provider or DEFAULT_PROVIDER, exc)
         raise HTTPException(status_code=503, detail="The language model is temporarily unavailable. Please try again shortly.") from exc
 
     # Record turns in the in-memory buffer
@@ -407,7 +453,7 @@ async def chat_stream(
     context = memory.get_context(session_id)
 
     async def event_source() -> AsyncIterator[str]:
-        async for ev in pipeline.run_stream(message, session_id, context):
+        async for ev in pipeline.run_stream(message, session_id, context, provider=body.provider):
             if ev.kind == "delta":
                 yield format_sse({"delta": ev.text})
             elif ev.kind == "error":

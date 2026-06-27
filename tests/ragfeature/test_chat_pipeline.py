@@ -22,6 +22,7 @@ def _make_pipeline(
     chat_llm: Optional[MagicMock] = None,
     input_status: GuardStatus = GuardStatus.PASSED,
     output_status: GuardStatus = GuardStatus.PASSED,
+    providers: Optional[dict[str, dict[str, Any]]] = None,
 ) -> ChatPipeline:
     input_guard = MagicMock()
     input_guard.check = AsyncMock(return_value=GuardOutcome(status=input_status))
@@ -39,6 +40,7 @@ def _make_pipeline(
         chat_llm=chat_llm or MagicMock(spec=LLMClient),
         system_prompt="You are a test assistant.",
         output_rejected_msg="REPLACED",
+        providers=providers or {},
     )
 
 
@@ -151,6 +153,62 @@ async def test_run_stream_emits_error_when_upstream_fails_mid_stream() -> None:
     assert events[0].text == "Hel"
     assert events[1].status == "llm_unavailable"
     assert not any(e.kind == "done" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_resolve_chat_llm_returns_default_without_provider() -> None:
+    default_llm = MagicMock(spec=LLMClient)
+    pipeline = _make_pipeline(chat_llm=default_llm, providers={"gemini": {"model": "gemini-flash-latest"}})
+
+    assert pipeline._resolve_chat_llm(None) is default_llm
+    assert pipeline._resolve_chat_llm("") is default_llm
+    # default chat provider is "local"; selecting it reuses the default client too.
+    assert pipeline._resolve_chat_llm("local") is default_llm
+    # an unknown/unconfigured provider falls back to the default rather than erroring.
+    assert pipeline._resolve_chat_llm("does-not-exist") is default_llm
+
+
+@pytest.mark.asyncio
+async def test_resolve_chat_llm_builds_selected_provider() -> None:
+    default_llm = MagicMock(spec=LLMClient)
+    default_llm._temperature = 0.7
+    default_llm._streaming = True
+    pipeline = _make_pipeline(chat_llm=default_llm, providers={"gemini": {"model": "gemini-flash-latest"}})
+
+    resolved = pipeline._resolve_chat_llm("gemini")
+
+    assert resolved is not default_llm
+    assert resolved.provider == "gemini"
+    assert resolved.model == "gemini-flash-latest"
+    # temperature/streaming are inherited from the default chat client.
+    assert resolved._temperature == 0.7
+    assert resolved._streaming is True
+
+
+@pytest.mark.asyncio
+async def test_run_stream_uses_provider_specific_client() -> None:
+    default_llm = MagicMock(spec=LLMClient)
+    default_llm._temperature = 0.7
+    default_llm._streaming = True
+    gemini_inner = MagicMock()
+    gemini_inner.astream = MagicMock(return_value=_aiter([SimpleNamespace(content="Hi from Gemini")]))
+    pipeline = _make_pipeline(chat_llm=default_llm, providers={"gemini": {"model": "gemini-flash-latest"}})
+
+    captured: dict[str, Any] = {}
+    original_resolve = pipeline._resolve_chat_llm
+
+    def _spy(provider: Optional[str]) -> Any:
+        captured["provider"] = provider
+        client = original_resolve(provider)
+        client.get = MagicMock(return_value=gemini_inner)  # type: ignore[method-assign]
+        return client
+
+    pipeline._resolve_chat_llm = _spy  # type: ignore[method-assign]
+
+    events = [ev async for ev in pipeline.run_stream("hi", "sess", provider="gemini")]
+
+    assert captured["provider"] == "gemini"
+    assert "".join(e.text for e in events if e.kind == "delta") == "Hi from Gemini"
 
 
 @pytest.mark.asyncio

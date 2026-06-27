@@ -2,7 +2,7 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 
 import type { BrainrotStyleKey, ChatAttachment, ChatMessage, Language } from "../types/chat";
 import { ApiError, sendChatMessage } from "../api/chatApi";
-import { timeFormatter } from "../utils/chat";
+import { resolveBackendProvider, timeFormatter } from "../utils/chat";
 
 interface UseChatSessionOptions {
   selectedModelId: string;
@@ -168,12 +168,12 @@ export function useChatSession({
         reasoning: reasoningText,
       };
 
-      const isGeminiModel = selectedModelId.toLowerCase().includes("gemini");
+      const backendProvider = resolveBackendProvider(selectedModelId);
 
-      if (isGeminiModel) {
+      if (backendProvider !== null) {
         scheduleTimeout(() => {
           setMessages((previous) => [...previous, thinkingMessage]);
-          void sendChatMessage(trimmed, sessionIdRef.current, token)
+          void sendChatMessage(trimmed, sessionIdRef.current, backendProvider, token)
             .then((response) => {
               sessionIdRef.current = response.session_id;
               streamReply(thinkingId, response.message);
@@ -195,8 +195,8 @@ export function useChatSession({
         }, 80);
         const fullReply =
           language === "de"
-            ? "Dieses LLM ist noch nicht angelegt. Kontaktiere den Admin. Aktuell arbeiten wir nur mit Google Gemini."
-            : "This LLM is not set up yet. Please contact the admin. For now, only Google Gemini is available.";
+            ? "Dieses LLM ist noch nicht angebunden. Kontaktiere den Admin. Aktuell verfügbar: Google Gemini und das lokal gehostete LLM."
+            : "This LLM is not connected yet. Please contact the admin. Currently available: Google Gemini and the locally hosted LLM.";
 
         streamReply(thinkingId, fullReply);
       }
@@ -208,6 +208,7 @@ export function useChatSession({
       isTyping,
       language,
       selectedModelId,
+      token,
       onFirstUserMessage,
       reasoningText,
       streamReply,

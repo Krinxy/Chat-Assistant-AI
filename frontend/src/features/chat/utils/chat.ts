@@ -1,4 +1,25 @@
-import type { BrainrotStyleKey, Language } from "../types/chat";
+import type { BackendProvider, BrainrotStyleKey, Language } from "../types/chat";
+
+/**
+ * Map a selected model id to the backend chat provider that should handle it.
+ *
+ * Returns `null` for models that are not yet connected to a real backend (the UI
+ * shows a placeholder reply for those). Gemini model ids route to the Gemini
+ * provider; the local self-hosted group routes to the local OpenAI-compatible gateway.
+ */
+export const resolveBackendProvider = (modelId: string): BackendProvider | null => {
+  const id = modelId.trim().toLowerCase();
+
+  if (id.includes("gemini")) {
+    return "gemini";
+  }
+
+  if (id.startsWith("local")) {
+    return "local";
+  }
+
+  return null;
+};
 
 interface ComposeAssistantReplyOptions {
   brainrotTone?: boolean;

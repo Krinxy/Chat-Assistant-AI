@@ -28,6 +28,7 @@ from .api.documents import router as documents_router  # noqa: E402
 from .api.sessions import router as sessions_router  # noqa: E402
 from .db.session import init_db  # noqa: E402
 from .services.core.chat.transcription.websocket import router as transcription_router  # noqa: E402
+from .services.dependency.llm import LLMClient  # noqa: E402
 from .services.utils.transcription.preflight import (  # noqa: E402
     print_preflight_report,
     run_transcription_preflight,
@@ -153,7 +154,9 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        return {"status": "ok"}
+        # LLM status reflects whether the gateway credentials are present in the
+        # environment — no inference call is made, so /health stays fast and free.
+        return {"status": "ok", "llm": "configured" if LLMClient.is_configured() else "not_configured"}
 
     app.include_router(transcription_router)
     app.include_router(auth_router, prefix="/api")

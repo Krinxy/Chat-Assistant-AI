@@ -23,7 +23,10 @@ def test_backend_health_endpoint_is_available() -> None:
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    # LLM status reflects gateway credential presence without an inference call.
+    assert body["llm"] in {"configured", "not_configured"}
 
 
 def test_ws_transcription_streams_transcript_payload_and_clears_cache(monkeypatch) -> None:

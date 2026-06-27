@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-minimum-32-chars-long!")
 
+from backend.app.api import chat as chat_api  # noqa: E402
 from backend.app.api.chat import initialize as initialize_chat  # noqa: E402
 from backend.app.api.documents import _get_document_embedder  # noqa: E402
 from backend.app.db.session import Base, get_db  # noqa: E402
@@ -22,7 +23,7 @@ from backend.app.main import create_app  # noqa: E402
 from backend.app.services.core.agents.persona_loader import PersonaLoader  # noqa: E402
 from backend.app.services.core.guardrails.policy_guard import PolicyGuard  # noqa: E402
 from backend.app.services.core.ingestion.embedder import DocumentEmbedder, EmbeddingService  # noqa: E402
-from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError  # noqa: E402
+from backend.app.services.dependency.llm import LLMClient, LLMNotConfiguredError, LLMUnavailableError  # noqa: E402
 from backend.app.services.utils.config import ConfigLoader  # noqa: E402
 from tests.ragfeature.conftest import FakeChromaCollection, HashingEmbeddingModel  # noqa: E402
 
@@ -256,6 +257,42 @@ async def test_chat_returns_503_on_db_error() -> None:
         os.environ["AUTH_MODE"] = prev_mode
 
 
+# ── Chat endpoint: upstream LLM failure → 503 ────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_chat_returns_503_on_llm_upstream_failure() -> None:
+    from backend.app.main import create_app as _create_app
+
+    prev_mode = os.environ.get("AUTH_MODE")
+    os.environ["AUTH_MODE"] = "mock"
+    os.environ["MOCK_USER_ROLE"] = "user"
+
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    app = _create_app()
+    initialize_chat(app)
+    app.dependency_overrides[get_db] = _override_get_db
+
+    pipeline = MagicMock()
+    pipeline._max_message_length = 4000
+    pipeline.run = AsyncMock(side_effect=LLMUnavailableError("502 Bad Gateway"))
+    app.dependency_overrides[chat_api._pipeline_dep] = lambda: pipeline
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.post("/api/chat", json={"message": "hello"})
+        assert resp.status_code == 503
+
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    if prev_mode is None:
+        os.environ.pop("AUTH_MODE", None)
+    else:
+        os.environ["AUTH_MODE"] = prev_mode
+
+
 # ── Sessions endpoint: SQLAlchemy error → 503 ────────────────────────────────
 
 
@@ -294,9 +331,9 @@ async def test_create_session_returns_503_on_db_error() -> None:
 
 def test_llm_client_remaps_init_error_to_not_configured() -> None:
     client = LLMClient()
-    with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"}):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "fake-key", "OPENAI_BASE_URL": "https://gw.example/v1"}):
         with patch(
-            "backend.app.services.dependency.llm.ChatGoogleGenerativeAI",
+            "backend.app.services.dependency.llm.ChatOpenAI",
             side_effect=RuntimeError("quota exceeded"),
         ):
             with pytest.raises(LLMNotConfiguredError, match="Failed to initialise"):

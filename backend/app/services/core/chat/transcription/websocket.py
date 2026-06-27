@@ -81,17 +81,18 @@ async def transcribe_audio(websocket: WebSocket) -> None:
 
     receive_poll_ms = _resolve_int_env(
         "TRANSCRIPTION_RECEIVE_POLL_MS",
-        120,
-        min_value=40,
-        max_value=1000,
+        _cfg.transcription.receive_poll_ms,
+        min_value=_cfg.transcription.receive_poll_ms_min,
+        max_value=_cfg.transcription.receive_poll_ms_max,
     )
     max_inflight_chunks = _resolve_int_env(
         "TRANSCRIPTION_MAX_INFLIGHT_CHUNKS",
         session_handler.recommended_max_inflight_chunks(),
-        min_value=1,
-        max_value=8,
+        min_value=_cfg.transcription.max_inflight_chunks_min,
+        max_value=_cfg.transcription.max_inflight_chunks_max,
     )
 
+    max_chunk_bytes = _cfg.api.max_audio_chunk_bytes
     disconnected = False
     chunk_index = 0
     next_emit_index = 0
@@ -231,7 +232,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
             if len(audio_chunk) == 0:
                 continue
 
-            if len(audio_chunk) > _cfg.api.max_audio_chunk_bytes:
+            if len(audio_chunk) > max_chunk_bytes:
                 await _send_payload({"type": "error", "message": "Audio chunk too large"})
                 continue
 

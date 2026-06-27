@@ -38,6 +38,7 @@ class RateLimitConfig:
 @dataclass
 class ApiConfig:
     body_limit_bytes: int = 1_048_576
+    max_upload_bytes: int = 20 * 1024 * 1024
     hsts_max_age_seconds: int = 31_536_000
     max_audio_chunk_bytes: int = 10 * 1024 * 1024
     ws_auth_timeout_seconds: float = 10.0
@@ -113,3 +114,4 @@ def _load() -> AppConfig:
 
 
 cfg = _load()
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"

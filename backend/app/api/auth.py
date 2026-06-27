@@ -15,7 +15,7 @@ from ..services.core.auth.user_service import (
     request_password_reset,
     reset_password,
 )
-from ..config import cfg as _cfg
+from ..config import cfg as _cfg, IS_PRODUCTION
 from ..services.dependency.auth import get_current_user
 from ..services.dependency.ratelimit import check_rate_limit
 
@@ -54,8 +54,9 @@ class ForgotPasswordRequest:
 
 @dataclass
 class ForgotPasswordResponse:
-    reset_token: str
-    message: str = field(default="If this email exists, a reset token has been generated.")
+    message: str = field(default="If this email exists, a reset link has been sent.")
+    # Returned only outside production — use to test the reset flow without an email service.
+    reset_token: str | None = field(default=None)
 
 
 @dataclass
@@ -104,7 +105,7 @@ async def forgot_password(
 ) -> ForgotPasswordResponse:
     check_rate_limit(request, limit=_cfg.rate_limit.forgot_password_max_attempts, window=_cfg.rate_limit.forgot_password_window_seconds)
     token = await request_password_reset(body.email, db)
-    return ForgotPasswordResponse(reset_token=token)
+    return ForgotPasswordResponse(reset_token=None if IS_PRODUCTION else token)
 
 
 @router.get("/me", response_model=MeResponse)

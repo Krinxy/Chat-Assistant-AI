@@ -1,4 +1,4 @@
-const API_BASE = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:8000";
+export const API_BASE = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL ?? "http://localhost:8000";
 
 export interface AppConfig {
   persist_token_in_browser: boolean;
@@ -58,15 +58,11 @@ export async function apiFetchConfig(): Promise<AppConfig> {
   }
 }
 
-export async function apiRegister(
-  email: string,
-  password: string,
-  role: "admin" | "user" = "user",
-): Promise<RegisterResult> {
+export async function apiRegister(email: string, password: string): Promise<RegisterResult> {
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, role }),
+    body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {

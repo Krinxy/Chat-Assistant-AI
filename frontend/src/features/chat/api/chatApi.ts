@@ -1,4 +1,5 @@
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+import { API_BASE } from "../../../shared/api/auth_api";
+import { TOKEN_KEY } from "../../../shared/constants/auth";
 
 export interface ChatApiResponse {
   status: string;
@@ -27,9 +28,9 @@ export class ApiError extends Error {
 }
 
 export async function sendChatMessage(message: string, sessionId: string): Promise<ChatApiResponse> {
-  const token = globalThis.localStorage?.getItem("auth_token");
+  const token = globalThis.localStorage?.getItem(TOKEN_KEY);
 
-  const response = await fetch(`${BASE_URL}/api/chat`, {
+  const response = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

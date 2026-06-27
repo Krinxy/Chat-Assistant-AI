@@ -92,6 +92,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
         max_value=8,
     )
 
+    max_chunk_bytes = _cfg.api.max_audio_chunk_bytes
     disconnected = False
     chunk_index = 0
     next_emit_index = 0
@@ -231,7 +232,7 @@ async def transcribe_audio(websocket: WebSocket) -> None:
             if len(audio_chunk) == 0:
                 continue
 
-            if len(audio_chunk) > _cfg.api.max_audio_chunk_bytes:
+            if len(audio_chunk) > max_chunk_bytes:
                 await _send_payload({"type": "error", "message": "Audio chunk too large"})
                 continue
 

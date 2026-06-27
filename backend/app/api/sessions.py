@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_db
 from ..models.session import ChatSession
+from ..models.user import User
 from ..services.core.chat.memory import SessionMemoryManager
+from ..services.dependency.authtoken import authtoken
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -40,7 +42,9 @@ def _memory_dep(request: Request) -> SessionMemoryManager:
 
 
 @router.post("", response_model=SessionCreateResponse, responses={503: {"description": "Database temporarily unavailable"}})
+@authtoken
 async def create_session(
+    current_user: User,
     db: AsyncSession = Depends(get_db),
     memory: SessionMemoryManager = Depends(_memory_dep),
 ) -> SessionCreateResponse:
@@ -63,8 +67,10 @@ async def create_session(
         503: {"description": "Database temporarily unavailable"},
     },
 )
+@authtoken
 async def get_session_history(
     session_id: str,
+    current_user: User,
     db: AsyncSession = Depends(get_db),
     memory: SessionMemoryManager = Depends(_memory_dep),
 ) -> SessionHistoryResponse:

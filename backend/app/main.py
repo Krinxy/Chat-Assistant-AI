@@ -36,6 +36,8 @@ from .services.utils.transcription.preflight import (  # noqa: E402
 _logger = logging.getLogger(__name__)
 
 _BODY_LIMIT_BYTES = cfg.api.body_limit_bytes
+# Document uploads are allowed up to max_upload_bytes; the global limit is enforced in-endpoint.
+_BODY_LIMIT_EXEMPT_PATHS = {"/api/documents/upload"}
 
 _IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
 
@@ -57,6 +59,8 @@ def _ensure_jwt_secret() -> None:
 
 class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.url.path in _BODY_LIMIT_EXEMPT_PATHS:
+            return await call_next(request)
         cl = request.headers.get("content-length")
         if cl and int(cl) > _BODY_LIMIT_BYTES:
             return Response(

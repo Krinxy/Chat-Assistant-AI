@@ -125,11 +125,12 @@ def test_embedding_service_raises_runtime_error_on_model_load_failure() -> None:
 
 
 def test_vector_db_get_collection_raises_runtime_error_on_failure() -> None:
-    from backend.app.services.dependency.vectordb import VectorDBClient, VectorDBConfig
+    from backend.app.config import VectorDbConfig
+    from backend.app.services.dependency.vectordb import VectorDBClient
 
     broken_client = MagicMock()
     broken_client.get_or_create_collection.side_effect = Exception("disk full")
-    vdb = VectorDBClient(client=broken_client, config=VectorDBConfig())
+    vdb = VectorDBClient(client=broken_client, config=VectorDbConfig())
     with pytest.raises(RuntimeError, match="ChromaDB collection"):
         vdb.get_collection()
 

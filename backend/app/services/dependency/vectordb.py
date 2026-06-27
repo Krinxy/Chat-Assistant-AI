@@ -1,37 +1,27 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from ...config import VectorDbConfig, cfg as _cfg
 
 if TYPE_CHECKING:
     from chromadb.api import ClientAPI
     from chromadb.api.models.Collection import Collection
 
-_DEFAULT_PERSIST_PATH = "./chroma_db"
-_DEFAULT_COLLECTION_NAME = "documents"
-_COSINE_SPACE = "cosine"
-
-
-@dataclass(frozen=True)
-class VectorDBConfig:
-    persist_path: str = _DEFAULT_PERSIST_PATH
-    collection_name: str = _DEFAULT_COLLECTION_NAME
-
 
 class VectorDBClient:
-    """Singleton-friendly wrapper around a ChromaDB PersistentClient using cosine similarity.
+    """Singleton-friendly wrapper around a ChromaDB PersistentClient.
 
     The underlying ChromaDB client can be injected for tests; in production it is created
-    lazily from a persistent on-disk path so documents stay on-premises.
+    lazily from the persist_path in cfg.vector_db so documents stay on-premises.
     """
 
     def __init__(
         self,
         client: ClientAPI | None = None,
-        config: VectorDBConfig | None = None,
+        config: VectorDbConfig | None = None,
     ) -> None:
-        self._config = config or VectorDBConfig(persist_path=_resolve_persist_path_from_env())
+        self._config = config if config is not None else _cfg.vector_db
         self._client = client if client is not None else _create_persistent_client(self._config.persist_path)
         self._collection: Collection | None = None
 
@@ -44,12 +34,12 @@ class VectorDBClient:
         return self._config.persist_path
 
     def get_collection(self) -> Collection:
-        """Return the cosine-similarity document collection, creating it if necessary."""
+        """Return the document collection, creating it if necessary."""
         if self._collection is None:
             try:
                 self._collection = self._client.get_or_create_collection(
                     name=self._config.collection_name,
-                    metadata={"hnsw:space": _COSINE_SPACE},
+                    metadata={"hnsw:space": self._config.distance_metric},
                 )
             except Exception as exc:
                 raise RuntimeError(f"ChromaDB collection '{self._config.collection_name}' unavailable: {exc}") from exc
@@ -89,14 +79,6 @@ def _create_persistent_client(persist_path: str) -> ClientAPI:
         )
     except Exception as exc:
         raise RuntimeError(f"ChromaDB client could not be created at '{persist_path}': {exc}") from exc
-
-
-def _resolve_persist_path_from_env() -> str:
-    configured_path = os.getenv("CHROMA_PATH", "").strip()
-    if len(configured_path) == 0:
-        return _DEFAULT_PERSIST_PATH
-
-    return configured_path
 
 
 _vector_db_client: VectorDBClient | None = None

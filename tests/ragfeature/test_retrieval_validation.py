@@ -19,7 +19,8 @@ pytest.importorskip("chromadb")
 
 from backend.app.services.core.ingestion.chunker import DocumentChunker  # noqa: E402
 from backend.app.services.core.ingestion.embedder import DocumentEmbedder, EmbeddingService  # noqa: E402
-from backend.app.services.dependency.vectordb import VectorDBClient, VectorDBConfig  # noqa: E402
+from backend.app.config import VectorDbConfig  # noqa: E402
+from backend.app.services.dependency.vectordb import VectorDBClient  # noqa: E402
 
 HIT_RATE_THRESHOLD = 0.8
 MIN_TOP1_SIMILARITY = 0.25
@@ -42,7 +43,7 @@ def populated_collection(embedding_service: EmbeddingService):
 
     client = VectorDBClient(
         client=chromadb.EphemeralClient(),
-        config=VectorDBConfig(persist_path="unused", collection_name="ground_truth"),
+        config=VectorDbConfig(persist_path="unused", collection_name="ground_truth"),
     )
     collection = client.reset_collection()
 

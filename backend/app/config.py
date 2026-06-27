@@ -103,12 +103,20 @@ def _load() -> AppConfig:
     if env_origins.strip():
         api_kwargs["allowed_origins"] = [o.strip() for o in env_origins.split(",") if o.strip()]
 
+    # CHROMA_PATH env var takes precedence over YAML for operational flexibility
+    vectordb_raw = dict(raw.get("vectordb") or {})
+    chroma_path = os.getenv("CHROMA_PATH", "").strip()
+    if chroma_path:
+        vectordb_raw["persist_path"] = chroma_path
+    vectordb_known = {f.name for f in dataclasses.fields(VectorDbConfig)}
+    vectordb_kwargs = {k: v for k, v in vectordb_raw.items() if k in vectordb_known}
+
     return AppConfig(
         auth=_section(AuthConfig, raw, "auth"),
         rate_limit=_section(RateLimitConfig, raw, "rate_limit"),
         api=ApiConfig(**api_kwargs) if api_kwargs else ApiConfig(),
         transcription=_section(TranscriptionConfig, raw, "transcription"),
-        vector_db=_section(VectorDbConfig, raw, "vectordb"),
+        vector_db=VectorDbConfig(**vectordb_kwargs) if vectordb_kwargs else VectorDbConfig(),
         redis=_section(RedisConfig, raw, "redis"),
     )
 

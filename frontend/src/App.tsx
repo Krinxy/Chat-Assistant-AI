@@ -144,7 +144,7 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
-  const [selectedModelId, setSelectedModelId] = useState<string>("gpt-5.3-codex");
+  const [selectedModelId, setSelectedModelId] = useState<string>("gemini-2.5-flash");
   const [activeServices, setActiveServices] = useState<ChatServiceKey[]>([]);
   const [brainrotStyle, setBrainrotStyle] = useState<BrainrotStyleKey>(getInitialBrainrotStyle);
   const [localModelOptions, setLocalModelOptions] = useState<ModelOption[]>([]);

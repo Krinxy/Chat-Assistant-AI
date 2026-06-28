@@ -29,6 +29,7 @@ export class ApiError extends Error {
 export async function sendChatMessage(
   message: string,
   sessionId: string,
+  provider: string,
   token: string | null,
 ): Promise<ChatApiResponse> {
   const response = await fetch(`${API_BASE}/api/chat`, {
@@ -37,7 +38,7 @@ export async function sendChatMessage(
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ message, session_id: sessionId }),
+    body: JSON.stringify({ message, session_id: sessionId, provider }),
   });
 
   if (!response.ok) {

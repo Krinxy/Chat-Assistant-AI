@@ -28,6 +28,11 @@ export interface ModelOption {
   label: string;
 }
 
+// Chat providers wired to the real backend. Keep in sync with the `llm.providers`
+// keys in backend/config/backend.yaml. Models not mapping to one of these are not
+// yet connected and fall back to a placeholder reply in the UI.
+export type BackendProvider = "local" | "gemini";
+
 export interface ModelProvider {
   id: string;
   label: string;

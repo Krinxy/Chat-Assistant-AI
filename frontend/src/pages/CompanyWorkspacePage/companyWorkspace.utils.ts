@@ -5,8 +5,118 @@ import type {
   CompanyRecord,
   CompanyTeamMemberEntry,
   DisplayRole,
+  HypothesisEntry,
   ParsedAppointmentItem,
 } from "./companyWorkspace.types";
+import type { Language } from "../../features/chat/types/chat";
+
+export const trendFor = (isUp: boolean, isDown: boolean): "up" | "down" | "neutral" => {
+  if (isUp) return "up";
+  if (isDown) return "down";
+  return "neutral";
+};
+
+export const genSpark = (end: number, trend: "up" | "down" | "neutral", seed: number): number[] => {
+  const pts: number[] = [];
+  let v = trend === "up" ? end * 0.55 : trend === "down" ? end * 1.45 : end * 0.85;
+  for (let i = 0; i < 8; i++) {
+    const noise = ((((seed * (i + 1) * 7919) % 100) / 100) - 0.5) * end * 0.22;
+    v += (end - v) * 0.28 + noise;
+    pts.push(Math.max(0, Math.min(end * 1.6, v)));
+  }
+  pts.push(end);
+  return pts;
+};
+
+export const sparkPolyline = (pts: readonly number[]): string => {
+  const W = 80;
+  const H = 32;
+  const max = Math.max(...pts) || 1;
+  const min = Math.min(...pts);
+  const range = max - min || 1;
+  return pts
+    .map((v, i) => {
+      const x = (i / (pts.length - 1)) * W;
+      const y = H - ((v - min) / range) * (H - 4);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+};
+
+export const buildPerformanceRows = (company: CompanyRecord, activeHypotheses: HypothesisEntry[], language: Language) => {
+  const totalOpen = company.openQuestions + company.pendingMeetings;
+  const totalCompleted = company.completedQuestions + company.completedMeetings;
+  const confirmedHypo = activeHypotheses.filter((h) => h.status === "confirmed").length;
+  const churnRisk = Math.min(82, Math.max(5, totalOpen * 4 + company.pendingMeetings * 5));
+  const nrr = Math.round(Math.min(138, Math.max(80, 108 + company.completedMeetings * 2 - company.pendingMeetings * 3)));
+  const arrGrowth = Math.round(Math.min(44, Math.max(3, 13 + confirmedHypo * 5 - totalOpen * 0.6)));
+  const upsellRate = Math.round(Math.min(86, Math.max(12, 36 + activeHypotheses.length * 8)));
+  const dealVelocity = Math.round(Math.min(58, Math.max(9, 40 - totalCompleted * 0.5 + totalOpen * 1.1)));
+  const healthScore = Math.round(Math.min(97, Math.max(38, 84 - totalOpen * 2.4 + totalCompleted * 0.4)));
+
+  return [
+    {
+      id: "churn",
+      label: language === "de" ? "Churn-Risiko" : "Churn Risk",
+      value: churnRisk,
+      unit: "%",
+      note: language === "de" ? "↓ Ziel <20%" : "↓ Target <20%",
+      trend: trendFor(churnRisk < 20, churnRisk > 45),
+      barPct: churnRisk,
+      spark: genSpark(churnRisk, trendFor(churnRisk < 20, churnRisk > 45), 3),
+    },
+    {
+      id: "nrr",
+      label: "NRR",
+      value: nrr,
+      unit: "%",
+      note: language === "de" ? "Ziel >100%" : "Target >100%",
+      trend: trendFor(nrr >= 105, nrr < 95),
+      barPct: Math.min(100, nrr - 50),
+      spark: genSpark(nrr, trendFor(nrr >= 105, nrr < 95), 7),
+    },
+    {
+      id: "arr",
+      label: language === "de" ? "ARR-Wachstum" : "ARR Growth",
+      value: arrGrowth,
+      unit: "%",
+      note: "YoY",
+      trend: trendFor(arrGrowth >= 15, arrGrowth < 7),
+      barPct: arrGrowth,
+      spark: genSpark(arrGrowth, trendFor(arrGrowth >= 15, arrGrowth < 7), 11),
+    },
+    {
+      id: "upsell",
+      label: language === "de" ? "Upsell-Rate" : "Upsell Rate",
+      value: upsellRate,
+      unit: "%",
+      note: language === "de" ? "Potenzial identifiziert" : "Potential identified",
+      trend: trendFor(upsellRate >= 50, upsellRate < 28),
+      barPct: upsellRate,
+      spark: genSpark(upsellRate, trendFor(upsellRate >= 50, upsellRate < 28), 13),
+    },
+    {
+      id: "velocity",
+      label: language === "de" ? "Deal-Velocity" : "Deal Velocity",
+      value: dealVelocity,
+      unit: language === "de" ? " Tage" : " days",
+      note: language === "de" ? "↓ Ziel <25 Tage" : "↓ Target <25 days",
+      trend: trendFor(dealVelocity < 25, dealVelocity > 42),
+      barPct: Math.max(0, 100 - dealVelocity * 2),
+      spark: genSpark(dealVelocity, trendFor(dealVelocity < 25, dealVelocity > 42), 17),
+    },
+    {
+      id: "health",
+      label: "Health Score",
+      value: healthScore,
+      unit: "/100",
+      note: language === "de" ? "Account-Gesundheit" : "Account health",
+      trend: trendFor(healthScore >= 72, healthScore < 52),
+      barPct: healthScore,
+      spark: genSpark(healthScore, trendFor(healthScore >= 72, healthScore < 52), 19),
+    },
+  ];
+};
 
 export const formatFileSize = (sizeInBytes: number): string => {
   if (sizeInBytes <= 0) {

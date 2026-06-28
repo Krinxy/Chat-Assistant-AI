@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from collections import defaultdict
+from collections import deque
 
 from fastapi import HTTPException, Request, status
 
@@ -13,7 +13,7 @@ class IpRateLimiter:
     Not distributed: use Redis-backed slowapi for multi-process deployments.
     """
 
-    _hits: dict[str, list[float]] = defaultdict(list)
+    _buckets: dict[str, deque[float]] = {}
 
     @classmethod
     def check(cls, request: Request, *, limit: int = 5, window: int = 60) -> None:
@@ -23,19 +23,21 @@ class IpRateLimiter:
         now = time.monotonic()
         cutoff = now - window
 
-        active = [t for t in cls._hits[key] if t > cutoff]
-        cls._hits[key] = active
+        if key not in cls._buckets:
+            cls._buckets[key] = deque()
+        bucket = cls._buckets[key]
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
 
-        if len(active) >= limit:
+        if len(bucket) >= limit:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Too many requests. Try again in {window} seconds.",
                 headers={"Retry-After": str(window)},
             )
 
-        cls._hits[key].append(now)
+        bucket.append(now)
 
 
 def check_rate_limit(request: Request, *, limit: int = 5, window: int = 60) -> None:
-    """Module-level alias kept for auth.py backward compatibility."""
     IpRateLimiter.check(request, limit=limit, window=window)

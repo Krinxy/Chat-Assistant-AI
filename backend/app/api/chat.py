@@ -24,6 +24,7 @@ from ..services.core.guardrails.policy_guard import PolicyGuard
 from ..services.core.guardrails.query_refiner import QueryRefiner
 from ..services.dependency.authtoken import authtoken
 from ..services.dependency.llm import LLMClient, LLMNotConfiguredError, LLMUnavailableError
+from ..config import cfg as _app_cfg
 from ..services.utils.config import ConfigLoader
 from ..services.utils.rate_limit import RateLimiter
 from ..services.utils.streaming import ThinkBlockFilter, format_sse, strip_think_blocks
@@ -245,7 +246,7 @@ class ChatPipeline:
         chat_llm_cfg = cfg.get("llm", {}).get("chat", {})
         guard_cfg = cfg.get("guardrails", {})
         api_cfg = cfg.get("api", {})
-        max_len = int(api_cfg.get("input_validation", {}).get("max_message_length", 4000))
+        max_len = int(api_cfg.get("max_message_length", 4000))
         messages_cfg = api_cfg.get("messages", {})
 
         return cls(
@@ -274,10 +275,11 @@ class ChatPipeline:
 
 def initialize(app: FastAPI) -> None:
     """Populate app.state with chat service dependencies. Called once from the lifespan."""
-    cfg = ConfigLoader.get_backend()
-    app.state.chat_pipeline = ChatPipeline.from_config(cfg)
-    app.state.chat_rate_limiter = RateLimiter.from_config(cfg)
-    app.state.session_memory = SessionMemoryManager.from_config(cfg)
+    # ChatPipeline reads LLM/guardrails/RAG config via raw dict (ConfigLoader).
+    # Rate limiter and session memory use the typed AppConfig.
+    app.state.chat_pipeline = ChatPipeline.from_config(ConfigLoader.get_backend())
+    app.state.chat_rate_limiter = RateLimiter.from_config(_app_cfg)
+    app.state.session_memory = SessionMemoryManager.from_config(_app_cfg)
 
 
 # ── FastAPI dependencies ───────────────────────────────────────────────────────

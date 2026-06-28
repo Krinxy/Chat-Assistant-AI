@@ -92,9 +92,14 @@ class TestSessionMemoryManager:
         assert "Q3 revenue" in ctx
 
     def test_from_config_reads_max_context_turns(self) -> None:
-        mgr = SessionMemoryManager.from_config({"api": {"session": {"max_context_turns": 5}}})
+        from backend.app.config import ApiConfig, AppConfig
+
+        cfg = AppConfig(api=ApiConfig(max_context_turns=5))
+        mgr = SessionMemoryManager.from_config(cfg)
         assert mgr._max_turns == 5
 
     def test_from_config_default_fallback(self) -> None:
-        mgr = SessionMemoryManager.from_config({})
+        from backend.app.config import AppConfig
+
+        mgr = SessionMemoryManager.from_config(AppConfig())
         assert mgr._max_turns == 10

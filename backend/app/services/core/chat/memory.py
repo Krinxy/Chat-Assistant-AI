@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ....config import AppConfig
 
 
 class ConversationBuffer:
@@ -82,6 +85,5 @@ class SessionMemoryManager:
         return buf.get_context() if buf and not buf.is_empty else ""
 
     @classmethod
-    def from_config(cls, config: dict[str, Any]) -> "SessionMemoryManager":
-        max_turns = int(config.get("api", {}).get("session", {}).get("max_context_turns", 10))
-        return cls(max_turns=max_turns)
+    def from_config(cls, config: AppConfig) -> "SessionMemoryManager":
+        return cls(max_turns=config.api.max_context_turns)

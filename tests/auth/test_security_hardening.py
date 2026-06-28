@@ -25,7 +25,7 @@ async def client():
     # Clear rate-limit state so tests don't bleed into each other
     from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    IpRateLimiter._hits.clear()
+    IpRateLimiter._buckets.clear()
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)

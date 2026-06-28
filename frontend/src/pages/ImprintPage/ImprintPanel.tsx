@@ -237,6 +237,8 @@ export function ImprintPanel({ language, onClose }: ImprintPanelProps) {
         role="dialog"
         aria-modal="true"
         aria-label={copy.title}
+        tabIndex={-1}
+        onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}
       >
         <header className="imprint-modal-header">
           <div className="imprint-modal-title-group">

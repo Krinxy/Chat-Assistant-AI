@@ -1039,6 +1039,7 @@ export function ChatPanel({
                   <input
                     type="text"
                     placeholder={copy.modelSearchPlaceholder}
+                    aria-label={copy.modelSearchPlaceholder}
                     className="popup-search-input"
                     value={modelSearch}
                     onChange={(event) => setModelSearch(event.target.value)}
@@ -1525,6 +1526,7 @@ export function ChatPanel({
                 className="chat-file-input"
                 type="file"
                 multiple
+                aria-label={copy.attachTitle}
                 onChange={handleChatFileUpload}
               />
             </div>

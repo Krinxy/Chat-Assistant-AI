@@ -362,7 +362,13 @@ function AddAppointmentModal({ text, weekDays, visibleDayIndices, activeTeamMemb
       role="presentation"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
-      <div className="appt-modal" role="dialog" aria-modal="true" aria-label={text.appointmentFormTitle}>
+      <div
+        className="appt-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={text.appointmentFormTitle}
+        onKeyDown={(event) => { if (event.key === "Escape") onClose(); }}
+      >
         <div className="appt-modal-header">
           <span className="appt-modal-heading">{text.appointmentFormTitle}</span>
           <button className="appt-modal-close" onClick={onClose} aria-label={text.appointmentFormCancel} type="button">✕</button>

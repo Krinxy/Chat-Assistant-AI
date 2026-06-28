@@ -1,0 +1,70 @@
+version: "3.9"
+
+# Development environment: mirrors production backing services (Postgres, Redis)
+# while keeping hot-reload enabled for the backend.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up
+#
+# The backend DATABASE_URL points to Postgres — set MIGRATE=1 on first run to
+# initialise the schema, or run:  docker compose exec backend python -m alembic upgrade head
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+asyncpg://chat:chat@db:5432/chatdb
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_PATH: /data/chroma
+      LOG_LEVEL: DEBUG
+      UVICORN_WORKERS: "1"
+      # Secrets — copy .env.example → .env and fill in real values
+      JWT_SECRET: ${JWT_SECRET:-change-me-dev-only-secret}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+    volumes:
+      - .:/app
+      - chroma_data:/data/chroma
+    working_dir: /app/backend
+    command: >
+      sh -c "python -m uvicorn app.main:app
+             --host 0.0.0.0 --port 8000 --reload"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: chat
+      POSTGRES_DB: chatdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d chatdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:

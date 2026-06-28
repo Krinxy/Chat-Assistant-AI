@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 from dataclasses import dataclass
 
 from ...core.chat.transcription.runtime import runtime_service
 from ...core.chat.transcription.transcriber import _resolve_ffmpeg_binary_path
+
+_logger = logging.getLogger(__name__)
 
 
 def _parse_bool_env(name: str, default_value: bool) -> bool:
@@ -74,37 +77,37 @@ def run_transcription_preflight(
     )
 
 
-def _print_preload_status(report: TranscriptionPreflightReport) -> None:
+def _log_preload_status(report: TranscriptionPreflightReport) -> None:
     if not report.preload_attempted:
-        print("[transcription] model preload: skipped")
+        _logger.info("model preload: skipped")
         return
     if report.preload_success:
-        print(f"[transcription] model preload: ok ({report.runtime_device or 'unknown'})")
+        _logger.info("model preload: ok (%s)", report.runtime_device or "unknown")
         return
-    print("[transcription] model preload: failed")
+    _logger.warning("model preload: failed")
     if report.preload_error is not None:
-        print(f"[transcription] preload error: {report.preload_error}")
+        _logger.warning("preload error: %s", report.preload_error)
 
 
 def print_preflight_report(report: TranscriptionPreflightReport) -> None:
-    print("[transcription] startup preflight")
+    _logger.info("startup preflight")
 
     if len(report.missing_packages) == 0:
-        print("[transcription] dependencies: ok")
+        _logger.info("dependencies: ok")
     else:
-        print("[transcription] missing python packages: " + ", ".join(report.missing_packages))
+        _logger.warning("missing python packages: %s", ", ".join(report.missing_packages))
 
     if report.ffmpeg_path is None:
-        print("[transcription] ffmpeg: missing")
+        _logger.warning("ffmpeg: missing")
     else:
-        print(f"[transcription] ffmpeg: {report.ffmpeg_path}")
+        _logger.info("ffmpeg: %s", report.ffmpeg_path)
 
-    _print_preload_status(report)
+    _log_preload_status(report)
 
     if report.has_missing_runtime_dependencies and not report.fake_fallback_enabled:
-        print("[transcription] critical: fallback disabled and runtime dependencies missing")
+        _logger.critical("fallback disabled and runtime dependencies missing")
     elif report.has_missing_runtime_dependencies:
-        print("[transcription] warning: running with fake fallback mode")
+        _logger.warning("running with fake fallback mode")
 
 
 def _parse_args() -> argparse.Namespace:

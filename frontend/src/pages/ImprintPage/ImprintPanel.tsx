@@ -229,12 +229,15 @@ export function ImprintPanel({ language, onClose }: ImprintPanelProps) {
   return (
     <div
       className="imprint-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={copy.title}
+      role="presentation"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
-      <article className="imprint-modal">
+      <article
+        className="imprint-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.title}
+      >
         <header className="imprint-modal-header">
           <div className="imprint-modal-title-group">
             <h2 className="imprint-modal-title">{copy.title}</h2>

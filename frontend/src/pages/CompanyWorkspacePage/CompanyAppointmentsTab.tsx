@@ -357,8 +357,12 @@ function AddAppointmentModal({ text, weekDays, visibleDayIndices, activeTeamMemb
   };
 
   return (
-    <div className="appt-modal-overlay" role="dialog" aria-modal="true" aria-label={text.appointmentFormTitle} onClick={onClose}>
-      <div className="appt-modal" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="appt-modal-overlay"
+      role="presentation"
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <div className="appt-modal" role="dialog" aria-modal="true" aria-label={text.appointmentFormTitle}>
         <div className="appt-modal-header">
           <span className="appt-modal-heading">{text.appointmentFormTitle}</span>
           <button className="appt-modal-close" onClick={onClose} aria-label={text.appointmentFormCancel} type="button">✕</button>
@@ -724,7 +728,15 @@ export function CompanyAppointmentsTab({
                                   minHeight: isExpanded ? cardHeight : undefined,
                                   cursor: canClick ? "pointer" : "default",
                                 }}
+                                role={canClick ? "button" : undefined}
+                                tabIndex={canClick ? 0 : undefined}
                                 onClick={canClick ? () => setExpandedCardId(isExpanded ? null : cardKey) : undefined}
+                                onKeyDown={canClick ? (event) => {
+                                  if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    setExpandedCardId(isExpanded ? null : cardKey);
+                                  }
+                                } : undefined}
                               >
                                 <div className={showInviteBadge ? "planner-card-time-row" : undefined}>
                                   <time className="planner-card-time">
@@ -771,6 +783,7 @@ export function CompanyAppointmentsTab({
                                 {isPending && isExpanded && rsvpCopy !== undefined && onRsvp !== undefined && (
                                   <div
                                     className="planner-card-rsvp"
+                                    role="presentation"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {entry.invitedBy !== undefined && (

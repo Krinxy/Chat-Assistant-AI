@@ -235,12 +235,11 @@ export function Header({
         <div
           className="story-news-overlay"
           role="presentation"
-          onClick={() => setActiveStoryId(null)}
+          onClick={(event) => { if (event.target === event.currentTarget) setActiveStoryId(null); }}
         >
           <section
             className="story-news-modal"
             aria-label={`${activeStory.company} ${storyNewsLabel}`}
-            onClick={(event) => event.stopPropagation()}
           >
             <header className="story-news-header">
               <div className="story-news-title-wrap">

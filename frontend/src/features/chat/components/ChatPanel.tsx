@@ -1053,28 +1053,33 @@ export function ChatPanel({
                         className={`popup-menu-item has-submenu${
                           activeProvider?.id === provider.id ? " is-active" : ""
                         }`}
-                        onPointerEnter={(event) => {
-                          if (event.pointerType === "mouse") {
-                            setActiveModelProviderId(provider.id);
-                          }
-                        }}
-                        onClick={() => setActiveModelProviderId(provider.id)}
                       >
-                        <div className="popup-menu-item-content">
-                          <span>{provider.label}</span>
-                        </div>
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                        <button
+                          type="button"
+                          className="popup-menu-item-btn"
+                          onPointerEnter={(event) => {
+                            if (event.pointerType === "mouse") {
+                              setActiveModelProviderId(provider.id);
+                            }
+                          }}
+                          onClick={() => setActiveModelProviderId(provider.id)}
                         >
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
+                          <div className="popup-menu-item-content">
+                            <span>{provider.label}</span>
+                          </div>
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -1334,12 +1339,11 @@ export function ChatPanel({
         <div
           className="persona-wizard-overlay"
           role="presentation"
-          onClick={closePersonaWizard}
+          onClick={(event) => { if (event.target === event.currentTarget) closePersonaWizard(); }}
         >
           <section
             className="persona-wizard-panel"
             aria-label={copy.personaWizardTitle}
-            onClick={(event) => event.stopPropagation()}
           >
             <header className="persona-wizard-header">
               <h3>{copy.personaWizardTitle}</h3>

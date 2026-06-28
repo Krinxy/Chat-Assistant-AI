@@ -34,7 +34,7 @@ class TranscriptionRuntimeService:
             return 1
 
         normalized = device.lower()
-        if normalized.startswith("cuda") or normalized.startswith("mps") or normalized.startswith("xpu"):
+        if normalized.startswith(("cuda", "mps", "xpu")):
             return 1
 
         return 2
@@ -44,7 +44,7 @@ class TranscriptionRuntimeService:
         device = self.runtime_device
         if device is not None:
             normalized = device.lower()
-            if normalized.startswith("cuda") or normalized.startswith("mps") or normalized.startswith("xpu"):
+            if normalized.startswith(("cuda", "mps", "xpu")):
                 with self._accelerated_invoke_lock:
                     return self._transcriber.transcribe_chunk(
                         audio_chunk=event.audio_chunk,

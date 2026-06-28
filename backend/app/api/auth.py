@@ -76,7 +76,7 @@ class MeResponse:
     role: str
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     body: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -85,7 +85,7 @@ async def register(
     return RegisterResponse(id=user.id, email=user.email)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 async def login(
     request: Request,
     body: LoginRequest,
@@ -97,7 +97,7 @@ async def login(
     return TokenResponse(access_token=token)
 
 
-@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+@router.post("/forgot-password")
 async def forgot_password(
     request: Request,
     body: ForgotPasswordRequest,
@@ -108,7 +108,7 @@ async def forgot_password(
     return ForgotPasswordResponse(reset_token=None if IS_PRODUCTION else token)
 
 
-@router.get("/me", response_model=MeResponse)
+@router.get("/me")
 async def me(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> MeResponse:
@@ -117,7 +117,7 @@ async def me(
     return MeResponse(email=current_user.email, role=current_user.role)
 
 
-@router.post("/reset-password", response_model=ResetPasswordResponse)
+@router.post("/reset-password")
 async def reset_password_endpoint(
     request: Request,
     body: ResetPasswordRequest,

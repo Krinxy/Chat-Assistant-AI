@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import typing
 
 import pytest
 
@@ -16,6 +17,13 @@ from backend.app.services.dependency.auth import get_current_user  # noqa: E402
 from backend.app.services.dependency.authtoken import authtoken  # noqa: E402
 
 
+def _param_has_depends(param: inspect.Parameter) -> bool:
+    """Return True if the parameter uses Annotated[..., Depends(get_current_user)]."""
+    ann = param.annotation
+    args = typing.get_args(ann)
+    return any(isinstance(a, type(Depends(get_current_user))) for a in args)
+
+
 def test_authtoken_patches_signature_with_depends() -> None:
     @authtoken
     async def handler(body: str, current_user: User) -> str:
@@ -23,7 +31,9 @@ def test_authtoken_patches_signature_with_depends() -> None:
 
     sig = inspect.signature(handler)
     cu_param = sig.parameters["current_user"]
-    assert cu_param.default == Depends(get_current_user)
+    # Decorator now uses Annotated[User, Depends(get_current_user)] (no .default)
+    assert cu_param.default is inspect.Parameter.empty
+    assert _param_has_depends(cu_param)
 
 
 def test_authtoken_requires_current_user_param() -> None:
@@ -41,7 +51,9 @@ def test_authtoken_with_role_kwarg_patches_signature() -> None:
 
     sig = inspect.signature(admin_handler)
     assert "current_user" in sig.parameters
-    assert sig.parameters["current_user"].default == Depends(get_current_user)
+    cu_param = sig.parameters["current_user"]
+    assert cu_param.default is inspect.Parameter.empty
+    assert _param_has_depends(cu_param)
 
 
 @pytest.mark.asyncio

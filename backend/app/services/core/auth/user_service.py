@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from jose import ExpiredSignatureError, JWTError, jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -136,7 +136,7 @@ class AuthService:
             email: str | None = payload.get("sub")
             if not email:
                 raise invalid_error
-        except (ExpiredSignatureError, JWTError):
+        except JWTError:
             raise invalid_error
 
         result = await db.execute(select(User).where(User.email == email))

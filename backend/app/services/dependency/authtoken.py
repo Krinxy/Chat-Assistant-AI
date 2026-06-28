@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 from collections.abc import Callable
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 
@@ -36,13 +36,15 @@ def authtoken(_func: Callable[..., Any] | None = None, *, role: str | None = Non
         sig = inspect.signature(func)
         params = list(sig.parameters.values())
 
-        # Replace the bare `current_user: User` param with one that has Depends()
-        # so FastAPI picks it up during route registration.
+        # Replace the bare `current_user: User` param with an Annotated[User, Depends()]
+        # annotation (no default). This avoids the "non-default argument follows default
+        # argument" error when the other route params also use Annotated[…, Depends()] style.
+        _annotated_user = Annotated[User, Depends(get_current_user)]
         new_params: list[inspect.Parameter] = []
         injected = False
         for p in params:
             if p.name == "current_user":
-                new_params.append(p.replace(default=Depends(get_current_user), annotation=User))
+                new_params.append(p.replace(annotation=_annotated_user, default=inspect.Parameter.empty))
                 injected = True
             else:
                 new_params.append(p)

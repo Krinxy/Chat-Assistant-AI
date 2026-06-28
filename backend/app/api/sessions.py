@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,12 +48,12 @@ def _memory_dep(request: Request) -> SessionMemoryManager:
 # ── endpoints ──────────────────────────────────────────────────────────────────
 
 
-@router.post("", response_model=SessionCreateResponse, responses={503: {"description": "Database temporarily unavailable"}})
+@router.post("", responses={503: {"description": "Database temporarily unavailable"}})
 @authtoken
 async def create_session(
     current_user: User,
-    db: AsyncSession = Depends(get_db),
-    memory: SessionMemoryManager = Depends(_memory_dep),
+    db: Annotated[AsyncSession, Depends(get_db)],
+    memory: Annotated[SessionMemoryManager, Depends(_memory_dep)],
 ) -> SessionCreateResponse:
     """Create a new chat session. Returns the session_id to use in POST /api/chat."""
     session_id = str(uuid.uuid4())
@@ -66,7 +68,6 @@ async def create_session(
 
 @router.get(
     "/{session_id}/history",
-    response_model=SessionHistoryResponse,
     responses={
         404: {"description": "Session not found"},
         503: {"description": "Database temporarily unavailable"},
@@ -76,7 +77,7 @@ async def create_session(
 async def get_session_history(
     session_id: str,
     current_user: User,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SessionHistoryResponse:
     """Return the compressed summary and persisted conversation turns for a session.
 

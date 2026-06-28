@@ -23,7 +23,10 @@ dependencies = []
 
 [project.optional-dependencies]
 # Keep production empty for now until Docker baseline tests are validated.
-production = []
+production = [
+  "gunicorn>=23.0.0",        # multi-worker process manager for uvicorn workers
+  "asyncpg>=0.30.0",         # async PostgreSQL driver for production DATABASE_URL
+]
 
 backend = [
   "fastapi>=0.115.0",

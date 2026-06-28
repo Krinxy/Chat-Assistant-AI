@@ -12,6 +12,9 @@ from dotenv import find_dotenv, load_dotenv
 # .env is found regardless of which subdirectory uvicorn is launched from.
 load_dotenv(find_dotenv(usecwd=True, raise_error_if_not_found=False))
 
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, _log_level, logging.INFO))
+
 from fastapi import FastAPI, Request, Response  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402

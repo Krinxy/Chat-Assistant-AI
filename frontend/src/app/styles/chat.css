@@ -25,9 +25,6 @@
 
 .content-grid.chat-focused .chat-panel {
   animation: panelEnterChat 320ms cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-
-.content-grid.chat-focused .chat-panel {
   border-radius: 16px;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);

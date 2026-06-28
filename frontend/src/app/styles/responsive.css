@@ -262,9 +262,6 @@
   .home-story-btn {
     scroll-snap-align: start;
     flex-shrink: 0;
-  }
-
-  .home-story-btn {
     font-size: 0;
   }
 

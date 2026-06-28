@@ -343,16 +343,15 @@ export function Sidebar({
           const { Icon } = item;
 
           return (
-            <li
-              className={isActive ? "is-active" : ""}
-              key={item.key}
-              onClick={() => {
-                setActiveView(item.view);
-              }}
-              style={{ cursor: "pointer" }}
-            >
-              <Icon className="nav-list-icon" />
-              <span>{copy.nav[item.key]}</span>
+            <li className={isActive ? "is-active" : ""} key={item.key}>
+              <button
+                type="button"
+                onClick={() => setActiveView(item.view)}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon className="nav-list-icon" />
+                <span>{copy.nav[item.key]}</span>
+              </button>
             </li>
           );
         })}

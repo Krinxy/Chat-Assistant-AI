@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Optional
+from typing import Annotated, Any, AsyncIterator, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -397,7 +397,6 @@ async def _resolve_session(body: ChatRequest, memory: SessionMemoryManager, db: 
 
 @router.post(
     "",
-    response_model=ChatResponse,
     responses={
         400: {"description": "Guardrail policy violation"},
         404: {"description": "Session not found"},
@@ -410,10 +409,10 @@ async def _resolve_session(body: ChatRequest, memory: SessionMemoryManager, db: 
 async def chat(
     body: ChatRequest,
     current_user: User,
-    pipeline: ChatPipeline = Depends(_pipeline_dep),
-    rate_limiter: RateLimiter = Depends(_rate_limiter_dep),
-    memory: SessionMemoryManager = Depends(_memory_dep),
-    db: AsyncSession = Depends(get_db),
+    pipeline: Annotated[ChatPipeline, Depends(_pipeline_dep)],
+    rate_limiter: Annotated[RateLimiter, Depends(_rate_limiter_dep)],
+    memory: Annotated[SessionMemoryManager, Depends(_memory_dep)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ChatResponse:
     if not await rate_limiter.is_allowed(current_user.email):
         raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait before sending another message.")
@@ -453,10 +452,10 @@ async def chat(
 async def chat_stream(
     body: ChatRequest,
     current_user: User,
-    pipeline: ChatPipeline = Depends(_pipeline_dep),
-    rate_limiter: RateLimiter = Depends(_rate_limiter_dep),
-    memory: SessionMemoryManager = Depends(_memory_dep),
-    db: AsyncSession = Depends(get_db),
+    pipeline: Annotated[ChatPipeline, Depends(_pipeline_dep)],
+    rate_limiter: Annotated[RateLimiter, Depends(_rate_limiter_dep)],
+    memory: Annotated[SessionMemoryManager, Depends(_memory_dep)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StreamingResponse:
     """Stream the answer token-by-token as Server-Sent Events.
 

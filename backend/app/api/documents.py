@@ -5,6 +5,8 @@ import logging
 import uuid
 from datetime import datetime
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -50,7 +52,7 @@ def _get_document_embedder() -> DocumentEmbedder:
 @authtoken
 async def list_documents(
     current_user: User,
-    db: AsyncSession = Depends(get_db),
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[Document]:
     result = await db.execute(select(Document).order_by(Document.uploaded_at.desc()))
     return list(result.scalars().all())
@@ -60,9 +62,9 @@ async def list_documents(
 @authtoken(role="admin")
 async def upload_document(
     current_user: User,
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    embedder: DocumentEmbedder = Depends(_get_document_embedder),
+    file: Annotated[UploadFile, File()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    embedder: Annotated[DocumentEmbedder, Depends(_get_document_embedder)],
 ) -> Document:
     data = await file.read()
     if len(data) > _cfg.api.max_upload_bytes:
@@ -118,8 +120,8 @@ async def upload_document(
 async def delete_document(
     doc_id: str,
     current_user: User,
-    db: AsyncSession = Depends(get_db),
-    embedder: DocumentEmbedder = Depends(_get_document_embedder),
+    db: Annotated[AsyncSession, Depends(get_db)],
+    embedder: Annotated[DocumentEmbedder, Depends(_get_document_embedder)],
 ) -> None:
     result = await db.execute(select(Document).where(Document.id == doc_id))
     doc = result.scalar_one_or_none()

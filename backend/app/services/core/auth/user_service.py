@@ -104,19 +104,11 @@ class AuthService:
     async def request_password_reset(email: str, db: AsyncSession) -> str:
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
-        if user is None:
-            dummy_expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
-            return str(
-                jwt.encode(
-                    {"sub": email, "purpose": "password_reset", "exp": dummy_expire},
-                    AuthService._get_secret(),
-                    algorithm=_ALGORITHM,
-                )
-            )
         expire = datetime.now(timezone.utc) + timedelta(minutes=_RESET_TOKEN_MINUTES)
+        target_email = user.email if user is not None else email
         return str(
             jwt.encode(
-                {"sub": user.email, "purpose": "password_reset", "exp": expire},
+                {"sub": target_email, "purpose": "password_reset", "exp": expire},
                 AuthService._get_secret(),
                 algorithm=_ALGORITHM,
             )
@@ -130,7 +122,12 @@ class AuthService:
             detail="Invalid or expired reset token.",
         )
         try:
-            payload = jwt.decode(reset_token, AuthService._get_secret(), algorithms=[_ALGORITHM])
+            payload = jwt.decode(
+                reset_token,
+                AuthService._get_secret(),
+                algorithms=[_ALGORITHM],
+                options={"require_exp": True, "require_sub": True},
+            )
             if payload.get("purpose") != "password_reset":
                 raise invalid_error
             email: str | None = payload.get("sub")

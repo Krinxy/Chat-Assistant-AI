@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import uuid
 from datetime import datetime
 
@@ -72,7 +73,8 @@ async def upload_document(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"File too large (max {_cfg.api.max_upload_bytes // (1024 * 1024)} MB).",
         )
-    filename = file.filename or "upload"
+    raw_name = file.filename or "upload"
+    filename = os.path.basename(raw_name.replace("\\", "/")).replace("\x00", "")[:255] or "upload"
 
     try:
         text = DocumentLoader.extract_text(filename, data)

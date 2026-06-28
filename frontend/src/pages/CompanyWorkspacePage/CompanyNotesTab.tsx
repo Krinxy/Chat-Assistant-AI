@@ -91,6 +91,7 @@ export function CompanyNotesTab({
               className="company-file-input"
               type="file"
               multiple
+              aria-label={text.attachNoteFile}
               onChange={onAttachNoteFile}
             />
           </div>
@@ -222,6 +223,7 @@ export function CompanyNotesTab({
               <strong>{text.notesEditHeader}</strong>
               <input
                 value={editNoteTitle}
+                aria-label={text.notesEditHeader}
                 onChange={(event) => onEditNoteTitleChange(event.target.value)}
               />
               <textarea

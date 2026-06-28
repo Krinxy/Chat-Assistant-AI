@@ -690,7 +690,7 @@ function WeatherGraph({
             <div className="wg-labels-row">
               {dayPoints.map((point, i) => (
                 <div
-                  key={i}
+                  key={point.hour}
                   className={`wg-label-cell${point.hour === "00:00" && i > 0 ? " is-day-start" : ""}`}
                   style={{ width: `${GRAPH_COL_W}px` }}
                 >
@@ -701,9 +701,9 @@ function WeatherGraph({
 
             {/* Weather icon row */}
             <div className="wg-icons-row">
-              {dayPoints.map((point, i) => (
+              {dayPoints.map((point) => (
                 <div
-                  key={i}
+                  key={point.hour}
                   className="wg-icon-cell"
                   style={{ width: `${GRAPH_COL_W}px` }}
                 >
@@ -716,9 +716,9 @@ function WeatherGraph({
 
             {/* Temperature row — below icons, above graph */}
             <div className="wg-temp-row">
-              {dayPoints.map((point, i) => (
+              {dayPoints.map((point) => (
                 <div
-                  key={i}
+                  key={point.hour}
                   className="wg-temp-cell"
                   style={{ width: `${GRAPH_COL_W}px` }}
                 >
@@ -857,7 +857,7 @@ function WeatherGraph({
               const x = i * GRAPH_COL_W;
               return (
                 <line
-                  key={`midnight-${i}`}
+                  key={`midnight-${point.hour}`}
                   x1={x}
                   y1={GRAPH_CHART_TOP}
                   x2={x}
@@ -981,9 +981,9 @@ function WeatherGraph({
             )}
 
             {/* Invisible hit targets for hover detection */}
-            {dayPoints.map((_, i) => (
+            {dayPoints.map((point, i) => (
               <rect
-                key={i}
+                key={point.hour}
                 x={i * GRAPH_COL_W}
                 y={0}
                 width={GRAPH_COL_W}
@@ -1269,12 +1269,19 @@ export function DashboardAside({
               </button>
 
               {isAddOpen ? (
-                <div className="weather-add-popover" role="dialog" aria-label={copy.addCity}>
+                <div
+                  className="weather-add-popover"
+                  role="dialog"
+                  aria-label={copy.addCity}
+                  tabIndex={-1}
+                  onKeyDown={(event) => { if (event.key === "Escape") setIsAddOpen(false); }}
+                >
                   <div className="weather-add-row">
                     <input
                       type="text"
                       value={citySearch}
                       placeholder={copy.searchCityPlaceholder}
+                      aria-label={copy.searchCityPlaceholder}
                       onChange={(event) => {
                         setCitySearch(event.target.value);
                         if (cityError.length > 0) {

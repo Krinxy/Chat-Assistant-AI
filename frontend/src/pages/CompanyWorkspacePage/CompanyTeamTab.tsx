@@ -74,6 +74,7 @@ export function CompanyTeamTab({
                     {isEditing ? (
                       <input
                         value={teamEditName}
+                        aria-label={text.teamNameCol}
                         onChange={(event) => onTeamEditNameChange(event.target.value)}
                       />
                     ) : (

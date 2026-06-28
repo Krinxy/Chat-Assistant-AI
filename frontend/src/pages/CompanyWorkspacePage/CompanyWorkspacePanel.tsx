@@ -1445,6 +1445,7 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
               className="company-file-input"
               type="file"
               multiple
+              aria-label={text.addFile}
               onChange={handleDocumentUpload}
             />
           </div>

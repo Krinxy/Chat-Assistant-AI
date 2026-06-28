@@ -1,4 +1,6 @@
+import logging
 from unittest.mock import patch, MagicMock
+
 from backend.app.services.utils.transcription.preflight import (
     _parse_bool_env,
     TranscriptionPreflightReport,
@@ -70,8 +72,7 @@ def test_run_transcription_preflight_missing(mock_resolve_ffmpeg, mock_import):
     assert "transformers" in report.missing_packages
 
 
-@patch("builtins.print")
-def test_print_preflight_report(mock_print):
+def test_print_preflight_report(caplog):
     report = TranscriptionPreflightReport(
         missing_packages=("torch",),
         ffmpeg_path=None,
@@ -81,11 +82,11 @@ def test_print_preflight_report(mock_print):
         preload_error="Some error",
         runtime_device=None,
     )
-    print_preflight_report(report)
-    output = " ".join([call[0][0] for call in mock_print.call_args_list])
-    assert "missing" in output
-    assert "Some error" in output
-    assert "transcription" in output
+    with caplog.at_level(logging.DEBUG):
+        print_preflight_report(report)
+    assert "missing" in caplog.text
+    assert "Some error" in caplog.text
+    assert "transcription" in caplog.text
 
 
 @patch("backend.app.services.utils.transcription.preflight._parse_args")
@@ -117,8 +118,7 @@ def test_run_transcription_preflight_preload_error(mock_runtime_service, mock_re
     assert "Out of memory" in report.preload_error
 
 
-@patch("builtins.print")
-def test_print_preflight_report_success_no_device(mock_print):
+def test_print_preflight_report_success_no_device(caplog):
     report = TranscriptionPreflightReport(
         missing_packages=(),
         ffmpeg_path="/bin/ffmpeg",
@@ -128,13 +128,12 @@ def test_print_preflight_report_success_no_device(mock_print):
         preload_error=None,
         runtime_device=None,
     )
-    print_preflight_report(report)
-    output = " ".join([call[0][0] for call in mock_print.call_args_list])
-    assert "ok (unknown)" in output
+    with caplog.at_level(logging.DEBUG):
+        print_preflight_report(report)
+    assert "ok (unknown)" in caplog.text
 
 
-@patch("builtins.print")
-def test_print_preflight_report_success_device(mock_print):
+def test_print_preflight_report_success_device(caplog):
     report = TranscriptionPreflightReport(
         missing_packages=(),
         ffmpeg_path="/bin/ffmpeg",
@@ -144,13 +143,12 @@ def test_print_preflight_report_success_device(mock_print):
         preload_error=None,
         runtime_device="cuda",
     )
-    print_preflight_report(report)
-    output = " ".join([call[0][0] for call in mock_print.call_args_list])
-    assert "ok (cuda)" in output
+    with caplog.at_level(logging.DEBUG):
+        print_preflight_report(report)
+    assert "ok (cuda)" in caplog.text
 
 
-@patch("builtins.print")
-def test_print_preflight_report_not_attempted(mock_print):
+def test_print_preflight_report_not_attempted(caplog):
     report = TranscriptionPreflightReport(
         missing_packages=(),
         ffmpeg_path="/bin/ffmpeg",
@@ -160,13 +158,12 @@ def test_print_preflight_report_not_attempted(mock_print):
         preload_error=None,
         runtime_device=None,
     )
-    print_preflight_report(report)
-    output = " ".join([call[0][0] for call in mock_print.call_args_list])
-    assert "skipped" in output
+    with caplog.at_level(logging.DEBUG):
+        print_preflight_report(report)
+    assert "skipped" in caplog.text
 
 
-@patch("builtins.print")
-def test_print_preflight_report_warning(mock_print):
+def test_print_preflight_report_warning(caplog):
     report = TranscriptionPreflightReport(
         missing_packages=("torch",),
         ffmpeg_path=None,
@@ -176,10 +173,9 @@ def test_print_preflight_report_warning(mock_print):
         preload_error=None,
         runtime_device=None,
     )
-    print_preflight_report(report)
-    output = " ".join([call[0][0] for call in mock_print.call_args_list])
-    assert "warning" in output
-    assert "fake fallback mode" in output
+    with caplog.at_level(logging.DEBUG):
+        print_preflight_report(report)
+    assert "fake fallback mode" in caplog.text
 
 
 @patch("backend.app.services.utils.transcription.preflight._parse_args")

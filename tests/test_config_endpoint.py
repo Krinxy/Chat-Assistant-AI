@@ -13,7 +13,6 @@ from backend.app.api.documents import _get_document_embedder  # noqa: E402
 from backend.app.db.session import Base, get_db  # noqa: E402
 from backend.app.main import create_app  # noqa: E402
 from backend.app.services.core.ingestion.embedder import DocumentEmbedder, EmbeddingService  # noqa: E402
-from backend.app.services.utils.config import ConfigLoader  # noqa: E402
 from tests.ragfeature.conftest import FakeChromaCollection, HashingEmbeddingModel  # noqa: E402
 
 _engine = create_async_engine("sqlite+aiosqlite:///:memory:")
@@ -69,8 +68,7 @@ async def test_config_endpoint_contains_persist_flag(anon_client: AsyncClient) -
 
 @pytest.mark.asyncio
 async def test_config_persist_flag_reflects_backend_yaml(anon_client: AsyncClient) -> None:
-    ConfigLoader.reset()
-    cfg = ConfigLoader.get_backend()
-    expected = cfg.get("api", {}).get("session", {}).get("persist_token_in_browser", False)
+    from backend.app.config import cfg as app_cfg
+
     resp = await anon_client.get("/api/config")
-    assert resp.json()["persist_token_in_browser"] == expected
+    assert resp.json()["persist_token_in_browser"] == app_cfg.api.persist_token_in_browser

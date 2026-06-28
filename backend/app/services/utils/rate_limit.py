@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...config import AppConfig
 
 
 class RateLimiter:
@@ -17,8 +20,6 @@ class RateLimiter:
         self._max_requests = max_requests
         self._window_seconds = window_seconds
         self._buckets: dict[str, deque[float]] = {}
-
-    # ── main entry point ───────────────────────────────────────────────────────
 
     async def is_allowed(self, key: str) -> bool:
         """Return True if the key is within the rate limit for this window."""
@@ -35,9 +36,8 @@ class RateLimiter:
         return True
 
     @classmethod
-    def from_config(cls, config: dict[str, Any]) -> "RateLimiter":
-        rate_cfg = config.get("api", {}).get("rate_limit", {})
+    def from_config(cls, config: AppConfig) -> RateLimiter:
         return cls(
-            max_requests=int(rate_cfg.get("chat_requests_per_minute", 60)),
-            window_seconds=int(rate_cfg.get("window_seconds", 60)),
+            max_requests=config.api.chat_requests_per_minute,
+            window_seconds=config.api.chat_window_seconds,
         )

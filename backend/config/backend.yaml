@@ -46,27 +46,23 @@ api:
   hsts_max_age_seconds: 31536000   # 1 year
   max_audio_chunk_bytes: 10485760  # 10 MB — guards against memory exhaustion on WS receive
   ws_auth_timeout_seconds: 10.0    # seconds to wait for auth frame after WS accept
+  # Chat rate limiting
+  chat_requests_per_minute: 60
+  chat_window_seconds: 60
+  # Session / context window
+  max_context_turns: 10
+  persist_token_in_browser: true
+  # Input validation
+  max_message_length: 4000
+  # Rejection messages (read by ChatPipeline via ConfigLoader)
+  messages:
+    input_rejected: "Request rejected by content policy."
+    output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."
   # allowed_origins: overridden by ALLOWED_ORIGINS env var in production
   allowed_origins:
     - "http://localhost:5173"
     - "http://localhost:5174"
     - "http://localhost:5175"
-  rate_limit:
-    chat_requests_per_minute: 60
-    window_seconds: 60
-    auth_login_per_60s: 5
-    auth_forgot_per_600s: 3
-  input_validation:
-    max_message_length: 4000
-  session:
-    max_context_turns: 10
-    persist_token_in_browser: true
-  messages:
-    input_rejected: "Request rejected by content policy."
-    output_rejected: "I'm unable to provide a response to this query. Please rephrase your question."
-  cors:
-    # Loaded from ALLOWED_ORIGINS env var at runtime; falls back to allowed_origins above
-    allowed_origins: []
 
 # ── RAG ───────────────────────────────────────────────────────────────────────
 rag:

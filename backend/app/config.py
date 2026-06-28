@@ -42,6 +42,14 @@ class ApiConfig:
     hsts_max_age_seconds: int = 31_536_000
     max_audio_chunk_bytes: int = 10 * 1024 * 1024
     ws_auth_timeout_seconds: float = 10.0
+    # Chat rate limiting
+    chat_requests_per_minute: int = 60
+    chat_window_seconds: int = 60
+    # Session / context
+    max_context_turns: int = 10
+    persist_token_in_browser: bool = True
+    # Input validation
+    max_message_length: int = 4000
     allowed_origins: List[str] = field(
         default_factory=lambda: [
             "http://localhost:5173",

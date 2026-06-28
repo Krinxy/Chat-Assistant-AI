@@ -34,7 +34,7 @@ async def client():
     """Admin mock client — AUTH_MODE=mock, role=admin."""
     from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    IpRateLimiter._hits.clear()
+    IpRateLimiter._buckets.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "mock"
@@ -62,7 +62,7 @@ async def jwt_auth_client():
     """Real JWT client for /api/auth/me and role-enforcement tests — AUTH_MODE=jwt."""
     from backend.app.services.dependency.ratelimit import IpRateLimiter
 
-    IpRateLimiter._hits.clear()
+    IpRateLimiter._buckets.clear()
 
     prev_mode = os.environ.get("AUTH_MODE")
     os.environ["AUTH_MODE"] = "jwt"

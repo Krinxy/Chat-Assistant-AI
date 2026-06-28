@@ -261,17 +261,14 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.8rem;
+  color: var(--ink-700);
 }
 
 .weather-city-name {
   font-size: 1rem;
   font-weight: 700;
   color: var(--ink-900);
-}
-
-.weather-city-condition {
-  font-size: 0.8rem;
-  color: var(--ink-700);
 }
 
 .weather-city-updated {

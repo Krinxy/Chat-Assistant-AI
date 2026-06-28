@@ -123,6 +123,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 8px;
 }
 
 .company-box-card {
@@ -340,12 +341,6 @@
 .company-empty-item {
   color: var(--ink-500);
   padding: 12px 6px;
-}
-
-.company-detail-column {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .company-detail-header {
@@ -1134,22 +1129,6 @@
   padding: 0 10px;
 }
 
-.company-documents-toolbar button {
-  min-height: 34px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--feature-lilac) 14%, var(--panel));
-  color: var(--ink-900);
-  padding: 0 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.company-documents-toolbar button:hover {
-  border-color: color-mix(in srgb, var(--feature-lilac) 42%, var(--line));
-}
-
 .company-file-input {
   display: none;
 }
@@ -1160,37 +1139,6 @@
   border-radius: 12px;
   padding: 0 10px;
   min-height: 0;
-}
-
-.company-document-btn {
-  width: 100%;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: transparent;
-  text-align: left;
-  color: var(--ink-900);
-  padding: 8px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.company-document-btn span {
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
-.company-document-btn small {
-  color: var(--ink-500);
-  font-size: 0.68rem;
-}
-
-.company-document-btn:hover,
-.company-document-btn.is-focused,
-.company-document-btn.is-opened {
-  border-color: color-mix(in srgb, var(--feature-lilac) 36%, var(--line));
-  background: color-mix(in srgb, var(--feature-lilac) 9%, var(--panel));
 }
 
 .company-document-preview-panel {
@@ -1908,15 +1856,15 @@
 }
 
 .ov-hypo-chip--ok {
-  color: #7c6af7;
+  color: color-mix(in srgb, #7a2cff 82%, var(--ink-900));
   background: rgba(124, 106, 247, 0.1);
   border-color: rgba(124, 106, 247, 0.22);
 }
 
 .ov-hypo-chip--no {
-  color: #c4b5fd;
-  background: rgba(196, 181, 253, 0.1);
-  border-color: rgba(196, 181, 253, 0.22);
+  color: color-mix(in srgb, #7a2cff 65%, var(--ink-900));
+  background: rgba(124, 106, 247, 0.07);
+  border-color: rgba(124, 106, 247, 0.15);
 }
 
 .ov-hypo-chip--pending {
@@ -2623,13 +2571,13 @@
 }
 
 .perf-trend-badge--up {
-  color: #a78bfa;
+  color: color-mix(in srgb, #7a2cff 82%, var(--ink-900));
   background: rgba(124,106,247,0.14);
 }
 
 .perf-trend-badge--down {
-  color: #c4b5fd;
-  background: rgba(196,181,253,0.14);
+  color: color-mix(in srgb, #7a2cff 65%, var(--ink-900));
+  background: rgba(124,106,247,0.08);
 }
 
 .perf-trend-badge--neutral {
@@ -3055,12 +3003,6 @@
   color: var(--ink-400, rgba(255,255,255,0.3));
   font-style: italic;
   margin-top: 4px;
-}
-
-.hyp-add-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
 }
 
 .hyp-add-form input,
@@ -3801,19 +3743,19 @@
   padding: 7px 16px;
   border-radius: 8px;
   border: none;
-  background: var(--feature-lilac, #a78bfa);
+  background: var(--feature-lilac, #6d4ef0);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   letter-spacing: 0.01em;
   transition: opacity 0.15s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #a78bfa) 40%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #6d4ef0) 40%, transparent);
 }
 
 .appt-add-btn:hover {
   opacity: 0.88;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--feature-lilac, #a78bfa) 55%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--feature-lilac, #6d4ef0) 55%, transparent);
 }
 
 .appt-add-btn:active {
@@ -3847,7 +3789,7 @@
 
 .appt-week-nav-btn:hover {
   background: var(--bg-2, #1c1c2e);
-  border-color: var(--feature-lilac, #a78bfa);
+  border-color: var(--feature-lilac, #6d4ef0);
 }
 
 .appt-week-nav-btn:active {
@@ -3910,7 +3852,7 @@
 .appt-modal-heading {
   font-size: 16px;
   font-weight: 700;
-  color: var(--feature-lilac, #a78bfa);
+  color: var(--feature-lilac, #6d4ef0);
 }
 
 .appt-modal-close {
@@ -3960,7 +3902,7 @@
 }
 
 .appt-form-input:focus {
-  border-color: var(--feature-lilac, #a78bfa);
+  border-color: var(--feature-lilac, #6d4ef0);
 }
 
 .appt-form-textarea {
@@ -4006,14 +3948,14 @@
 }
 
 .appt-people-chip:hover {
-  background: color-mix(in srgb, var(--feature-lilac, #a78bfa) 12%, transparent);
-  border-color: var(--feature-lilac, #a78bfa);
+  background: color-mix(in srgb, var(--feature-lilac, #6d4ef0) 12%, transparent);
+  border-color: var(--feature-lilac, #6d4ef0);
 }
 
 .appt-people-chip--selected {
-  background: color-mix(in srgb, var(--feature-lilac, #a78bfa) 22%, transparent);
-  border-color: var(--feature-lilac, #a78bfa);
-  color: var(--feature-lilac, #a78bfa);
+  background: color-mix(in srgb, var(--feature-lilac, #6d4ef0) 22%, transparent);
+  border-color: var(--feature-lilac, #6d4ef0);
+  color: var(--feature-lilac, #6d4ef0);
   font-weight: 600;
 }
 
@@ -4095,13 +4037,19 @@
 }
 
 .appt-form-btn--primary {
-  background: var(--feature-lilac, #a78bfa);
+  background: var(--feature-lilac, #6d4ef0);
   color: #fff;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #a78bfa) 40%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #6d4ef0) 40%, transparent);
 }
 
 .appt-form-btn--primary:hover {
   opacity: 0.88;
+}
+
+[data-theme="dark"] .appt-add-btn,
+[data-theme="dark"] .appt-form-btn--primary {
+  background: color-mix(in srgb, var(--feature-lilac, #6d4ef0) 55%, #000);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--feature-lilac, #6d4ef0) 25%, transparent);
 }
 
 /* ── Card description line ───────────────────────────────────────────────── */
@@ -4710,6 +4658,7 @@
 
 .company-documents-toolbar button:hover {
   background: color-mix(in srgb, var(--feature-lilac) 22%, var(--panel-solid));
+  border-color: color-mix(in srgb, var(--feature-lilac) 42%, var(--line));
 }
 
 .company-document-btn {
@@ -4717,6 +4666,7 @@
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--panel-soft);
+  color: var(--ink-900);
   padding: 9px 12px;
   text-align: left;
   display: flex;
@@ -4740,6 +4690,7 @@
 .company-document-btn span {
   flex: 1;
   font-size: 13px;
+  line-height: 1.35;
   font-weight: 500;
   color: var(--ink-800);
   overflow: hidden;

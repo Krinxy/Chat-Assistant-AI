@@ -64,7 +64,15 @@ class _BodySizeLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path in _BODY_LIMIT_EXEMPT_PATHS:
             return await call_next(request)
         cl = request.headers.get("content-length")
-        if cl and int(cl) > _BODY_LIMIT_BYTES:
+        try:
+            cl_int = int(cl) if cl else 0
+        except ValueError:
+            return Response(
+                content='{"detail":"Invalid Content-Length header"}',
+                status_code=400,
+                media_type="application/json",
+            )
+        if cl_int > _BODY_LIMIT_BYTES:
             return Response(
                 content='{"detail":"Request body too large (max 1 MB)"}',
                 status_code=413,

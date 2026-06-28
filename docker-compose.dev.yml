@@ -6,8 +6,10 @@ version: "3.9"
 # Usage:
 #   docker compose -f docker-compose.dev.yml up
 #
-# The backend DATABASE_URL points to Postgres — set MIGRATE=1 on first run to
-# initialise the schema, or run:  docker compose exec backend python -m alembic upgrade head
+# On first run (or after schema changes) run migrations inside the container:
+#   docker compose -f docker-compose.dev.yml exec backend python -m alembic upgrade head
+#
+# Secrets are loaded exclusively from .env — copy .env.example → .env and fill in values.
 
 services:
   backend:
@@ -17,17 +19,16 @@ services:
       target: runtime
     ports:
       - "8000:8000"
+    env_file:
+      - .env                        # JWT_SECRET, GEMINI_API_KEY, OPENAI_API_KEY, …
     environment:
+      # Non-secret, Docker-specific overrides (beat anything in .env for these keys)
       ENVIRONMENT: development
-      DATABASE_URL: postgresql+asyncpg://chat:chat@db:5432/chatdb
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-chat}:${POSTGRES_PASSWORD:-chat}@db:5432/${POSTGRES_DB:-chatdb}"
       REDIS_URL: redis://redis:6379/0
       CHROMA_PATH: /data/chroma
       LOG_LEVEL: DEBUG
       UVICORN_WORKERS: "1"
-      # Secrets — copy .env.example → .env and fill in real values
-      JWT_SECRET: ${JWT_SECRET:-change-me-dev-only-secret}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
     volumes:
       - .:/app
       - chroma_data:/data/chroma
@@ -44,15 +45,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: chat
-      POSTGRES_PASSWORD: chat
-      POSTGRES_DB: chatdb
+      POSTGRES_USER: ${POSTGRES_USER:-chat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chat}
+      POSTGRES_DB: ${POSTGRES_DB:-chatdb}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chat -d chatdb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chat} -d ${POSTGRES_DB:-chatdb}"]
       interval: 5s
       timeout: 5s
       retries: 10

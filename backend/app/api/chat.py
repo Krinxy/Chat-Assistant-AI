@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -9,10 +10,12 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from openai import OpenAIError
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import get_db
+from ..models.document import Document
 from ..models.session import ChatSession
 from ..models.user import User
 from ..services.core.agents.persona_loader import PersonaLoader
@@ -24,6 +27,7 @@ from ..services.core.guardrails.input_guard import InputGuard
 from ..services.core.guardrails.output_guard import OutputGuard
 from ..services.core.guardrails.policy_guard import PolicyGuard
 from ..services.core.guardrails.query_refiner import QueryRefiner
+from ..services.core.rag import NO_CONTEXT_MESSAGE, ChromaRetriever, RetrievedChunk, Retriever, build_rag_messages, extract_sources
 from ..services.dependency.authtoken import authtoken
 from ..config import cfg as _app_cfg
 from ..services.dependency.llm import DEFAULT_PROVIDER, LLMClient, LLMNotConfiguredError, LLMUnavailableError
@@ -56,6 +60,9 @@ class ChatResponse:
     user: str
     message: str
     session_id: str
+    # Provenance of the answer: one entry per retrieved chunk (document, chunk index,
+    # similarity). Empty for non-RAG replies and the no-context fallback.
+    sources: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -70,6 +77,7 @@ class StreamEvent:
     text: str = ""
     status: str = "ok"
     detail: str = ""
+    sources: list[dict] = field(default_factory=list)
 
 
 # ── pipeline ───────────────────────────────────────────────────────────────────
@@ -90,6 +98,7 @@ class ChatPipeline:
         output_guard: OutputGuard,
         policy_guard: PolicyGuard,
         chat_llm: LLMClient,
+        retriever: Optional[Retriever] = None,
         system_prompt: str = _DEFAULT_SYSTEM_PROMPT,
         max_message_length: int = 4000,
         input_rejected_msg: str = "Request rejected by content policy.",
@@ -105,6 +114,10 @@ class ChatPipeline:
         self._output_guard = output_guard
         self._policy_guard = policy_guard
         self._chat_llm = chat_llm
+        # RAG is active iff a retriever is supplied. Without one the pipeline behaves like the
+        # pre-AP-4 bare-LLM chat (history-only context, no document grounding, empty sources).
+        self._retriever = retriever
+        self._rag_enabled = retriever is not None
         # Per-request provider switch: the default chat client is reused unless the
         # caller selects another configured provider. Guardrails are deliberately
         # unaffected — they keep their own provider/model.
@@ -173,22 +186,45 @@ class ChatPipeline:
             return message
         return await self._query_refiner.refine(message, session_id)
 
+    async def _retrieve(self, query: str) -> list[RetrievedChunk]:
+        """Run dense retrieval for *query*; returns [] when RAG is disabled.
+
+        Retrieval (embedding + ChromaDB query) is synchronous CPU/IO work, so it runs in a
+        worker thread to keep the event loop responsive while streaming other requests.
+        """
+        if not self._rag_enabled or self._retriever is None:
+            return []
+        return await asyncio.to_thread(self._retriever.retrieve, query)
+
     def _build_messages(self, query: str, context: str) -> list[BaseMessage]:
-        """Assemble the prompt: persona system prompt + conversation history + user query.
+        """Assemble the non-RAG prompt: persona system prompt + conversation history + user query.
 
         The conversation history is folded into the single leading SystemMessage rather
         than sent as a second one: strict gateways (e.g. the Qwen/litellm gateway) reject
         a second system message with "System message must be at the beginning." One system
         message followed by the human turn is accepted by every provider.
 
-        In AP 4 this is replaced by the full RAG prompt (retrieved chunks injected as context).
+        Used only when RAG is disabled; with a retriever present, :meth:`_messages_for`
+        builds the full RAG prompt (retrieved chunks injected as grounding context).
         """
         system_content = self._system_prompt
         if context:
             system_content = f"{system_content}\n\nConversation so far:\n{context}"
         return [SystemMessage(content=system_content), HumanMessage(content=query)]
 
-    async def _generate(self, refined_query: str, context: str = "", chat_llm: Optional[LLMClient] = None) -> str:
+    def _messages_for(self, query: str, chunks: list[RetrievedChunk], history: str) -> list[BaseMessage]:
+        """Pick the prompt builder: grounded RAG prompt when enabled, plain chat prompt otherwise."""
+        if self._rag_enabled:
+            return build_rag_messages(self._system_prompt, query, chunks, history)
+        return self._build_messages(query, history)
+
+    async def _generate(
+        self,
+        refined_query: str,
+        context: str = "",
+        chat_llm: Optional[LLMClient] = None,
+        chunks: Optional[list[RetrievedChunk]] = None,
+    ) -> str:
         """Generate the answer via a single (non-streamed) gateway call.
 
         Raises:
@@ -197,7 +233,7 @@ class ChatPipeline:
         """
         llm = (chat_llm or self._chat_llm).get()
         try:
-            response = await llm.ainvoke(self._build_messages(refined_query, context))
+            response = await llm.ainvoke(self._messages_for(refined_query, chunks or [], context))
         except OpenAIError as exc:
             raise LLMUnavailableError(str(exc)) from exc
         raw = response.content if isinstance(response.content, str) else str(response.content)
@@ -214,8 +250,11 @@ class ChatPipeline:
 
     # ── main entry point ───────────────────────────────────────────────────────
 
-    async def run(self, message: str, session_id: str, context: str = "", provider: Optional[str] = None) -> tuple[str, str]:
-        """Execute the full pipeline. Returns (response_message, status).
+    async def run(self, message: str, session_id: str, context: str = "", provider: Optional[str] = None) -> tuple[str, str, list[dict]]:
+        """Execute the full pipeline. Returns (response_message, status, sources).
+
+        When RAG is enabled and retrieval finds no chunk above the similarity threshold, the
+        grounded fallback is returned without calling the LLM (status ``"no_context"``).
 
         Raises:
             HTTPException 400: if the input guard rejects the query.
@@ -224,8 +263,14 @@ class ChatPipeline:
             raise HTTPException(status_code=400, detail=self._input_rejected_msg)
 
         refined_query = await self._refine_query(message, session_id)
-        generated = await self._generate(refined_query, context, self._resolve_chat_llm(provider))
-        return await self._apply_output_guard(message, generated, session_id)
+        chunks = await self._retrieve(refined_query)
+        if self._rag_enabled and not chunks:
+            return NO_CONTEXT_MESSAGE, "no_context", []
+
+        sources = extract_sources(chunks)
+        generated = await self._generate(refined_query, context, self._resolve_chat_llm(provider), chunks=chunks)
+        final, status = await self._apply_output_guard(message, generated, session_id)
+        return final, status, sources
 
     async def screen_input(self, message: str, session_id: str) -> bool:
         """Return True if the input guard (with local policy fallback) rejects the message."""
@@ -242,12 +287,19 @@ class ChatPipeline:
         the blocking output guard on the assembled answer and emits a final event.
         """
         refined_query = await self._refine_query(message, session_id)
+        chunks = await self._retrieve(refined_query)
+        if self._rag_enabled and not chunks:
+            yield StreamEvent(kind="delta", text=NO_CONTEXT_MESSAGE)
+            yield StreamEvent(kind="done", text=NO_CONTEXT_MESSAGE, status="no_context", sources=[])
+            return
+
+        sources = extract_sources(chunks)
         think_filter = ThinkBlockFilter()
         collected: list[str] = []
 
         try:
             llm = self._resolve_chat_llm(provider).get()
-            async for chunk in llm.astream(self._build_messages(refined_query, context)):
+            async for chunk in llm.astream(self._messages_for(refined_query, chunks, context)):
                 content = chunk.content
                 if content is None:
                     continue
@@ -275,7 +327,7 @@ class ChatPipeline:
 
         full_answer = "".join(collected).strip()
         final, status = await self._apply_output_guard(message, full_answer, session_id)
-        yield StreamEvent(kind="done", text=final, status=status)
+        yield StreamEvent(kind="done", text=final, status=status, sources=sources)
 
     # ── factory ────────────────────────────────────────────────────────────────
 
@@ -291,6 +343,9 @@ class ChatPipeline:
         api_cfg = cfg.get("api", {})
         max_len = int(api_cfg.get("max_message_length", 4000))
         messages_cfg = api_cfg.get("messages", {})
+        # The retriever resolves its ChromaDB collection lazily, so building it here is cheap and
+        # never touches the vector store at startup.
+        retriever = ChromaRetriever.from_config(cfg.get("rag", {}))
 
         return cls(
             input_guard=InputGuard.from_config(llm_cfg, guard_cfg.get("input_guard", {})),
@@ -298,6 +353,7 @@ class ChatPipeline:
             output_guard=OutputGuard.from_config(llm_cfg, guard_cfg.get("output_guard", {})),
             policy_guard=PolicyGuard.from_file(),
             chat_llm=LLMClient.from_config(chat_llm_cfg),
+            retriever=retriever,
             system_prompt=PersonaLoader.load_assistant() or _DEFAULT_SYSTEM_PROMPT,
             max_message_length=max_len,
             input_rejected_msg=str(messages_cfg.get("input_rejected", "Request rejected by content policy.")),
@@ -355,6 +411,25 @@ async def _persist_turn(db: AsyncSession, session_id: str, user_message: str, as
         await MessageStore.append_turn(db, session_id, user_message, assistant_message)
     except SQLAlchemyError as exc:
         _logger.warning("failed to persist conversation turn for session %s: %s", session_id, exc)
+
+
+async def _enrich_sources(db: AsyncSession, sources: list[dict]) -> list[dict]:
+    """Add each chunk's human-readable ``filename`` alongside its document id.
+
+    Retrieval only knows the document id stored in chunk metadata; the filename lives in the
+    relational ``documents`` table. Best-effort: on a DB error (or a since-deleted document)
+    the id is kept as the filename so the answer still ships with its provenance.
+    """
+    if not sources:
+        return sources
+    doc_ids = {str(s["source"]) for s in sources}
+    try:
+        result = await db.execute(select(Document.id, Document.filename).where(Document.id.in_(doc_ids)))
+        names = {row[0]: row[1] for row in result.all()}
+    except SQLAlchemyError as exc:
+        _logger.warning("failed to resolve document filenames for sources: %s", exc)
+        names = {}
+    return [{**s, "filename": names.get(str(s["source"]), str(s["source"]))} for s in sources]
 
 
 async def _resolve_session(body: ChatRequest, memory: SessionMemoryManager, db: AsyncSession, user_id: int) -> str:
@@ -422,7 +497,7 @@ async def chat(
     context = memory.get_context(session_id)
 
     try:
-        response_message, status = await pipeline.run(message, session_id, context, provider=body.provider)
+        response_message, status, sources = await pipeline.run(message, session_id, context, provider=body.provider)
     except LLMNotConfiguredError as exc:
         _logger.warning("chat generation not configured (provider=%r): %s", body.provider or DEFAULT_PROVIDER, exc)
         raise HTTPException(status_code=503, detail="The language model is not configured.") from exc
@@ -435,7 +510,13 @@ async def chat(
     memory.add_turn(session_id, "assistant", response_message)
     await _persist_turn(db, session_id, message, response_message)
 
-    return ChatResponse(status=status, user=current_user.email, message=response_message, session_id=session_id)
+    return ChatResponse(
+        status=status,
+        user=current_user.email,
+        message=response_message,
+        session_id=session_id,
+        sources=await _enrich_sources(db, sources),
+    )
 
 
 @router.post(
@@ -487,7 +568,12 @@ async def chat_stream(
                 memory.add_turn(session_id, "assistant", ev.text)
                 await _persist_turn(db, session_id, message, ev.text)
                 yield format_sse(
-                    {"status": ev.status, "session_id": session_id, "message": ev.text},
+                    {
+                        "status": ev.status,
+                        "session_id": session_id,
+                        "message": ev.text,
+                        "sources": await _enrich_sources(db, ev.sources),
+                    },
                     event="done",
                 )
 

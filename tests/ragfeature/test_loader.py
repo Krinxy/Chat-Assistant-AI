@@ -7,8 +7,10 @@ import pytest
 from docx import Document
 
 from backend.app.services.core.ingestion.loader import (
+    DocumentLoader,
     LoadedDocument,
     UnsupportedDocumentError,
+    extract_segments,
     extract_text,
     load_document,
     supported_suffixes,
@@ -64,6 +66,49 @@ def test_supported_suffixes_contains_expected_types() -> None:
     suffixes = supported_suffixes()
 
     assert {".pdf", ".docx", ".txt", ".md"} <= suffixes
+
+
+def test_serialize_table_pairs_header_with_each_row() -> None:
+    rows = [
+        ["Modul", "Datum", "Uhrzeit"],
+        ["Robotik", "28.07.2026", "11:00"],
+        ["Deep Learning", "29.07.2026", "08:00"],
+    ]
+
+    serialized = DocumentLoader._serialize_table(rows)
+
+    assert serialized == [
+        "Modul: Robotik | Datum: 28.07.2026 | Uhrzeit: 11:00",
+        "Modul: Deep Learning | Datum: 29.07.2026 | Uhrzeit: 08:00",
+    ]
+
+
+def test_serialize_table_drops_empty_cells_and_blank_rows() -> None:
+    rows = [
+        ["Modul", "Datum", "Raum"],
+        ["Big Data", "30.07.2026", None],
+        [None, None, None],
+    ]
+
+    serialized = DocumentLoader._serialize_table(rows)
+
+    assert serialized == ["Modul: Big Data | Datum: 30.07.2026"]
+
+
+def test_serialize_table_joins_positionally_without_header() -> None:
+    # A single data row (no separate header) is joined positionally.
+    serialized = DocumentLoader._serialize_table([["Robotik", "28.07.2026"]])
+
+    assert serialized == ["Robotik | 28.07.2026"]
+
+
+def test_extract_segments_returns_single_segment_for_plain_text() -> None:
+    assert extract_segments("notes.txt", b"  hello world  ") == ["hello world"]
+
+
+def test_extract_segments_rejects_unsupported_suffix() -> None:
+    with pytest.raises(UnsupportedDocumentError):
+        extract_segments("archive.zip", b"data")
 
 
 def test_load_document_reads_file_from_disk(tmp_path: Path) -> None:

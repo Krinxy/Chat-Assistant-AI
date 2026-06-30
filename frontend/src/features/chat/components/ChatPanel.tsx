@@ -629,6 +629,16 @@ export function ChatPanel({
                   {message.isStreaming ? <span className="stream-cursor" aria-hidden="true" /> : null}
                 </p>
               ) : null}
+              {message.sources !== undefined && message.sources.length > 0 ? (
+                <div className="chat-message-sources">
+                  <span className="chat-source-label">{copy.sourcesLabel}:</span>
+                  {message.sources.map((source) => (
+                    <span className="chat-source-chip" key={`${source.source}-${source.chunkIndex}`}>
+                      {source.filename} · #{source.chunkIndex}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <span>{message.time}</span>
             </article>
           );

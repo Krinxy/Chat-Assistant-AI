@@ -1,0 +1,435 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Pakete  (bewusst ohne babel-ngerman -- lokale Locale defekt; utf8 reicht
+%          fuer Umlaute, nur die Silbentrennung folgt engl. Mustern)
+% ---------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+% ---------------------------------------------------------------------------
+% Farben & Status-Marker
+% ---------------------------------------------------------------------------
+\definecolor{accent}{HTML}{2C6E9B}
+\definecolor{good}{HTML}{2E7D46}
+\definecolor{warn}{HTML}{C07A1E}
+\definecolor{bad}{HTML}{B23A48}
+\definecolor{ink}{HTML}{1F2933}
+\definecolor{soft}{HTML}{F0F4F8}
+
+\newcommand{\ok}{\textcolor{good}{\textbf{\checkmark\ vorhanden}}}
+\newcommand{\warnref}{\textcolor{warn}{\textbf{$\triangle$\ Repo pr\"ufen}}}
+\newcommand{\miss}{\textcolor{bad}{\textbf{$\times$\ fehlt}}}
+\newcommand{\todo}[1]{\textcolor{bad}{\textbf{[TODO: #1]}}}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small\color{accent}TryRAG \textendash{} Architektur-Review}
+\rhead{\small\color{accent}Softwarearchitektur \textbullet{} HS Ansbach}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\setlist{itemsep=2pt,topsep=3pt}
+
+% ---------------------------------------------------------------------------
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\color{accent}\rule{\linewidth}{1.4pt}}\\[0.5cm]
+{\Huge\bfseries TryRAG\par}
+\vspace{0.35cm}
+{\LARGE Architektur-Review \& arc42-Dokumentationsger\"ust\par}
+\vspace{0.2cm}
+{\large Abgleich gegen die Vorlesungs-/Pr\"ufungsanforderungen}
+{\color{accent}\rule{\linewidth}{1.4pt}}\\[1.1cm]
+
+\begin{minipage}{0.85\linewidth}
+\centering\large
+Pr\"uft \"Ubung f\"ur \"Ubung, was die Vorlesung verlangt, gegen den aktuellen Stand
+(Pr\"asentation \emph{TryRAG-Architektur} + Repository) und liefert anschlie{\ss}end ein
+ausf\"ullbares arc42-Ger\"ust f\"ur die Abgabe.
+\end{minipage}
+
+\vfill
+\begin{tabular}{rl}
+\toprule
+Modul & Softwarearchitektur (Prof.\ N.\ Weeger), SS~2026\\
+Team & Constantin Dendtel \textbullet{} Juri Sindel \textbullet{} Dominic Bechtold\\
+Abgabe-Deadline & 02.07.2026 (GitLab-Repo, arc42-konform)\\
+Pr\"ufungstag & 06.07.2026 (online, 7,5\,min/Person + Diskussion)\\
+\bottomrule
+\end{tabular}
+
+\vspace{1.2cm}
+{\color{ink}\today}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ===========================================================================
+\part*{Teil I \textendash{} Gap-Analyse}
+\addcontentsline{toc}{section}{Teil I \textendash{} Gap-Analyse}
+% ===========================================================================
+
+\section{Worauf der Dozent bewertet}
+Aus den Folien (Pr\"ufung, Infos zur Pr\"ufung, \"Ubungen 1\,--\,6, arc42-Mapping
+auf Folie~36) lassen sich die Bewertungskriterien klar ableiten:
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{Vollst\"andigkeit:} Die Abgabe muss \emph{mindestens} alle in den
+        \"Ubungen definierten Artefakte enthalten. Die Summe der \"Ubungen ergibt
+        eine vollst\"andige, \textbf{arc42-konforme} Dokumentation im Repo.
+  \item \textbf{Nachvollziehbarkeit der Entscheidungen:} Nicht nur \emph{was},
+        sondern \emph{warum} \textendash{} inkl.\ \textbf{Alternativen} und
+        \textbf{Entscheidungsfindung}. Das ist der explizit genannte Kern
+        (,,Sie zeigen, dass Sie verstanden haben, wie Architektur funktioniert``).
+  \item \textbf{Qualit\"atsgetriebenheit:} Requirements + NFRs treiben die
+        Architektur; jede Entscheidung beg\"unstigt nachweisbar bestimmte
+        Qualit\"atsszenarien (Trade-offs benennen). ,,Architektur ist weder
+        korrekt noch inkorrekt ohne Qualit\"atsanforderungen.``
+  \item \textbf{Messbarkeit:} Qualit\"atsszenarien nach dem Bass-Schema
+        (Source, Stimulus, Artifact, Environment, Response, \textbf{Response Measure}).
+  \item \textbf{Sichten:} C4 (Context/Container/Component/Dynamic) bzw.\ die
+        Bass-Viewtypes; Architektur auf mehreren Ebenen erkl\"aren.
+  \item \textbf{Dokumentationsqualit\"at:} korrekt, aktuell, wartbar, verst\"andlich,
+        angemessen \textendash{} ,,lebt im Repository`` (versioniert, diffbar).
+\end{enumerate}
+
+\section{Gesamtbefund}
+Die Pr\"asentation ist \textbf{inhaltlich stark} und deckt die geforderten Themen
+breit ab \textendash{} oft \"uber das Pflichtma{\ss} hinaus (9~ADRs statt 6, DDD,
+Defense-in-Depth, Traceability-Idee). Der \textbf{kritische Punkt} ist nicht der
+Inhalt, sondern der \textbf{Abgabe-Tr\"ager}:
+
+\begin{quote}\itshape
+Die Abgabe ist das \textbf{GitLab-Repository}, nicht die Pr\"asentation. In diesem
+Code-Repository (\texttt{Chat-Assistant-AI}) liegen die in der Pr\"asentation
+referenzierten arc42-Artefakte aktuell \textbf{nicht} vor.
+\end{quote}
+
+Konkret fehlen hier (oder liegen in einem separaten Repo \textendash{} unbedingt
+verifizieren): \texttt{functional\_requirements.md}, \texttt{constraints.md},
+\texttt{qualities.md}, \texttt{/scenarios/}, \texttt{quality-tree.md},
+\texttt{glossary.md}, \texttt{traceability.md}, \texttt{risks.md}, die
+9~Architektur-ADRs sowie \texttt{adrs/patterns/design\_patterns.md}.
+Vorhanden sind nur \"altere, komponentenbezogene ADRs
+(\texttt{01\_frontend\_chatbot} \dots{} \texttt{008\_transform\_to\_microservices})
+und \texttt{docs/doc.tex} (AP-1A-Implementierungsdoku \textendash{} nicht die
+Architekturabgabe).
+
+\paragraph{Wichtigste Sofortma{\ss}nahme.} Sicherstellen, dass das Abgabe-Repo
+genau die Datei-/Ordnerstruktur von Folie~36 hat und alle referenzierten Dateien
+real existieren. Die Pr\"asentation darf keine Datei nennen, die der Pr\"ufer im
+Repo nicht findet.
+
+% ---------------------------------------------------------------------------
+\section{Artefakt-Mapping: \"Ubung $\rightarrow$ arc42 $\rightarrow$ Status}
+% ---------------------------------------------------------------------------
+Legende: \ok\ = in der Pr\"asentation belegt \quad
+\warnref\ = referenziert, Datei im Repo verifizieren \quad
+\miss\ = nicht erkennbar / anzulegen.
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{@{}p{2.3cm} p{4.4cm} p{3.2cm} p{3.2cm}@{}}
+\toprule
+\textbf{\"Ubung} & \textbf{Gefordertes Artefakt} & \textbf{arc42-Sektion} & \textbf{Status}\\
+\midrule
+\endhead
+\"U1 & \texttt{Readme.md} (App-Beschreibung + Gruppen-Infos) & \S1 Intro \& Goals & \warnref\\
+\"U1 & \texttt{functional\_requirements.md} (7--10 FRs, priorisiert) & \S1 & \ok\ (11 FRs, MoSCoW)\\
+\"U1 & \texttt{constraints.md} (Annahmen + Randbed.) & \S2 Constraints & \ok\ (Inhalt da)\\
+\"U1 & \texttt{use-case-diagram} & \S3 Context \& Scope & \ok\ (Auszug)\\
+\"U2 & \texttt{qualities.md} (5+1 ISO-25010, begr\"undet) & \S10 Quality & \ok\ (Tabelle)\\
+\"U2 & \texttt{/scenarios/} ($\geq$2 je Top-3, messbar) & \S10 & \warnref\ (IDs genannt)\\
+\"U2 & \texttt{quality-tree.md} (Utility Tree) & \S10 & \warnref\\
+\"U3 & ADR Applikationstyp & \S9 Decisions & \ok\ (ADR~002)\\
+\"U3 & ADR Programmiersprache(n) & \S9 & \ok\ (ADR~003.2)\\
+\"U3 & ADR Framework & \S9 & \ok\ (ADR~003.1)\\
+\"U3 & 2 weitere ADRs & \S9 & \ok\ (004\,--\,009)\\
+\"U3 & \texttt{glossary.md} (Ubiquitous Language) & \S12 Glossary & \warnref\\
+\"U3 & \texttt{bounded-contexts} (boxes \& lines) & \S5 Building Block & \ok\\
+\"U4 & ADR Architekturpattern(s) (vs.\ Szenarien, auf Dom\"anen) & \S9 & \warnref\ (impliz.\ in 001)\\
+\"U4 & ADR Design Patterns (3 Kernstellen) & \S9 & \ok\ (Adapter/CB/PubSub)\\
+\"U5 & C4 System Context & \S3 & \ok\ (L1)\\
+\"U5 & C4 Container (BCs + Technik) & \S5 & \ok\ (L2)\\
+\"U5 & C4 Component & \S5 & \ok\ (L3)\\
+\"U5 & C4 Dynamic ($\geq$2 Use-Cases) & \S6 Runtime View & \ok\ (FR-1, FR-2)\\
+\"U6 & ADR Schnittstellen & \S9 & \ok\ (ADR~006)\\
+\"U6 & \texttt{risks.md} ($\geq$3 Risiken, Tech-Debt, Mitigation) & \S11 Risks & \ok\ (6 Risiken)\\
+\midrule
+\multicolumn{4}{@{}l@{}}{\emph{arc42-Sektionen, die die \"Ubungen nicht erzwingen, aber das Template (Folie~87) listet:}}\\
+-- & Solution Strategy & \S4 & \miss\ (implizit)\\
+-- & Deployment View (K8s/EU) & \S7 & \miss\ (kein Diagramm)\\
+-- & Crosscutting Concepts & \S8 & \warnref\ (Security/Resilienz da)\\
+\bottomrule
+\end{longtable}
+
+% ---------------------------------------------------------------------------
+\section{Bewertung je \"Ubung + konkrete To-dos}
+% ---------------------------------------------------------------------------
+
+\subsection*{\"Ubung 1 \textendash{} Anforderungen}
+\textbf{Stark:} 11 FRs mit MoSCoW-Priorisierung, rollenbasiert; Use-Case-Diagramm;
+Randbedingungen klar (EU-Hosting, DSGVO/AVV, Tenant-Isolation, 99,9\,\% SLA,
+PII-Filter, self-hosted ChromaDB).
+\begin{itemize}
+  \item \todo{Readme} Gruppen-Infos je Mitglied erg\"anzen: \textbf{Name,
+        Matrikelnummer, Hochschule, E-Mail} (explizit gefordert) + kurze
+        App-Beschreibung.
+  \item FRs als \emph{User Stories} im Format ,,Als \dots{} m\"ochte ich \dots{},
+        um \dots`` formulieren (Folie 40) \textendash{} schafft Anschluss an die
+        Use-Cases.
+  \item \texttt{constraints.md}: Annahmen \emph{und} Randbedingungen klar trennen.
+\end{itemize}
+
+\subsection*{\"Ubung 2 \textendash{} Softwarequalit\"at}
+\textbf{Stark:} ISO-25010-Tabelle mit Priorit\"aten; 5 ,,Hoch`` + 2 ,,Niedrig``;
+messbare Ziele (TTFT~$\leq$~1,5\,s, Retrieval~$\leq$~250\,ms); Architecture Drivers
+benannt (S2, S3, Z3).
+\begin{itemize}
+  \item \textbf{Pflicht-Detail:} Jedes Szenario in \texttt{/scenarios/} im
+        \textbf{vollst\"andigen Bass-6-Tupel} (Source, Stimulus, Artifact,
+        Environment, Response, \textbf{Response Measure}). In der Pr\"asentation
+        sind bisher nur IDs (Z1--Z4, S1--S3, E1--E3) sichtbar \textendash{} im Repo
+        m\"ussen die ausformulierten, \emph{messbaren} Szenarien liegen
+        ($\geq$2 je Top-3-Attribut).
+  \item \texttt{qualities.md}: f\"ur die 3 wichtigsten Attribute je einen
+        \textbf{Use-Case} angeben, in dem das Attribut am wichtigsten ist
+        (\"U2.1.3), und je Attribut begr\"unden, \emph{warum} wichtig/unwichtig.
+  \item Trade-offs explizit machen (Folie 50): z.\,B.\ PII-Filter (Sicherheit)
+        kostet Latenz (Effizienz).
+\end{itemize}
+
+\subsection*{\"Ubung 3 \textendash{} Designen}
+\textbf{Stark:} 9 ADRs, DDD mit 7 Bounded Contexts + Shared Kernel, Ubiquitous
+Language adressiert.
+\begin{itemize}
+  \item \warnref\ \texttt{glossary.md} sicherstellen (Ubiquitous Language als
+        echte Begriffsliste: Tenant, Workspace, RAG, Chunk, Embedding, Retrieval,
+        MCP, Cost-Attribution \dots).
+  \item ADR-Nummerierung dokumentieren: Die \"Ubung erwartet
+        ADR~001~Applikationstyp / 002~Sprache / 003~Framework. Euer Schema
+        weicht ab (001~Stil, 002~Anwendungstyp, 003.1/003.2). Das ist legitim,
+        aber in \texttt{traceability.md} eine \textbf{Mapping-Tabelle}
+        ,,\"Ubungsanforderung $\rightarrow$ ADR-Nummer`` aufnehmen, damit der
+        Pr\"ufer jedes Pflicht-ADR findet.
+  \item Jedes ADR im Standard-Template (Title, Status, Context, Decision,
+        Consequences inkl.\ \emph{negativer}) \textendash{} Folie 64.
+\end{itemize}
+
+\subsection*{\"Ubung 4 \textendash{} Patterns}
+\textbf{Stark:} Design Patterns an 3 Kernstellen (Adapter, Circuit Breaker,
+Publish/Subscribe) mit Szenario-Zuordnung; weitere genannt (Repository, Facade,
+Token-Bucket).
+\begin{itemize}
+  \item \textbf{Architekturpattern} als eigenes ADR sch\"arfen: Der Stil
+        (DDD-Microservices, ADR~001) ist da, aber \"U4 verlangt die
+        Pattern-Wahl \emph{explizit gegen Qualit\"atsszenarien} begr\"undet
+        \emph{und} auf die Bounded Contexts \emph{abgebildet}. Tabelle:
+        Pattern $\rightarrow$ unterst\"utztes Szenario $\rightarrow$ betroffene
+        Dom\"ane.
+  \item Begr\"undung ,,welche Szenarien wie gut unterst\"utzt werden`` ausformulieren
+        (nicht nur ID-Liste).
+\end{itemize}
+
+\subsection*{\"Ubung 5 \textendash{} Dokumentation}
+\textbf{Stark / vollst\"andig:} C4 L1\,--\,L3 + 2 Sequenzdiagramme (FR-1, FR-2).
+\begin{itemize}
+  \item Diagramme als \textbf{Diagrams-as-Code} (PlantUML/C4-PlantUML oder
+        Structurizr) im Repo ablegen \textendash{} der Dozent betont versionierbar/diffbar
+        (Folien 94\,--\,99). \texttt{.drawio} ist laut Folie~36 ok, aber Code ist die
+        ausdr\"ucklich empfohlene Kür.
+  \item Container-Diagramm: explizit als ,,Bounded Contexts + technische Sicht``
+        kennzeichnen (\"U5.2-Wortlaut).
+\end{itemize}
+
+\subsection*{\"Ubung 6 \textendash{} Schnittstellen + Reflexion}
+\textbf{Stark:} Schnittstellen-Mix pro Kante begr\"undet (REST/gRPC/Async/MCP/SDK);
+\texttt{risks.md} mit 6 Risiken + Mitigation + Tech-Debt.
+\begin{itemize}
+  \item Schnittstellen-Auswahl an die Synchron-/Asynchron-/Echtzeit-Taxonomie der
+        Vorlesung (Folien 106\,--\,108) ankn\"upfen \textendash{} zeigt bewusste Auswahl.
+  \item \texttt{risks.md}: zu jedem Risiko die Frage ,,wo entsteht Tech-Debt beim
+        \emph{Wachstum}`` getrennt von der Mitigation beantworten (\"U6.2).
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\section{Priorisierte Lücken vor der Abgabe}
+% ---------------------------------------------------------------------------
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}p{0.7cm} Y p{2.2cm}@{}}
+\toprule
+\textbf{\#} & \textbf{Lücke / Ma{\ss}nahme} & \textbf{Priorit\"at}\\
+\midrule
+1 & Abgabe-Repo gem.\ Folie~36 anlegen; alle referenzierten \texttt{.md}-Dateien real einchecken & \textcolor{bad}{\textbf{kritisch}}\\
+2 & \texttt{/scenarios/} als vollst\"andige, messbare Bass-Szenarien ausformulieren & \textcolor{bad}{\textbf{kritisch}}\\
+3 & \texttt{traceability.md} mit Mapping FR/NFR $\rightarrow$ Baustein $\rightarrow$ Szenario $\rightarrow$ ADR (und \"Ubung $\rightarrow$ ADR-Nr.) & \textcolor{warn}{\textbf{hoch}}\\
+4 & \texttt{Readme.md} mit Gruppen-Infos (Name/Matrikelnr./HS/E-Mail) & \textcolor{warn}{\textbf{hoch}}\\
+5 & \texttt{glossary.md} (Ubiquitous Language) & \textcolor{warn}{\textbf{hoch}}\\
+6 & Architekturpattern-ADR: Pattern $\rightarrow$ Szenario $\rightarrow$ Dom\"ane explizit & \textcolor{warn}{\textbf{hoch}}\\
+7 & arc42 \S4 Solution Strategy (1 Seite) erg\"anzen & mittel\\
+8 & arc42 \S7 Deployment-Diagramm (K8s, eu-central-1) & mittel\\
+9 & Diagramme als PlantUML/C4-Code versionieren & mittel\\
+\bottomrule
+\end{tabularx}
+
+% ---------------------------------------------------------------------------
+\section{Hinweise für die mündliche Prüfung}
+% ---------------------------------------------------------------------------
+\begin{itemize}
+  \item \textbf{Format:} alle online, jede Gruppe pr\"asentiert,
+        \textbf{7,5\,min pro Person} + Diskussion, alle gleich viel Arbeit. Die
+        drei Bereiche fair aufteilen (z.\,B.\ Anforderungen/Qualit\"at \textbar{}
+        Entscheidungen/Patterns \textbar{} Sichten/Schnittstellen/Risiken).
+  \item \textbf{Roter Faden:} App-Idee $\rightarrow$ Requirements/NFRs $\rightarrow$
+        warum diese Architektur $\rightarrow$ welche NFRs werden wie beg\"unstigt
+        $\rightarrow$ Alternativen \& Entscheidungsfindung. Genau diese Kette
+        verlangt Folie~7.
+  \item \textbf{Auf Alternativ-Fragen vorbereiten:} Zu jedem gro{\ss}en ADR den
+        verworfenen Weg \emph{und den Ausschlaggrund} parat haben (Monolith,
+        Serverless, ESB; direkte SDKs vs.\ Abstraktion; pgvector/Qdrant statt
+        Chroma).
+  \item \textbf{Trade-offs aktiv ansprechen} statt sie zu verstecken
+        (Distributed-Systems-Komplexit\"at, Eventual Consistency, Halluzinationen).
+\end{itemize}
+
+\newpage
+% ===========================================================================
+\part*{Teil II \textendash{} arc42-Dokumentationsger\"ust}
+\addcontentsline{toc}{section}{Teil II \textendash{} arc42-Dokumentationsger\"ust}
+% ===========================================================================
+\noindent\emph{Vorlage zum Ausf\"ullen/Einchecken (eine Datei je Sektion bzw.\
+gem.\ Folie~36). Inhalte sind aus eurer Pr\"asentation vorbef\"ullt;
+\todo{\dots} markiert, was noch aus dem Team kommen muss.}
+
+\section{Einführung und Ziele \quad{\normalfont\small(arc42 \S1)}}
+\textbf{Aufgabe.} TryRAG ist eine multi-mandantenf\"ahige B2B-SaaS-RAG-Plattform:
+isolierter Workspace pro Tenant, RAG-Chatbot mit Quellenangaben, Agenten f\"ur
+Mehrschritt-Tasks via MCP, plus Verwaltung (RBAC, Usage-Monitoring, Key-Management),
+DSGVO-konform und EU-gehostet.
+
+\paragraph{Top-Qualit\"atsziele.} AZ-1 Tenant-Isolation \& Datenschutz \textbullet{}
+AZ-2 Zuverl\"assigkeit (99,9\,\% SLA) \textbullet{} AZ-3 schnelle, korrekte Antworten.
+
+\paragraph{Funktionale Anforderungen (Auszug, MoSCoW).}
+MUST: FR-1 RAG-Frage, FR-2 Upload, FR-3 Login, FR-8 RBAC, FR-10 API-Keys.
+SHOULD: FR-4 Agenten/MCP, FR-6 Kalender, FR-9 MCP-Anbindung, FR-11 Usage.
+COULD: FR-5 Bot-Parameter, FR-7 Abteilungs-Termine. \todo{volle FR-Liste FR-1..FR-11 als User Stories}
+
+\paragraph{Stakeholder.} Endnutzer, Tenant-Admin, Plattform-Betreiber,
+Datenschutz/Compliance.
+
+\section{Randbedingungen \quad{\normalfont\small(arc42 \S2)}}
+EU-Hosting (eu-central-1, Frankfurt) \textbullet{} DSGVO-konform inkl.\ AVV mit
+Cloud-/LLM-Providern \textbullet{} strikte Tenant-Isolation \textbullet{} 99,9\,\% SLA
+der Plattform-API \textbullet{} PII-Filter vor jedem Provider-Versand \textbullet{}
+self-hosted Vektor-DB (ChromaDB). \todo{Annahmen vs. Randbedingungen trennen; org./technische/zeitliche Constraints}
+
+\section{Kontextabgrenzung \quad{\normalfont\small(arc42 \S3)}}
+\textbf{Fachlicher Kontext / System Context (C4 L1).} TryRAG kapselt RAG, LLM-Routing,
+Billing und Tenant-Isolation. Externe Akteure: Mitarbeiter, Tenant-Admin. Externe
+Systeme: LLM-Provider (OpenAI/Anthropic), MCP-Zielsysteme (Kalender/Ticketing),
+Identity Provider (OIDC/OAuth2). Personenbezogene Daten verlassen das System nur
+PII-gefiltert. \emph{(Diagramm: C4-Context, Pr\"asentation Folie~8.)}
+
+\section{Lösungsstrategie \quad{\normalfont\small(arc42 \S4)}}
+\todo{1 Seite}: Kurzbegr\"undung der Kernweichen je Qualit\"atsziel:
+DDD-Microservices (Isolation/Skalierung) \textbullet{} Polyglot Node.js/Python
+(passende Tech je Workload) \textbullet{} LLM-Abstraktion (Provider-Unabh\"angigkeit,
+Cost-Tracking) \textbullet{} self-hosted ChromaDB + RLS (DSGVO/Isolation) \textbullet{}
+Event-Bus (Entkopplung Hot-Path).
+
+\section{Bausteinsicht \quad{\normalfont\small(arc42 \S5)}}
+\textbf{Bounded Contexts:} Auth, Tenant, LLM-Routing, RAG, Agent, Billing, Audit +
+Shared Kernel (UserProfile, TenantId, i18n, CloudEvents).
+\textbf{Container (C4 L2):} SPA (React/TS), API-Gateway/BFF (Node.js), Redis,
+RAG-Service (Python), LLM-Routing (Python), Agent-Service (Python), Auth/Tenant/
+Billing/Audit (Node.js), ChromaDB, PostgreSQL (RLS), Object Storage (S3 EU),
+Event-Bus (RabbitMQ).
+\textbf{Komponenten (C4 L3):} RAG-Context (Retriever, Context Builder, Ingestion,
+Embedding) + LLM-Routing (Provider-Interface, OpenAI-/Anthropic-Adapter, PII-Filter,
+Cost-Tracker). \emph{(Folien 9\,--\,11.)}
+
+\section{Laufzeitsicht \quad{\normalfont\small(arc42 \S6)}}
+\textbf{FR-1 RAG-Query-Flow:} SPA $\rightarrow$ Gateway (JWT/Rate-Limit) $\rightarrow$
+Retriever $\rightarrow$ ChromaDB (Top-K) $\rightarrow$ LLM-Routing (PII-gefiltert)
+$\rightarrow$ Provider $\rightarrow$ SSE-Stream; danach asynchron
+\texttt{llm.request.completed} $\rightarrow$ Billing/Audit.
+\textbf{FR-2 Upload-Flow:} Gateway (JWT/RBAC/Quota) $\rightarrow$ Ingestion
+$\rightarrow$ Object Storage; ab \texttt{202~Accepted} asynchron
+Parsing/Chunking/Embedding $\rightarrow$ ChromaDB; Abschluss
+\texttt{document.indexed}. \emph{(Folien 16\,--\,17.)}
+
+\section{Verteilungssicht \quad{\normalfont\small(arc42 \S7)}}
+\todo{Deployment-Diagramm}: Kubernetes in eu-central-1; Services als Deployments +
+HPA; PostgreSQL/ChromaDB/Object-Storage/RabbitMQ/Redis als Stateful-/Managed-
+Komponenten; Edge mit TLS + WAF.
+
+\section{Querschnittliche Konzepte \quad{\normalfont\small(arc42 \S8)}}
+\textbf{Security (Defense in Depth):} TLS+WAF $\rightarrow$ OIDC + kurzlebige JWTs
+$\rightarrow$ RBAC $\rightarrow$ PostgreSQL Row-Level-Security $\rightarrow$
+ChromaDB-Collection-Konvention \texttt{tenant\_\{id\}\_\{type\}} $\rightarrow$
+Cross-Tenant-Tests im CI; PII-Filter Richtung Provider.
+\textbf{Resilienz:} Circuit Breaker + Fallback-Provider, Retry/Backoff,
+Service-Isolation, Async-Entkopplung, Caching (Redis), HPA.
+\textbf{Observability:} OpenTelemetry + Prometheus/Grafana/Loki/Tempo (ADR~008).
+\emph{(Folie 18.)}
+
+\section{Architekturentscheidungen \quad{\normalfont\small(arc42 \S9)}}
+9 ADRs (je Kontext/Entscheidung/Begr\"undung/Alternativen/Konsequenzen):
+001 DDD-Microservices \textbullet{} 002 Cloud-native Multi-Tenant SaaS \textbullet{}
+003.1 React/TS-SPA \textbullet{} 003.2 Polyglot Node.js+Python \textbullet{}
+004 ChromaDB self-hosted \textbullet{} 005 LLM-Adapter + Cost-Tracking \textbullet{}
+006 Schnittstellen-Mix \textbullet{} 007 RabbitMQ \textbullet{} 008 Observability
+\textbullet{} 009 OIDC/OAuth2 + JWT + RBAC + API-Keys.
+\textbf{Patterns:} Adapter, Circuit Breaker, Publish/Subscribe (3 Kernstellen) +
+Repository, Facade/Gateway, Token-Bucket.
+\todo{Architekturpattern-ADR: Tabelle Pattern $\rightarrow$ Szenario $\rightarrow$ Dom\"ane}
+
+\section{Qualitätsanforderungen \quad{\normalfont\small(arc42 \S10)}}
+\textbf{ISO-25010-Priorisierung:} Hoch \textendash{} Zuverl\"assigkeit, Sicherheit,
+Funktionale Eignung, Benutzbarkeit, Effizienz; Mittel \textendash{} Kompatibilit\"at;
+Niedrig \textendash{} Wartbarkeit, \"Ubertragbarkeit. Architecture Drivers: S2
+Cross-Tenant, S3 PII, Z3 Provider-Fallback.
+\textbf{Utility Tree + Szenarien} \todo{vollst\"andige Bass-6-Tupel je Szenario,
+$\geq$2 je Top-3-Attribut, mit Response Measure (z.\,B.\ TTFT~$\leq$~1,5\,s;
+Retrieval~$\leq$~250\,ms; Recovery; Cross-Tenant-Zugriff = 0)}.
+
+\section{Risiken und technische Schulden \quad{\normalfont\small(arc42 \S11)}}
+Tenant-Isolation-Leak (niedrig/katastrophal \textendash{} RLS+Collection+CI) \textbullet{}
+LLM-Provider-Dependency (mittel/hoch \textendash{} Abstraktion+Fallback+CB) \textbullet{}
+Last/Skalierung (hoch/sp\"urbar \textendash{} Queue+HPA+Cache) \textbullet{}
+VectorDB-Bulking (Retention+Splitting+Re-Indexing) \textbullet{} Halluzinationen
+(Quellen+Confidence-Threshold) \textbullet{} Datenschutz/PII (PII-Filter+EU+AVV).
+\todo{Tech-Debt beim Wachstum je Risiko getrennt benennen.}
+
+\section{Glossar \quad{\normalfont\small(arc42 \S12)}}
+\todo{Ubiquitous Language als Begriffsliste}: Tenant, Workspace, RAG, Chunk,
+Embedding, Retrieval (ANN), Bounded Context, Shared Kernel, MCP, PII-Filter,
+Cost-Attribution, Circuit Breaker, RLS \dots
+
+\vfill
+\begin{center}\small\color{ink}
+Quellen: \emph{Softwarearchitektur}-Folien (Prof.\ Weeger, SS\,2026) \textbullet{}
+\emph{TryRAG-Architektur} (Team-Pr\"asentation) \textbullet{} Repo
+\texttt{Chat-Assistant-AI}.
+\end{center}
+
+\end{document}

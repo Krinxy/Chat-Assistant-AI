@@ -38,6 +38,8 @@ import { UserProfilePanel } from "./pages/ProfilePage/UserProfilePanel";
 import { userProfile } from "./shared/data/userProfile";
 import { NotificationsPanel } from "./features/notifications/components/NotificationsPanel";
 import { useInviteNotifications } from "./features/notifications/hooks/useInviteNotifications";
+import { DocumentsPanel } from "./features/documents/components/DocumentsPanel";
+import { uploadDocument } from "./features/documents/api/documentsApi";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
 import { WelcomeOverlay } from "./shared/components/ui/WelcomeOverlay";
@@ -372,8 +374,34 @@ export default function App() {
       return;
     }
 
+    // Always echo the attachment in the chat for immediate feedback.
     addUploadedFilesMessage(files);
-  }, [addUploadedFilesMessage]);
+
+    // Admins additionally feed the files into the shared RAG knowledge base (vectorized
+    // into ChromaDB). Non-admins lack the permission, so we skip the call to avoid a
+    // guaranteed 403 and keep the attach button purely cosmetic for them.
+    if (user?.role !== "admin") {
+      return;
+    }
+
+    const token = user.token;
+    void (async () => {
+      let succeeded = 0;
+      for (const file of files) {
+        try {
+          await uploadDocument(file, token);
+          succeeded += 1;
+        } catch {
+          // Per-file failure is reported in aggregate via the snackbar below.
+        }
+      }
+      setSnackbarMessage(
+        succeeded === files.length
+          ? ui.documents.uploadSuccess.replace("{count}", String(succeeded))
+          : ui.documents.errGeneric,
+      );
+    })();
+  }, [addUploadedFilesMessage, user, ui, setSnackbarMessage]);
 
   const handleReturnToDashboard = (): void => {
     setActiveView("dashboard");
@@ -691,6 +719,15 @@ export default function App() {
               onOpenProfile={handleOpenProfile}
               isSidebarOpen={isSidebarOpen}
               onOpenSidebar={() => setIsSidebarOpen(true)}
+            />
+          ) : null}
+
+          {activeView === "documents" ? (
+            <DocumentsPanel
+              language={language}
+              token={user?.token ?? null}
+              isAdmin={user?.role === "admin"}
+              copy={ui.documents}
             />
           ) : null}
 

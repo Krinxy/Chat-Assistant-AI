@@ -319,6 +319,24 @@ input {
   min-width: 0;
 }
 
+/* Reset the inner <button> so it fills the row transparently instead of showing the
+   browser default (white box + border) — the icon/label sit on one line again. */
+.nav-list li button {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .nav-list-icon {
   flex-shrink: 0;
   opacity: 0.82;
@@ -742,6 +760,11 @@ input {
   gap: 0;
 }
 
+.dashboard-shell.is-collapsed .nav-list li button {
+  justify-content: center;
+  gap: 0;
+}
+
 .dashboard-shell.is-collapsed .nav-list li span {
   opacity: 0;
   width: 0;
@@ -1146,6 +1169,9 @@ input {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr);
+  /* Cap the single row at the container height (min 0) instead of letting an implicit
+     auto row grow with chat content — otherwise .chat-log can never overflow and scroll. */
+  grid-template-rows: minmax(0, 1fr);
   gap: clamp(14px, 1.4vw, 22px);
   overflow: visible;
   position: relative;

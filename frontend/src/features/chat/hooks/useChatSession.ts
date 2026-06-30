@@ -176,6 +176,13 @@ export function useChatSession({
           void sendChatMessage(trimmed, sessionIdRef.current, backendProvider, token)
             .then((response) => {
               sessionIdRef.current = response.session_id;
+              if (response.sources.length > 0) {
+                setMessages((previous) =>
+                  previous.map((message) =>
+                    message.id !== thinkingId ? message : { ...message, sources: response.sources },
+                  ),
+                );
+              }
               streamReply(thinkingId, response.message);
             })
             .catch((err: unknown) => {

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Protocol, cast, runtime_checkable
 
 from ...dependency.vectordb import get_vector_db_client
 from ..ingestion.embedder import DEFAULT_EMBEDDING_MODEL, EmbeddingService
 
 if TYPE_CHECKING:
     from chromadb.api.models.Collection import Collection
+    from chromadb.api.types import Embeddings
 
 _logger = logging.getLogger(__name__)
 
@@ -85,7 +86,8 @@ class ChromaRetriever:
             collection = self._collection_provider()
             query_embedding = self._embeddings.embed_query(query)
             results = collection.query(
-                query_embeddings=[query_embedding],
+                # ChromaDB accepts plain float lists at runtime; its stubs are narrower, so cast.
+                query_embeddings=cast("Embeddings", [query_embedding]),
                 n_results=self._k,
                 include=["documents", "metadatas", "distances"],
             )
@@ -95,7 +97,7 @@ class ChromaRetriever:
 
         return self._parse_results(results)
 
-    def _parse_results(self, results: dict) -> list[RetrievedChunk]:
+    def _parse_results(self, results: Mapping[str, Any]) -> list[RetrievedChunk]:
         documents = self._first_row(results, "documents")
         metadatas = self._first_row(results, "metadatas")
         distances = self._first_row(results, "distances")
@@ -119,7 +121,7 @@ class ChromaRetriever:
         return chunks
 
     @staticmethod
-    def _first_row(results: dict, key: str) -> list:
+    def _first_row(results: Mapping[str, Any], key: str) -> list:
         """Unwrap ChromaDB's per-query nesting (``{key: [[...]]}``) for our single query."""
         rows = results.get(key) or []
         return list(rows[0]) if rows else []

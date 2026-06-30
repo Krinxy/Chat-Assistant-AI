@@ -1146,6 +1146,9 @@ input {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(360px, 1fr);
+  /* Cap the single row at the container height (min 0) instead of letting an implicit
+     auto row grow with chat content — otherwise .chat-log can never overflow and scroll. */
+  grid-template-rows: minmax(0, 1fr);
   gap: clamp(14px, 1.4vw, 22px);
   overflow: visible;
   position: relative;

@@ -7,6 +7,17 @@ export interface ChatAttachment {
   previewUrl?: string;
 }
 
+export interface ChatSource {
+  /** Document id stored in the chunk metadata (falls back as filename if unresolved). */
+  source: string;
+  /** Human-readable document name resolved by the backend. */
+  filename: string;
+  /** Zero-based index of the chunk within its document. */
+  chunkIndex: number;
+  /** Cosine similarity of the chunk to the query, in [0, 1]. */
+  similarity: number;
+}
+
 export interface ChatMessage {
   id: number;
   role: ChatRole;
@@ -16,6 +27,7 @@ export interface ChatMessage {
   reasoning?: string;
   isStreaming?: boolean;
   attachments?: ChatAttachment[];
+  sources?: ChatSource[];
 }
 
 export interface AttachmentAction {
@@ -112,4 +124,5 @@ export type ActiveView =
   | "settings"
   | "guide"
   | "imprint"
-  | "mydesk";
+  | "mydesk"
+  | "documents";

@@ -8,7 +8,8 @@ type NavKey =
   | "notifications"
   | "profile"
   | "settings"
-  | "mydesk";
+  | "mydesk"
+  | "documents";
 
 type ServiceKey =
   | "persona"
@@ -85,6 +86,7 @@ export interface UiText {
     audioStopTitle: string;
     disclaimer: string;
     streamStatus: string;
+    sourcesLabel: string;
     speechListening: string;
     speechUnsupported: string;
     speechPermissionDenied: string;
@@ -119,6 +121,29 @@ export interface UiText {
     subline: string;
     skip: string;
   };
+  documents: {
+    title: string;
+    subtitle: string;
+    uploadButton: string;
+    uploading: string;
+    uploadHint: string;
+    uploadSuccess: string;
+    adminOnlyNote: string;
+    listTitle: string;
+    loading: string;
+    empty: string;
+    loadError: string;
+    retry: string;
+    chunksSuffix: string;
+    deleteLabel: string;
+    deleting: string;
+    errDuplicate: string;
+    errTooLarge: string;
+    errType: string;
+    errAuth: string;
+    errForbidden: string;
+    errGeneric: string;
+  };
 }
 
 export const uiTextByLanguage: Record<Language, UiText> = {
@@ -133,6 +158,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         profile: "Profil",
         settings: "Einstellungen",
         mydesk: "Schreibtisch",
+        documents: "Wissensbasis",
       },
       lastChatsTitle: "Letzte Chats",
       newChatTitle: "Neuer Chat",
@@ -222,6 +248,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       disclaimer:
         "Sprachmodelle können Fehler machen. Wichtige Informationen immer überprüfen.",
       streamStatus: "Antwort wird generiert...",
+      sourcesLabel: "Quellen",
       speechListening: "Höre zu... sprich jetzt.",
       speechUnsupported: "Spracheingabe wird in diesem Browser nicht unterstützt.",
       speechPermissionDenied: "Mikrofon-Zugriff wurde blockiert.",
@@ -262,6 +289,30 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       subline: "",
       skip: "Intro überspringen",
     },
+    documents: {
+      title: "Wissensbasis",
+      subtitle:
+        "Lade Dokumente hoch, die der Assistent als Wissensquelle nutzt. Sie werden vektorisiert und in der Vektordatenbank gespeichert.",
+      uploadButton: "Dokument hochladen",
+      uploading: "Wird hochgeladen…",
+      uploadHint: "PDF, DOCX oder TXT · max. 20 MB",
+      uploadSuccess: "{count} Dokument(e) hinzugefügt.",
+      adminOnlyNote: "Nur Administratoren können Dokumente hochladen oder löschen.",
+      listTitle: "Hochgeladene Dokumente",
+      loading: "Wird geladen…",
+      empty: "Noch keine Dokumente in der Wissensbasis.",
+      loadError: "Dokumente konnten nicht geladen werden.",
+      retry: "Erneut versuchen",
+      chunksSuffix: "Chunks",
+      deleteLabel: "Löschen",
+      deleting: "Wird gelöscht…",
+      errDuplicate: "Dieses Dokument existiert bereits (identischer Inhalt).",
+      errTooLarge: "Datei zu groß (max. 20 MB).",
+      errType: "Dateityp nicht unterstützt. Erlaubt: PDF, DOCX, TXT.",
+      errAuth: "Bitte melde dich an.",
+      errForbidden: "Keine Berechtigung — Admin-Rolle erforderlich.",
+      errGeneric: "Aktion fehlgeschlagen. Bitte erneut versuchen.",
+    },
   },
   en: {
     sidebar: {
@@ -274,6 +325,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
         profile: "Profile",
         settings: "Settings",
         mydesk: "Desk",
+        documents: "Knowledge base",
       },
       lastChatsTitle: "Recent Chats",
       newChatTitle: "New Chat",
@@ -363,6 +415,7 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       disclaimer:
         "Language models can make mistakes. Always verify important information.",
       streamStatus: "Generating response...",
+      sourcesLabel: "Sources",
       speechListening: "Listening... speak now.",
       speechUnsupported: "Speech input is not supported in this browser.",
       speechPermissionDenied: "Microphone access was denied.",
@@ -402,6 +455,30 @@ export const uiTextByLanguage: Record<Language, UiText> = {
       subtitle: "Ready for your day",
       subline: "",
       skip: "Skip intro",
+    },
+    documents: {
+      title: "Knowledge base",
+      subtitle:
+        "Upload documents the assistant uses as its knowledge source. They are vectorized and stored in the vector database.",
+      uploadButton: "Upload document",
+      uploading: "Uploading…",
+      uploadHint: "PDF, DOCX or TXT · max. 20 MB",
+      uploadSuccess: "{count} document(s) added.",
+      adminOnlyNote: "Only administrators can upload or delete documents.",
+      listTitle: "Uploaded documents",
+      loading: "Loading…",
+      empty: "No documents in the knowledge base yet.",
+      loadError: "Could not load documents.",
+      retry: "Try again",
+      chunksSuffix: "chunks",
+      deleteLabel: "Delete",
+      deleting: "Deleting…",
+      errDuplicate: "This document already exists (identical content).",
+      errTooLarge: "File too large (max. 20 MB).",
+      errType: "File type not supported. Allowed: PDF, DOCX, TXT.",
+      errAuth: "Please sign in.",
+      errForbidden: "Not allowed — admin role required.",
+      errGeneric: "Action failed. Please try again.",
     },
   },
 };

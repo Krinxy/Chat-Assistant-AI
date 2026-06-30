@@ -116,11 +116,7 @@ class DocumentLoader:
         The first non-empty row is treated as the header when every cell is filled; otherwise
         cells are joined positionally. Empty cells are dropped so each row stays self-contained.
         """
-        cleaned = [
-            [(cell or "").strip().replace("\n", " ") for cell in row]
-            for row in rows
-            if any((cell or "").strip() for cell in row)
-        ]
+        cleaned = [[(cell or "").strip().replace("\n", " ") for cell in row] for row in rows if any((cell or "").strip() for cell in row)]
         if not cleaned:
             return []
 

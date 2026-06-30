@@ -54,3 +54,23 @@ class DocumentChunker:
     def chunk_document(self, source: str, text: str) -> list[Chunk]:
         """Split a document into indexed :class:`Chunk` records carrying their source name."""
         return [Chunk(source=source, chunk_index=index, text=fragment) for index, fragment in enumerate(self.split(text))]
+
+    def chunk_segments(self, source: str, segments: list[str]) -> list[Chunk]:
+        """Chunk pre-segmented text, keeping each short segment atomic.
+
+        A segment that fits within ``chunk_size`` (e.g. one serialized table row) becomes exactly
+        one chunk, so distinct table entries never get merged and confused. Longer segments
+        (free-form prose) are recursively split as usual. Chunk indices are continuous across the
+        whole document.
+        """
+        chunks: list[Chunk] = []
+        index = 0
+        for segment in segments:
+            stripped = segment.strip()
+            if not stripped:
+                continue
+            fragments = [stripped] if len(stripped) <= self._chunk_size else self.split(stripped)
+            for fragment in fragments:
+                chunks.append(Chunk(source=source, chunk_index=index, text=fragment))
+                index += 1
+        return chunks

@@ -75,7 +75,7 @@ async def upload_document(
     filename = file.filename or "upload"
 
     try:
-        text = DocumentLoader.extract_text(filename, data)
+        segments = DocumentLoader.extract_segments(filename, data)
     except UnsupportedDocumentError:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -85,7 +85,7 @@ async def upload_document(
     content_hash = hashlib.sha256(data).hexdigest()
     doc_id = str(uuid.uuid4())
 
-    chunks = _chunker.chunk_document(doc_id, text)
+    chunks = _chunker.chunk_segments(doc_id, segments)
     try:
         result = embedder.upsert_chunks(chunks)
     except Exception as exc:

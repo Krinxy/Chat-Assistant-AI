@@ -1,16 +1,20 @@
 name: Deploy Frontend to Hetzner
 
-# Builds the frontend and rsyncs the static build to the Hetzner webspace on every push to
-# main. Requires these repository secrets (see docs/postgres-docker-setup.md deploy section):
+# Builds the frontend and rsyncs the static build to the Hetzner webspace — but only after
+# the "ChatBot CI/CD" workflow (Lint/Bandit/Test-And-Build gates) has finished successfully
+# on main. Runs entirely on GitHub-hosted runners, no dependency on any local machine.
+#
+# Requires these repository secrets (see docs/postgres-docker-setup.md deploy section):
 #   HETZNER_HOST     - e.g. www693.your-server.de
 #   HETZNER_PORT     - e.g. 222
 #   HETZNER_USER     - SSH/SFTP user
 #   HETZNER_SSH_KEY  - private half of a dedicated deploy keypair (not the account password)
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["ChatBot CI/CD"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -21,12 +25,16 @@ jobs:
   deploy:
     name: Build & Deploy Frontend
     runs-on: ubuntu-latest
+    # Only deploy if this was triggered by a successful CI run (or a manual dispatch).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Node
         uses: actions/setup-node@v4

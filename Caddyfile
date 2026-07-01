@@ -1,0 +1,8 @@
+# Reverse proxy + automatic TLS for the backend API.
+# Replace api.yourdomain.com below with your real backend domain/subdomain (must have a DNS
+# A/AAAA record pointing at this server's IP). Caddy fetches a Let's Encrypt cert for it
+# automatically on first request — no manual certbot/nginx config needed.
+
+api.yourdomain.com {
+	reverse_proxy backend:8000
+}

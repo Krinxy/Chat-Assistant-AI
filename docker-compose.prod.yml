@@ -1,0 +1,95 @@
+# Production stack: backend + Postgres + Redis + a Caddy reverse proxy that terminates TLS.
+#
+# Runs on ANY server with Docker + the Compose plugin installed (Hetzner Cloud, a VPS
+# elsewhere, your own hardware, ...) — no dependency on a specific host. See
+# docs/backend-deployment.md for the full setup guide.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Unlike docker-compose.dev.yml: no bind mounts, no --reload, no host ports on db/redis/
+# backend (only Caddy is exposed to the internet), restart: unless-stopped everywhere.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://chat:${POSTGRES_PASSWORD}@db:5432/chatdb
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_PATH: /data/chroma
+      LOG_LEVEL: INFO
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISS: aura-auth
+      JWT_AUD: aura-api
+      JWT_EXPIRES_MINUTES: "15"
+      AUTH_MODE: jwt
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      TRANSCRIPTION_PRELOAD_ON_STARTUP: "true"
+      WHISPER_ENABLE_FAKE_FALLBACK: "false"
+      # Caddy sits in front on the same private compose network — trusting it here is safe
+      # because only Caddy's ports (80/443) are published to the host; the backend itself
+      # is never reachable directly from the internet.
+      TRUSTED_PROXY_IPS: "*"
+    volumes:
+      - chroma_data:/data/chroma
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: chatdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d chatdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Deliberately no `ports:` — Postgres is only reachable from other containers on this
+    # compose network, never from the public internet.
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    # Same reasoning — no public port.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+  caddy_data:
+  caddy_config:

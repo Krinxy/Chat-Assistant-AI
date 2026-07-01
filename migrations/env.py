@@ -4,6 +4,7 @@ The target metadata is the application's declarative ``Base``. All model modules
 imported explicitly so every table is registered before autogenerate compares the
 schema. The database URL comes from ``DATABASE_URL`` (same default as the app).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -24,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend.app.db.session import Base  # noqa: E402
 
 # Import every model module so its table is attached to Base.metadata.
-from backend.app.models import document, message, session, user  # noqa: E402,F401
+from backend.app.models import company, document, message, session, user  # noqa: E402,F401
 
 config = context.config
 

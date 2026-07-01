@@ -22,12 +22,20 @@ def test_migrations_build_full_schema_to_head(tmp_path) -> None:
     conn = sqlite3.connect(db_path)
     try:
         tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert {"users", "chat_sessions", "chat_messages", "documents"} <= tables
+        assert {
+            "users",
+            "chat_sessions",
+            "chat_messages",
+            "documents",
+            "companies",
+            "personal_colleagues",
+            "personal_appointments",
+        } <= tables
 
         chat_session_cols = {row[1] for row in conn.execute("PRAGMA table_info(chat_sessions)")}
         assert "user_id" in chat_session_cols
 
         head = {row[0] for row in conn.execute("SELECT version_num FROM alembic_version")}
-        assert head == {"bae331af7ba5"}
+        assert head == {"7146f21e6688"}
     finally:
         conn.close()

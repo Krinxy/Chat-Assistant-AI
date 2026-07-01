@@ -40,6 +40,7 @@ import { NotificationsPanel } from "./features/notifications/components/Notifica
 import { useInviteNotifications } from "./features/notifications/hooks/useInviteNotifications";
 import { DocumentsPanel } from "./features/documents/components/DocumentsPanel";
 import { uploadDocument } from "./features/documents/api/documentsApi";
+import { useCompanyData } from "./features/company/hooks/useCompanyData";
 import { uiTextByLanguage } from "./shared/i18n/uiText";
 import { ACTIVE_DEV_PROFILE } from "./shared/constants/devProfiles";
 import { WelcomeOverlay } from "./shared/components/ui/WelcomeOverlay";
@@ -136,9 +137,11 @@ export default function App() {
   const [localLlmConfig, setLocalLlmConfig] = useState<LocalLlmConfig | null>(null);
   const [unixTime, setUnixTime] = useState<number>(Math.floor(Date.now() / 1000));
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const companyData = useCompanyData(user?.token ?? null);
   const { deskRsvpDecisions, notificationFeed, inviteNotifications, handleDeskRsvpDecision } = useInviteNotifications({
     language,
     onSnackbar: setSnackbarMessage,
+    personalAppointments: companyData.personalAppointments,
   });
 
   const [isImprintOpen, setIsImprintOpen] = useState<boolean>(false);
@@ -691,6 +694,7 @@ export default function App() {
           {activeView === "mydesk" ? (
             <MyDeskPanel
               language={language}
+              companyData={companyData}
               rsvpDecisions={deskRsvpDecisions}
               onRsvpDecision={handleDeskRsvpDecision}
             />
@@ -716,6 +720,10 @@ export default function App() {
           {activeView === "companies" ? (
             <CompanyWorkspacePanel
               language={language}
+              companies={companyData.companies}
+              isLoadingCompanies={companyData.isLoading}
+              companiesLoadError={companyData.loadError}
+              onReloadCompanies={companyData.reload}
               onOpenProfile={handleOpenProfile}
               isSidebarOpen={isSidebarOpen}
               onOpenSidebar={() => setIsSidebarOpen(true)}

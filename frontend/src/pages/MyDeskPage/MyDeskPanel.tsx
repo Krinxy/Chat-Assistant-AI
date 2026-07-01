@@ -1,14 +1,10 @@
 import { useMemo, useState } from "react";
 
 import type { Language } from "../../features/chat/types/chat";
+import type { UseCompanyDataResult } from "../../features/company/hooks/useCompanyData";
 import { ACTIVE_DEV_PROFILE } from "../../shared/constants/devProfiles";
 import { CompanyAppointmentsTab } from "../CompanyWorkspacePage/CompanyAppointmentsTab";
-import {
-  companyRecords,
-  personalAppointments,
-  personalColleagues,
-  weekdayLabelsByLanguage,
-} from "../CompanyWorkspacePage/companyWorkspace.data";
+import { weekdayLabelsByLanguage } from "../CompanyWorkspacePage/companyWorkspace.data";
 import { getCompanyWorkspaceText } from "../CompanyWorkspacePage/companyWorkspace.text";
 import type { CompanyRecord, ParsedAppointmentItem } from "../CompanyWorkspacePage/companyWorkspace.types";
 import {
@@ -20,12 +16,14 @@ type DeskTab = "overview" | "appointments" | "companies";
 
 interface MyDeskPanelProps {
   language: Language;
+  companyData: UseCompanyDataResult;
   rsvpDecisions: Record<string, "accepted" | "declined">;
   onRsvpDecision: (appointmentId: string, decision: "accepted" | "declined") => void;
 }
 
-export function MyDeskPanel({ language, rsvpDecisions, onRsvpDecision }: MyDeskPanelProps) {
+export function MyDeskPanel({ language, companyData, rsvpDecisions, onRsvpDecision }: MyDeskPanelProps) {
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
+  const { companies, personalColleagues, personalAppointments, isLoading, loadError, reload } = companyData;
   const [assignedRole] = useState(readDbAssignedRole);
   const [activeTab, setActiveTab] = useState<DeskTab>("overview");
 
@@ -92,8 +90,8 @@ export function MyDeskPanel({ language, rsvpDecisions, onRsvpDecision }: MyDeskP
 
   const accessibleCompanies = useMemo<CompanyRecord[]>(() => {
     if (assignedRole === "guest") return [];
-    return companyRecords.filter((c) => c.assignedRoles.includes(assignedRole));
-  }, [assignedRole]);
+    return companies.filter((c) => c.assignedRoles.includes(assignedRole));
+  }, [assignedRole, companies]);
 
   const userAppointments = useMemo<ParsedAppointmentItem[]>(() => {
     const weekDays = weekdayLabelsByLanguage[language];
@@ -164,6 +162,19 @@ export function MyDeskPanel({ language, rsvpDecisions, onRsvpDecision }: MyDeskP
           <p>{copy.subtitle}</p>
         </div>
       </header>
+
+      {isLoading ? (
+        <p className="company-workspace-load-status" role="status">
+          {language === "de" ? "Daten werden geladen…" : "Loading data…"}
+        </p>
+      ) : loadError !== null ? (
+        <p className="company-workspace-load-error" role="alert">
+          {language === "de" ? "Daten konnten nicht geladen werden." : "Failed to load data."}{" "}
+          <button type="button" onClick={() => void reload()}>
+            {language === "de" ? "Erneut versuchen" : "Retry"}
+          </button>
+        </p>
+      ) : null}
 
       <div
         className="company-tab-row"

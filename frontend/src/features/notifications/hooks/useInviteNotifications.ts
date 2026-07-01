@@ -1,9 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 
-import {
-  personalAppointments,
-  weekdayLabelsByLanguage,
-} from "../../../pages/CompanyWorkspacePage/companyWorkspace.data";
+import { weekdayLabelsByLanguage } from "../../../pages/CompanyWorkspacePage/companyWorkspace.data";
 import type { ParsedAppointmentItem } from "../../../pages/CompanyWorkspacePage/companyWorkspace.types";
 import type { Language } from "../../chat/types/chat";
 
@@ -25,9 +22,10 @@ export interface InviteNotification extends ParsedAppointmentItem {
 interface UseInviteNotificationsOptions {
   language: Language;
   onSnackbar: (message: string) => void;
+  personalAppointments: ParsedAppointmentItem[];
 }
 
-export function useInviteNotifications({ language, onSnackbar }: UseInviteNotificationsOptions) {
+export function useInviteNotifications({ language, onSnackbar, personalAppointments }: UseInviteNotificationsOptions) {
   const [deskRsvpDecisions, setDeskRsvpDecisions] = useState<Record<string, InviteDecision>>({});
   const [notificationFeed, setNotificationFeed] = useState<NotificationFeedItem[]>([]);
 
@@ -47,7 +45,7 @@ export function useInviteNotifications({ language, onSnackbar }: UseInviteNotifi
     return invites.sort(
       (a, b) => a.weekIndex - b.weekIndex || a.dayIndex - b.dayIndex || a.timeLabel.localeCompare(b.timeLabel),
     );
-  }, [deskRsvpDecisions, language]);
+  }, [deskRsvpDecisions, language, personalAppointments]);
 
   const handleDeskRsvpDecision = useCallback(
     (appointmentId: string, decision: InviteDecision): void => {
@@ -85,7 +83,7 @@ export function useInviteNotifications({ language, onSnackbar }: UseInviteNotifi
 
       onSnackbar(message);
     },
-    [language, onSnackbar],
+    [language, onSnackbar, personalAppointments],
   );
 
   return { deskRsvpDecisions, notificationFeed, inviteNotifications, handleDeskRsvpDecision };

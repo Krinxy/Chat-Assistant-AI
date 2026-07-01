@@ -10,11 +10,7 @@ import { CompanyList } from "./CompanyList";
 import { DocumentsTabContent } from "./DocumentsTabContent";
 import { OverviewTabContent } from "./OverviewTabContent";
 import { PortfolioTabContent } from "./PortfolioTabContent";
-import {
-  companyRecords,
-  tabVisibilityByRole,
-  weekdayLabelsByLanguage,
-} from "./companyWorkspace.data";
+import { tabVisibilityByRole, weekdayLabelsByLanguage } from "./companyWorkspace.data";
 import { getCompanyWorkspaceText } from "./companyWorkspace.text";
 import type {
   CompanyNoteEntry,
@@ -37,7 +33,16 @@ import { featureFlags } from "../../shared/config/appConfig";
 
 const ENABLE_WORKSPACE_NEWSFEED = featureFlags.enable_workspace_newsfeed;
 
-export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, onOpenSidebar }: CompanyWorkspacePanelProps) {
+export function CompanyWorkspacePanel({
+  language,
+  companies,
+  isLoadingCompanies,
+  companiesLoadError,
+  onReloadCompanies,
+  onOpenProfile,
+  isSidebarOpen,
+  onOpenSidebar,
+}: CompanyWorkspacePanelProps) {
   const text = useMemo(() => getCompanyWorkspaceText(language), [language]);
 
   const [assignedRole] = useState(readDbAssignedRole);
@@ -85,8 +90,8 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
       return [];
     }
 
-    return companyRecords.filter((company) => company.assignedRoles.includes(assignedRole));
-  }, [assignedRole]);
+    return companies.filter((company) => company.assignedRoles.includes(assignedRole));
+  }, [assignedRole, companies]);
 
   useEffect(() => {
     if (roleScopedCompanies.length === 0) {
@@ -919,6 +924,19 @@ export function CompanyWorkspacePanel({ language, onOpenProfile, isSidebarOpen, 
           </button>
         </div>
       </header>
+
+      {isLoadingCompanies ? (
+        <p className="company-workspace-load-status" role="status">
+          {language === "de" ? "Firmendaten werden geladen…" : "Loading company data…"}
+        </p>
+      ) : companiesLoadError !== null ? (
+        <p className="company-workspace-load-error" role="alert">
+          {language === "de" ? "Firmendaten konnten nicht geladen werden." : "Failed to load company data."}{" "}
+          <button type="button" onClick={() => void onReloadCompanies()}>
+            {language === "de" ? "Erneut versuchen" : "Retry"}
+          </button>
+        </p>
+      ) : null}
 
       <div className={`company-workspace-grid${isListPaneCollapsed ? " is-list-pane-collapsed" : ""}`}>
         <aside className="company-list-column">

@@ -31,6 +31,7 @@ production = [
 backend = [
   "fastapi>=0.115.0",
   "uvicorn>=0.30.0",
+  "asyncpg>=0.30.0",
   "redis>=5.2.0",
   "pydantic>=2.8.0",
   "pydantic-settings>=2.6.0",

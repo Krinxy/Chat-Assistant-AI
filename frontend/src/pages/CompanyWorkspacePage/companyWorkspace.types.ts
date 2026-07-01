@@ -119,6 +119,10 @@ export interface WeekdayTokenEntry {
 
 export interface CompanyWorkspacePanelProps {
   language: Language;
+  companies: CompanyRecord[];
+  isLoadingCompanies: boolean;
+  companiesLoadError: string | null;
+  onReloadCompanies: () => Promise<void>;
   onOpenProfile: () => void;
   isSidebarOpen: boolean;
   onOpenSidebar: () => void;

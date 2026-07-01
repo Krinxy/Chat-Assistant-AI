@@ -8,6 +8,7 @@ A modular multi-agent AI assistant for mobile applications, combining conversati
 - [01 General](docs/01_general.md)
 - [02 Dependencies](docs/02_dependencies.md)
 - [03 Quick Setup](docs/03_quick_setup.md)
+- [Docker Setup — Postgres, Redis & Frontend](docs/postgres-docker-setup.md) (Windows: `./scripts/setup-dev.ps1` installiert alles automatisch)
 - [04 Contribution Principles](docs/04_contribution_principles.md)
 - [Code Quality](docs/codequality.md)
 

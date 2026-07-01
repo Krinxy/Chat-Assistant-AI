@@ -1,0 +1,61 @@
+name: Deploy Frontend to Hetzner
+
+# Builds the frontend and rsyncs the static build to the Hetzner webspace on every push to
+# main. Requires these repository secrets (see docs/postgres-docker-setup.md deploy section):
+#   HETZNER_HOST     - e.g. www693.your-server.de
+#   HETZNER_PORT     - e.g. 222
+#   HETZNER_USER     - SSH/SFTP user
+#   HETZNER_SSH_KEY  - private half of a dedicated deploy keypair (not the account password)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hetzner
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Trust host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.HETZNER_PORT }}" "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy dist/ to public_html via rsync
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.HETZNER_PORT }}" \
+            frontend/dist/ \
+            "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:~/public_html/"

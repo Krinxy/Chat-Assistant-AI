@@ -41,3 +41,11 @@ redis:
   db: 0
   timeout_seconds: 0.25
   scan_count: 100
+
+# ── RAG ───────────────────────────────────────────────────────────────────────
+# enabled: false  →  plain LLM chat, no retrieval (default)
+# enabled: true   →  grounded answers from uploaded documents; falls back to
+#                    plain LLM when the knowledge base is empty or no chunk
+#                    exceeds the similarity threshold
+rag:
+  enabled: false

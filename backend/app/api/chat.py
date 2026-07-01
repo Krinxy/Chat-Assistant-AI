@@ -27,7 +27,7 @@ from ..services.core.guardrails.input_guard import InputGuard
 from ..services.core.guardrails.output_guard import OutputGuard
 from ..services.core.guardrails.policy_guard import PolicyGuard
 from ..services.core.guardrails.query_refiner import QueryRefiner
-from ..services.core.rag import NO_CONTEXT_MESSAGE, ChromaRetriever, RetrievedChunk, Retriever, build_rag_messages, extract_sources
+from ..services.core.rag import ChromaRetriever, RetrievedChunk, Retriever, build_rag_messages, extract_sources
 from ..services.dependency.authtoken import authtoken
 from ..config import cfg as _app_cfg
 from ..services.dependency.llm import DEFAULT_PROVIDER, LLMClient, LLMNotConfiguredError, LLMUnavailableError
@@ -253,8 +253,8 @@ class ChatPipeline:
     async def run(self, message: str, session_id: str, context: str = "", provider: Optional[str] = None) -> tuple[str, str, list[dict]]:
         """Execute the full pipeline. Returns (response_message, status, sources).
 
-        When RAG is enabled and retrieval finds no chunk above the similarity threshold, the
-        grounded fallback is returned without calling the LLM (status ``"no_context"``).
+        When retrieval yields no chunks (empty KB or below threshold), falls back to
+        a plain LLM call without document grounding (sources will be empty).
 
         Raises:
             HTTPException 400: if the input guard rejects the query.
@@ -264,9 +264,7 @@ class ChatPipeline:
 
         refined_query = await self._refine_query(message, session_id)
         chunks = await self._retrieve(refined_query)
-        if self._rag_enabled and not chunks:
-            return NO_CONTEXT_MESSAGE, "no_context", []
-
+        # Fall back to plain LLM when retrieval yields nothing (empty KB or below threshold).
         sources = extract_sources(chunks)
         generated = await self._generate(refined_query, context, self._resolve_chat_llm(provider), chunks=chunks)
         final, status = await self._apply_output_guard(message, generated, session_id)
@@ -288,11 +286,7 @@ class ChatPipeline:
         """
         refined_query = await self._refine_query(message, session_id)
         chunks = await self._retrieve(refined_query)
-        if self._rag_enabled and not chunks:
-            yield StreamEvent(kind="delta", text=NO_CONTEXT_MESSAGE)
-            yield StreamEvent(kind="done", text=NO_CONTEXT_MESSAGE, status="no_context", sources=[])
-            return
-
+        # Fall back to plain LLM when retrieval yields nothing (empty KB or below threshold).
         sources = extract_sources(chunks)
         think_filter = ThinkBlockFilter()
         collected: list[str] = []
@@ -343,9 +337,10 @@ class ChatPipeline:
         api_cfg = cfg.get("api", {})
         max_len = int(api_cfg.get("max_message_length", 4000))
         messages_cfg = api_cfg.get("messages", {})
-        # The retriever resolves its ChromaDB collection lazily, so building it here is cheap and
-        # never touches the vector store at startup.
-        retriever = ChromaRetriever.from_config(cfg.get("rag", {}))
+        # RAG is opt-in: only wire up the retriever when rag.enabled is true in backend.yaml.
+        # When disabled the pipeline falls through to plain LLM chat (no retrieval, no grounding).
+        rag_cfg = cfg.get("rag", {})
+        retriever = ChromaRetriever.from_config(rag_cfg) if rag_cfg.get("enabled", False) else None
 
         return cls(
             input_guard=InputGuard.from_config(llm_cfg, guard_cfg.get("input_guard", {})),

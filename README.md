@@ -66,3 +66,16 @@ For local enforcement before commit, install hooks once:
 
 1. `python -m pip install pre-commit`
 2. `pre-commit install`
+
+## Deployment
+
+Frontend deploy to Hetzner (`.github/workflows/deploy-hetzner.yml`) runs entirely on
+GitHub-hosted runners — no local machine involved. It triggers via `workflow_run` once the
+`ChatBot CI/CD` workflow succeeds on `main`, builds the frontend, and rsyncs `frontend/dist/`
+to the Hetzner webspace over SSH using a dedicated deploy keypair (not an account password).
+
+Required repository secrets: `HETZNER_HOST`, `HETZNER_PORT`, `HETZNER_USER`, `HETZNER_SSH_KEY`.
+
+This only ships the static frontend build. Backend + Postgres + Redis currently run via Docker
+locally (see [Docker Setup](docs/postgres-docker-setup.md)) — they are not yet deployed anywhere
+publicly reachable.

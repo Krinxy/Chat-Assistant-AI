@@ -1,0 +1,41 @@
+# Backing services only — run this, then start the backend locally.
+#
+# Usage:
+#   docker compose -f docker-compose.services.yml up -d
+#   python -m uvicorn backend.app.main:app --reload --port 8000
+#
+# Stop:
+#   docker compose -f docker-compose.services.yml down
+#
+# Wipe data (full reset):
+#   docker compose -f docker-compose.services.yml down -v
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: chat
+      POSTGRES_DB: chatdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat -d chatdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

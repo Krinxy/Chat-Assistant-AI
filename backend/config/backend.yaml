@@ -79,7 +79,12 @@ api:
     - "http://localhost:5175"
 
 # ── RAG ───────────────────────────────────────────────────────────────────────
+# enabled: false  →  plain LLM chat, no retrieval (default)
+# enabled: true   →  grounded answers from uploaded documents; falls back to
+#                    plain LLM when the knowledge base is empty or no chunk
+#                    exceeds the similarity threshold
 rag:
+  enabled: false
   retriever:
     top_k: 4
     similarity_threshold: 0.3

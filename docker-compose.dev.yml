@@ -24,10 +24,13 @@ services:
       CHROMA_PATH: /data/chroma
       LOG_LEVEL: DEBUG
       UVICORN_WORKERS: "1"
-      # Secrets — copy .env.example → .env and fill in real values
+      # Secrets — loaded from .env in the project root
       JWT_SECRET: ${JWT_SECRET:-change-me-dev-only-secret}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      WHISPER_ENABLE_FAKE_FALLBACK: ${WHISPER_ENABLE_FAKE_FALLBACK:-1}
     volumes:
       - .:/app
       - chroma_data:/data/chroma
